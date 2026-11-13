@@ -102,16 +102,16 @@ final class AboutDialog {
         links.addView(repo, btnLp(a, 5));
         repo.setOnClickListener(v -> openUrl(a, "https://github.com/SKJSLCY/bedrock-forge"));
 
-        Button feedback = new MinecraftUi.McButton(a, "反馈问题（GitHub Issues）");
+        Button feedback = new MinecraftUi.McButton(a, "反馈问题");
         links.addView(feedback, btnLp(a, 5));
         feedback.setOnClickListener(v -> openUrl(a,
                 "https://github.com/SKJSLCY/bedrock-forge/issues"));
 
-        Button qq = new MinecraftUi.McButton(a, "加入 QQ 交流群（1128935719）");
+        Button qq = new MinecraftUi.McButton(a, "QQ 交流群（1128935719）");
         links.addView(qq, btnLp(a, 5));
         qq.setOnClickListener(v -> openUrl(a, QQ_GROUP_URL));
 
-        Button license = new MinecraftUi.McButton(a, "开源许可证（GPL-3.0）");
+        Button license = new MinecraftUi.McButton(a, "开源许可证");
         links.addView(license, btnLp(a, 5));
         license.setOnClickListener(v -> showTextDialog(a,
                 "GNU GPL v3.0", reflow(readAsset(a, "legal/gpl-3.0.txt"))));
@@ -212,7 +212,7 @@ final class AboutDialog {
                 "软件完全免费，赞助自愿，不影响使用与开源权利。\n"
                         + "点击按钮前往爱发电赞助作者。",
                 8.5f, MinecraftUi.PANEL_MUTED, false));
-        Button sponsorBtn = new MinecraftUi.McButton(a, "赞助作者（爱发电）");
+        Button sponsorBtn = new MinecraftUi.McButton(a, "赞助作者");
         sponsor.addView(sponsorBtn, btnLp(a, 8));
         sponsorBtn.setOnClickListener(v -> openUrl(a, "https://afdian.com/a/SKJSLCY"));
         content.addView(sponsor, cardLp(a));
@@ -329,7 +329,17 @@ final class AboutDialog {
                 + "Q7：备份回滚失败\n"
                 + "A：确认原世界仍存在、服务端已停止，且备份版本不高于当前实例。\n\n"
                 + "Q8：如何反馈问题\n"
-                + "A：在关于页复制诊断信息，并附上复现步骤与截图。";
+                + "A：在关于页复制诊断信息，并附上复现步骤与截图。\n\n"
+                + "Q9：这个软件会持续维护下去吗？\n"
+                + "A：会的。\n\n"
+                + "Q10：这个基岩工坊后续会支持插件加载器吗？\n"
+                + "A：不会，因为目前做不到。\n\n"
+                + "Q11：低内存的手机可以开服吗？\n"
+                + "A：低于8G内存的手机很难。\n\n"
+                + "Q12：为什么我是花钱买的软件？\n"
+                + "A：本软件开源完全免费，这个问题你应该问卖家。\n\n"
+                + "Q13：为什么我用不了AI助手?\n"
+                + "A：只有输入AI服务商提供给你的APIkey选择模型后才能使用。";
         showTextDialog(a, "常见问题", text);
     }
 
