@@ -623,17 +623,45 @@ public final class MinecraftUi {
             int w = getWidth();
             int h = getHeight();
             if (ORE) {
-                int th = dp(getContext(), 28);
-                int top = (h - th) / 2;
-                paint.setColor(checked ? ACCENT : 0xFFBDBDBD);
-                canvas.drawRect(0, top, w, top + th, paint);
+                int mid = w / 2;
+                int b = dp(getContext(), 2);
+                int lip = dp(getContext(), 3);
+                paint.setStyle(Paint.Style.FILL);
                 paint.setColor(0xFF1B1B1B);
-                canvas.drawRect(0, top, w, top + 2, paint);
-                canvas.drawRect(0, top + th - 2, w, top + th, paint);
-                int kw = dp(getContext(), 26);
-                int left = checked ? w - kw - 3 : 3;
-                paint.setColor(0xFFF2F2F2);
-                canvas.drawRect(left, top + 3, left + kw, top + th - 3, paint);
+                canvas.drawRect(0, 0, w, h, paint);
+
+                int leftFill = checked ? 0xFF3D8B2F : 0xFFD6D6D6;
+                int rightFill = checked ? 0xFFD6D6D6 : 0xFFA8A8A8;
+                paint.setColor(leftFill);
+                canvas.drawRect(b, b, mid - b, h - b, paint);
+                paint.setColor(rightFill);
+                canvas.drawRect(mid + b, b, w - b, h - b, paint);
+
+                // 顶高光
+                paint.setColor(0x44FFFFFF);
+                canvas.drawRect(b, b, mid - b, b + dp(getContext(), 2), paint);
+                canvas.drawRect(mid + b, b, w - b, b + dp(getContext(), 2), paint);
+
+                // 底部凸起
+                paint.setColor(checked ? 0xFF2A5C1A : 0xFF8A8A8A);
+                canvas.drawRect(b, h - b - lip, mid - b, h - b, paint);
+                paint.setColor(checked ? 0xFFB0B0B0 : 0xFF7A7A7A);
+                canvas.drawRect(mid + b, h - b - lip, w - b, h - b, paint);
+
+                // I / O
+                paint.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
+                paint.setTextSize(dp(getContext(), 16));
+                paint.setTextAlign(Paint.Align.CENTER);
+                Paint.FontMetrics fm = paint.getFontMetrics();
+                float base = h / 2f - (fm.ascent + fm.descent) / 2f;
+                if (checked) {
+                    paint.setColor(0xFFFFFFFF);
+                    canvas.drawText("I", mid / 2f, base, paint);
+                } else {
+                    paint.setColor(0xFF1B1B1B);
+                    canvas.drawText("O", mid + mid / 2f, base, paint);
+                }
+                paint.setTextAlign(Paint.Align.LEFT);
                 return;
             }
             if (MINIMAL) {
