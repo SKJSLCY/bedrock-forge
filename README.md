@@ -30,6 +30,8 @@ Minecraft Bedrock Dedicated Server（BDS）。
 许可证：GPL-3.0-or-later
 ```
 
+本软件由 AI 制作。
+
 ## 重要说明
 
 - 本软件不内置 Minecraft 客户端、官方服务端或官方美术素材。

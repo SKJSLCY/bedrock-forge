@@ -254,6 +254,7 @@ final class AboutDialog {
         LinearLayout credits = MinecraftUi.panel(a, "贡献者名单");
         credits.addView(MinecraftUi.text(a,
                 "开发者：SKJSLCY\n"
+                        + "制作方式：由 AI 制作\n"
                         + "数据与接口：MCAPKS（历史版本列表）、Mojang 官方 BDS 下载\n"
                         + "测试与反馈：待补充\n"
                         + "开源组件：Box64、proot、Ubuntu Base、Shizuku、AOSP\n"
@@ -276,7 +277,8 @@ final class AboutDialog {
         // 非官方声明
         LinearLayout notice = MinecraftUi.panel(a, "非官方声明");
         notice.addView(MinecraftUi.text(a,
-                "本软件为非官方工具，与 Mojang Studios、Microsoft 及其关联公司"
+                "本软件由 AI 制作。\n"
+                        + "本软件为非官方工具，与 Mojang Studios、Microsoft 及其关联公司"
                         + "无隶属、授权或合作关系。\n"
                         + "Minecraft、Minecraft Bedrock Edition 及相关商标归其权利人所有。",
                 8.5f, MinecraftUi.PANEL_MUTED, false));
