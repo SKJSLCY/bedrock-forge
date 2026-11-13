@@ -211,14 +211,20 @@ final class AiAssistantView extends LinearLayout {
                 return true;
             });
             LinearLayout.LayoutParams lp = new LayoutParams(
-                    LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
+                    LayoutParams.WRAP_CONTENT, dp(40));
             lp.rightMargin = dp(5);
             lp.bottomMargin = dp(4);
+            lp.gravity = android.view.Gravity.BOTTOM;
             tabRow.addView(tab, lp);
         }
         Button add = new MinecraftUi.McButton(activity, "+");
-        LinearLayout.LayoutParams lp = new LayoutParams(dp(44), dp(36));
+        add.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
+        add.setPadding(dp(12), 0, dp(12), 0);
+        add.setMinWidth(0);
+        add.setMinHeight(0);
+        LinearLayout.LayoutParams lp = new LayoutParams(dp(52), dp(40));
         lp.bottomMargin = dp(4);
+        lp.gravity = android.view.Gravity.BOTTOM;
         tabRow.addView(add, lp);
         add.setOnClickListener(v -> {
             if (busy) return;

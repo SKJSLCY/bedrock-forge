@@ -642,8 +642,10 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
         cp.topMargin = MinecraftUi.ORE ? 0 : dp(10);
         shell.addView(content, cp);
 
-        shell.addView(buildHotbar(), new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        LinearLayout.LayoutParams hotLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        hotLp.topMargin = dp(8);
+        shell.addView(buildHotbar(), hotLp);
 
         setContentView(root);
         // 先把启动画面画出来，再构建各页面，避免冷启动时空白泥土停留过久。

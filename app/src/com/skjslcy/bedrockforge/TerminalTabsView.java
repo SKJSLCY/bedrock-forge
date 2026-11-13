@@ -26,6 +26,7 @@ public class TerminalTabsView extends LinearLayout {
         HorizontalScrollView scroll = new HorizontalScrollView(activity);
         scroll.setHorizontalScrollBarEnabled(false);
         tabRow = new LinearLayout(activity);
+        tabRow.setGravity(android.view.Gravity.CENTER_VERTICAL);
         tabRow.setOrientation(HORIZONTAL);
         scroll.addView(tabRow);
         addView(scroll, new LinearLayout.LayoutParams(
@@ -55,7 +56,10 @@ public class TerminalTabsView extends LinearLayout {
         }
         Button add = new MinecraftUi.McButton(activity, "+");
         add.setTextSize(14);
-        tabRow.addView(add, new LinearLayout.LayoutParams(dp(42), dp(38)));
+        LinearLayout.LayoutParams addLp = new LinearLayout.LayoutParams(dp(42), dp(36));
+        addLp.gravity = android.view.Gravity.CENTER_VERTICAL;
+        addLp.topMargin = dp(2);
+        tabRow.addView(add, addLp);
         add.setOnClickListener(v -> {
             terminals.add(new TerminalView(activity));
             rebuildTabs();
