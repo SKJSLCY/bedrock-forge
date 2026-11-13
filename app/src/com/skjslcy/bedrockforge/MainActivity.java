@@ -695,11 +695,11 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
                             android.graphics.drawable.GradientDrawable.Orientation.TOP_BOTTOM,
                             new int[]{0xFFF2F2F2, 0xFFE5E5E5});
             row.setBackground(bodyBg);
-            row.setPadding(dp(20), dp(10), dp(20), dp(10));
+            row.setPadding(dp(20), dp(3), dp(20), dp(3));
 
             TextView brand = new TextView(this);
             brand.setText("基岩工坊");
-            brand.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 20);
+            brand.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 18);
             brand.setTextColor(0xFF1B1B1B);
             brand.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
             row.addView(brand, new LinearLayout.LayoutParams(0,
@@ -714,7 +714,7 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
             View lip = new View(this);
             lip.setBackgroundColor(0xFFC6C6C6);
             oreBar.addView(lip, new LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT, dp(7)));
+                    ViewGroup.LayoutParams.MATCH_PARENT, dp(4)));
             View lipBottom = new View(this);
             lipBottom.setBackgroundColor(0xFF9E9E9E);
             oreBar.addView(lipBottom, new LinearLayout.LayoutParams(
