@@ -957,7 +957,7 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
         head.setOrientation(LinearLayout.HORIZONTAL);
         head.setGravity(Gravity.CENTER_VERTICAL);
         MinecraftUi.PixelIconView ic = new MinecraftUi.PixelIconView(this);
-        ic.set(icon, 0xFF2F4F1F);
+        ic.set(icon, MinecraftUi.MINIMAL ? MinecraftUi.PANEL_MUTED : 0xFF2F4F1F);
         LinearLayout.LayoutParams iclp = new LinearLayout.LayoutParams(dp(13), dp(13));
         iclp.rightMargin = dp(6);
         head.addView(ic, iclp);

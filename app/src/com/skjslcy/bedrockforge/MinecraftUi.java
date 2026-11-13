@@ -551,19 +551,21 @@ public final class MinecraftUi {
         @Override
         protected void onDraw(Canvas canvas) {
             super.onDraw(canvas);
-            float gap = dp(getContext(), 1.2f);
+            float gap = dp(getContext(), MINIMAL ? 2f : 1.2f);
             float w = (getWidth() - gap * (total - 1)) / total;
             Paint p = new Paint();
+            float radius = MINIMAL ? dp(getContext(), 3) : 0;
+            int track = MINIMAL ? BORDER : 0xFF7B7B7B;
             for (int i = 0; i < total; i++) {
                 float l = i * (w + gap);
-                if (i < filled) {
-                    p.setColor(fillColor);
+                p.setColor(i < filled ? fillColor : track);
+                if (MINIMAL) {
+                    canvas.drawRoundRect(l, 0, l + w, getHeight(), radius, radius, p);
                 } else {
-                    p.setColor(0xFF7B7B7B);
+                    canvas.drawRect(l, 0, l + w, getHeight(), p);
+                    p.setColor(0x33000000);
+                    canvas.drawRect(l, getHeight() - dp(getContext(), 2), l + w, getHeight(), p);
                 }
-                canvas.drawRect(l, 0, l + w, getHeight(), p);
-                p.setColor(0x33000000);
-                canvas.drawRect(l, getHeight() - dp(getContext(), 2), l + w, getHeight(), p);
             }
         }
     }
