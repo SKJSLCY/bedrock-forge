@@ -410,11 +410,11 @@ public final class MinecraftUi {
         private static StateListDrawable oreBg(Context c, int fill, int pressed, int disabled) {
             StateListDrawable bg = new StateListDrawable();
             bg.addState(new int[]{android.R.attr.state_pressed},
-                    ore3d(c, 0xFFC4C4C4, 0xFFB0B0B0, 0xFF111111, true));
+                    ore3d(c, 0xFFC8C8C8, 0xFFBEBEBE, 0xFF8A8A8A, true));
             bg.addState(new int[]{-android.R.attr.state_enabled},
-                    ore3d(c, 0xFFE0E0E0, 0xFFD0D0D0, 0xFF8A8A8A, false));
+                    ore3d(c, 0xFFE8E8E8, 0xFFDDDDDD, 0xFFC4C4C4, false));
             bg.addState(new int[]{},
-                    ore3d(c, 0xFFE6E6E6, 0xFFC0C0C0, 0xFF333333, false));
+                    ore3d(c, 0xFFEDEDED, 0xFFD4D4D4, 0xFFADADAD, false));
             return bg;
         }
 
