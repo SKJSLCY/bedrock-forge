@@ -376,27 +376,26 @@ public final class MinecraftUi {
                 @Override public void draw(Canvas canvas) {
                     Rect r = getBounds();
                     if (r.isEmpty()) return;
+                    // 凸起部分直接用底色，不加深色外描边
                     p.setStyle(Paint.Style.FILL);
-                    p.setColor(0xFF1B1B1B);
+                    p.setColor(bevel);
                     canvas.drawRect(r, p);
 
-                    p.setColor(bevel);
-                    canvas.drawRect(r.left + b, r.top + b, r.right - b, r.bottom - b, p);
-
-                    int faceBottom = r.bottom - b - bev;
+                    int faceBottom = r.bottom - bev;
                     p.setShader(new android.graphics.LinearGradient(
                             r.left, r.top, r.left, faceBottom, top, bottom,
                             android.graphics.Shader.TileMode.CLAMP));
                     canvas.drawRect(r.left + b, r.top + b, r.right - b, faceBottom, p);
                     p.setShader(null);
+
                     p.setStyle(Paint.Style.FILL);
-                    p.setColor(0x66FFFFFF);
+                    p.setColor(0x55FFFFFF);
                     canvas.drawRect(r.left + b, r.top + b,
                             r.right - b, r.top + b + Math.max(1, dp(c, 2)), p);
 
                     p.setStyle(Paint.Style.STROKE);
-                    p.setStrokeWidth(w);
-                    p.setColor(0xFF1B1B1B);
+                    p.setStrokeWidth(Math.max(1, dp(c, 1)));
+                    p.setColor(0xFF4A4A4A);
                     canvas.drawRect(r.left + b, r.top + b,
                             r.right - b, faceBottom, p);
                 }
