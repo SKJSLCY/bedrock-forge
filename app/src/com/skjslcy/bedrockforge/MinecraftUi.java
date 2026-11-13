@@ -243,7 +243,7 @@ public final class MinecraftUi {
         return new Drawable() {
             private final Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
             private final int b = dp(c, 2);
-            private final int bev = pressed ? dp(c, 2) : dp(c, 4);
+            private final int bev = pressed ? dp(c, 1) : dp(c, 3);
 
             @Override public void draw(Canvas canvas) {
                 Rect r = getBounds();
@@ -274,9 +274,9 @@ public final class MinecraftUi {
     }
 
     public static Drawable oreGreenDrawable(Context c, boolean pressed) {
-        return oreRaisedDrawable(c, 0xFF1F4A12,
-                pressed ? 0xFF55A83C : 0xFF6CCB4E,
-                pressed ? 0xFF438A2E : 0xFF3E8A28,
+        return oreRaisedDrawable(c, 0xFF234A16,
+                pressed ? 0xFF377E2A : 0xFF3D8B2F,
+                pressed ? 0xFF2F6B24 : 0xFF367C29,
                 0xFF2A5C1A, pressed);
     }
 
@@ -505,11 +505,11 @@ public final class MinecraftUi {
             if (ORE) {
                 StateListDrawable ore = new StateListDrawable();
                 ore.addState(new int[]{android.R.attr.state_pressed},
-                        oreRaisedDrawable(getContext(), 0xFF5E1212,
-                                0xFFE05555, 0xFFA62E2E, 0xFF7F1111, true));
+                        oreRaisedDrawable(getContext(), 0xFF7F1111,
+                                0xFFA83333, 0xFF9A2D2D, 0xFF7F1111, true));
                 ore.addState(new int[]{},
-                        oreRaisedDrawable(getContext(), 0xFF6B1515,
-                                0xFFE85A5A, 0xFFB33A3A, 0xFF7F1111, false));
+                        oreRaisedDrawable(getContext(), 0xFF6B1010,
+                                0xFFBC4141, 0xFFA83333, 0xFF6B1010, false));
                 setBackground(ore);
                 setTextColor(0xFFFFFFFF);
                 return;
@@ -529,11 +529,11 @@ public final class MinecraftUi {
             if (ORE) {
                 StateListDrawable bg = new StateListDrawable();
                 bg.addState(new int[]{android.R.attr.state_pressed},
-                        oreRaisedDrawable(getContext(), 0xFF5E1212,
-                                0xFFE05555, 0xFFA62E2E, 0xFF7F1111, true));
+                        oreRaisedDrawable(getContext(), 0xFF7F1111,
+                                0xFFA83333, 0xFF9A2D2D, 0xFF7F1111, true));
                 bg.addState(new int[]{},
-                        oreRaisedDrawable(getContext(), 0xFF6B1515,
-                                0xFFE85A5A, 0xFFB33A3A, 0xFF7F1111, false));
+                        oreRaisedDrawable(getContext(), 0xFF6B1010,
+                                0xFFBC4141, 0xFFA83333, 0xFF6B1010, false));
                 setBackground(bg);
                 setTextColor(0xFFFFFFFF);
                 return;
