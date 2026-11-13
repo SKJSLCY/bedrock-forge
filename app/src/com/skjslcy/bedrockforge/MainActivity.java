@@ -74,6 +74,9 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
 
     private View managePage;
     private FrameLayout manageHost;
+    private View settingsPage;
+    private FrameLayout settingsHost;
+    private TextView settingsTitle;
     private LinearLayout homeCol;
     private LinearLayout homeDeployGuide;
     private TextView homeGuideText;
@@ -669,6 +672,11 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
         managePage.setVisibility(View.GONE);
         content.addView(managePage, new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+
+        settingsPage = buildSettingsPage();
+        settingsPage.setVisibility(View.GONE);
+        content.addView(settingsPage, new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
         showPage(0);
         long elapsed = System.currentTimeMillis() - splashStart;
         long wait = Math.max(120, 700 - elapsed);
@@ -722,7 +730,9 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
             row.addView(back, backLp);
             back.setVisibility(View.GONE);
             back.setOnClickListener(v -> {
-                if (managePage != null && managePage.getVisibility() == View.VISIBLE) {
+                if (settingsPage != null && settingsPage.getVisibility() == View.VISIBLE) {
+                    showPage(3);
+                } else if (managePage != null && managePage.getVisibility() == View.VISIBLE) {
                     if (manageSectionOpen) showManageList(); else showPage(0);
                 }
             });
@@ -1444,10 +1454,13 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
         LinearLayout panel = MinecraftUi.panel(this, "设置");
         addPanel(col, panel);
 
-        String[] items = {"主题", "语言", "权限管理", "AI 智能体", "清除所有数据", "关于"};
+        String[] items = {"主题", "语言", "权限管理", "AI 智能体", "关于", "清除所有数据"};
         for (int i = 0; i < items.length; i++) {
             final String title = items[i];
             Button item = new MinecraftUi.McButton(this, title);
+            if ("清除所有数据".equals(title)) {
+                ((MinecraftUi.McButton) item).setBrightDangerStyle();
+            }
             LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT, dp(54));
             lp.topMargin = i == 0 ? 0 : dp(6);
@@ -1455,19 +1468,19 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
             item.setOnClickListener(new View.OnClickListener() {
                 @Override public void onClick(View v) {
                     if ("主题".equals(title)) {
-                        showThemeDialog();
+                        showSettingsSubPage("主题", buildThemePage());
                     } else if ("语言".equals(title)) {
-                        toast("语言功能暂未实装");
+                        showSettingsSubPage("语言", buildLanguagePage());
                     } else if ("权限管理".equals(title)) {
-                        showPermissionsDialog();
+                        showSettingsSubPage("权限管理",
+                                scrollWrap(new PermissionView(MainActivity.this)));
                     } else if ("AI 智能体".equals(title)) {
-                        showAiAgentDialog();
+                        showSettingsSubPage("AI 智能体",
+                                scrollWrap(new AiSettingsView(MainActivity.this)));
                     } else if ("清除所有数据".equals(title)) {
                         showWipeFirst();
                     } else if ("关于".equals(title)) {
-                        AboutDialog.show(MainActivity.this);
-                    } else {
-                        showSettingsPlaceholder(title);
+                        showSettingsSubPage("关于", buildAboutPage());
                     }
                 }
             });
@@ -1931,6 +1944,193 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
         return bar;
     }
 
+    private View scrollWrap(View content) {
+        ScrollView sv = new ScrollView(this);
+        sv.setFillViewport(false);
+        sv.addView(content, new ScrollView.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        return sv;
+    }
+
+    private View buildLanguagePage() {
+        ScrollView sv = new ScrollView(this);
+        LinearLayout col = new LinearLayout(this);
+        col.setOrientation(LinearLayout.VERTICAL);
+        col.setPadding(dp(2), 0, dp(2), 0);
+        LinearLayout panel = MinecraftUi.panel(this, null);
+        panel.addView(MinecraftUi.text(this,
+                "语言切换功能暂未实装。\n\n当前界面使用简体中文。",
+                10, MinecraftUi.PANEL_TEXT, false));
+        col.addView(panel);
+        sv.addView(col);
+        return sv;
+    }
+
+    private View buildThemePage() {
+        ScrollView sv = new ScrollView(this);
+        LinearLayout col = new LinearLayout(this);
+        col.setOrientation(LinearLayout.VERTICAL);
+        col.setPadding(dp(2), 0, dp(2), 0);
+        LinearLayout panel = MinecraftUi.panel(this, null);
+        col.addView(panel);
+
+        final String oldStyle = ThemeManager.style(this);
+        final String oldMode = ThemeManager.mode(this);
+        final String[] sel = {oldStyle, oldMode};
+
+        panel.addView(MinecraftUi.text(this, "风格", 9, MinecraftUi.PANEL_MUTED, true));
+        final Button classic = new MinecraftUi.McButton(this, "经典风格");
+        panel.addView(classic, dialogBtnLp(0));
+        final Button minimal = new MinecraftUi.McButton(this, "简约风格");
+        panel.addView(minimal, dialogBtnLp(6));
+        final Button ore = new MinecraftUi.McButton(this, "Ore UI");
+        panel.addView(ore, dialogBtnLp(6));
+
+        panel.addView(MinecraftUi.text(this, "简约风格明暗", 9, MinecraftUi.PANEL_MUTED, true));
+        final Button light = new MinecraftUi.McButton(this, "浅色模式");
+        panel.addView(light, dialogBtnLp(0));
+        final Button dark = new MinecraftUi.McButton(this, "深色模式");
+        panel.addView(dark, dialogBtnLp(6));
+
+        final TextView summary = MinecraftUi.text(this, "", 8.5f, MinecraftUi.PANEL_MUTED, false);
+        summary.setPadding(0, dp(10), 0, 0);
+        panel.addView(summary);
+
+        final Runnable refresh = () -> {
+            classic.setText(ThemeManager.CLASSIC.equals(sel[0]) ? "经典风格（当前）" : "经典风格");
+            minimal.setText(ThemeManager.MINIMAL.equals(sel[0]) ? "简约风格（当前）" : "简约风格");
+            ore.setText(ThemeManager.ORE.equals(sel[0]) ? "Ore UI（当前）" : "Ore UI");
+            light.setText(ThemeManager.MODE_LIGHT.equals(sel[1]) ? "浅色模式（当前）" : "浅色模式");
+            dark.setText(ThemeManager.MODE_DARK.equals(sel[1]) ? "深色模式（当前）" : "深色模式");
+            boolean minimalSel = ThemeManager.MINIMAL.equals(sel[0]);
+            light.setEnabled(minimalSel);
+            dark.setEnabled(minimalSel);
+            light.setAlpha(minimalSel ? 1f : 0.5f);
+            dark.setAlpha(minimalSel ? 1f : 0.5f);
+            if (ThemeManager.ORE.equals(sel[0])) {
+                summary.setText("Ore UI · 标准外观（不支持明暗模式）");
+            } else if (minimalSel) {
+                summary.setText("简约风格 · " + (ThemeManager.MODE_DARK.equals(sel[1]) ? "深色模式" : "浅色模式"));
+            } else {
+                summary.setText("经典风格");
+            }
+        };
+        refresh.run();
+        classic.setOnClickListener(v -> { sel[0] = ThemeManager.CLASSIC; refresh.run(); });
+        minimal.setOnClickListener(v -> { sel[0] = ThemeManager.MINIMAL; refresh.run(); });
+        ore.setOnClickListener(v -> { sel[0] = ThemeManager.ORE; refresh.run(); });
+        light.setOnClickListener(v -> { sel[1] = ThemeManager.MODE_LIGHT; refresh.run(); });
+        dark.setOnClickListener(v -> { sel[1] = ThemeManager.MODE_DARK; refresh.run(); });
+
+        Button apply = new MinecraftUi.McButton(this, "应用主题");
+        panel.addView(apply, dialogBtnLp(12));
+        apply.setOnClickListener(v -> {
+            if (sel[0].equals(oldStyle) && sel[1].equals(oldMode)) {
+                toast("当前已是该主题");
+                return;
+            }
+            showRestartPrompt(sel[0], sel[1]);
+        });
+
+        sv.addView(col);
+        return sv;
+    }
+
+    private View buildAboutPage() {
+        ScrollView sv = new ScrollView(this);
+        LinearLayout col = new LinearLayout(this);
+        col.setOrientation(LinearLayout.VERTICAL);
+        col.setPadding(dp(2), 0, dp(2), 0);
+
+        LinearLayout head = MinecraftUi.panel(this, null);
+        TextView name = MinecraftUi.text(this, "基岩工坊", 22, MinecraftUi.PANEL_TEXT, true);
+        head.addView(name);
+        String ver = "0.1";
+        try {
+            ver = getPackageManager().getPackageInfo(getPackageName(), 0).versionName;
+        } catch (Throwable ignored) {
+        }
+        head.addView(MinecraftUi.text(this, "BEDROCK FORGE · 版本 " + ver, 9,
+                MinecraftUi.PANEL_MUTED, false));
+        head.addView(MinecraftUi.text(this, "手机上的 Minecraft 基岩版服务端管理工具。软件完全免费。",
+                9, MinecraftUi.PANEL_TEXT, false));
+        col.addView(head);
+
+        LinearLayout links = MinecraftUi.panel(this, "快捷入口");
+        Button ua = new MinecraftUi.McButton(this, "用户协议");
+        links.addView(ua, dialogBtnLp(0));
+        ua.setOnClickListener(v -> AgreementDialog.show(this, false, null));
+        addLink(links, "项目仓库", "https://github.com/SKJSLCY/bedrock-forge");
+        addLink(links, "反馈问题", "https://github.com/SKJSLCY/bedrock-forge/issues");
+        addLink(links, "QQ 交流群", "https://qun.qq.com/universal-share/share?ac=1&authKey=aXbbDrFrIwkpxJWFhcclaTZyZFjQDRq%2FQDR0P3gUHSRNAbsG3aD9lb1CbRCc9yGq&busi_data=eyJncm91cENvZGUiOiIxMTI4OTM1NzE5IiwidG9rZW4iOiIveC9SQ3dvNXV1ZUFMNE5wbVFDYnJYSTkxenNoWjk0cy9VNGtxRUdhb3pFU2VZUEptRzJYWHZ3UGZPbGR1TWUvIiwidWluIjoiMTc5NDE5NjkxMCJ9&data=yGAGNaWN2jy6ZnJloDPda8gfQmSA1EsYMxjwmfDp3-KHEv5LlI0GSpgBilPvAARl0bzOz30CQcG-4XWs6yapRw&svctype=4&tempid=h5_group_info");
+        addLink(links, "赞助作者", "https://afdian.com/a/SKJSLCY");
+        col.addView(links);
+
+        LinearLayout notice = MinecraftUi.panel(this, "非官方声明");
+        notice.addView(MinecraftUi.text(this,
+                "本软件由 AI 制作。\n本软件为非官方工具，与 Mojang Studios、Microsoft 及其关联公司无隶属、授权或合作关系。\nMinecraft、Minecraft Bedrock Edition 及相关商标归其权利人所有。",
+                8.5f, MinecraftUi.PANEL_MUTED, false));
+        col.addView(notice);
+
+        sv.addView(col);
+        return sv;
+    }
+
+    private void addLink(LinearLayout panel, String label, final String url) {
+        Button b = new MinecraftUi.McButton(this, label);
+        panel.addView(b, dialogBtnLp(5));
+        b.setOnClickListener(v -> {
+            try {
+                startActivity(new android.content.Intent(
+                        android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url)));
+            } catch (Throwable t) {
+                toast("无法打开链接");
+            }
+        });
+    }
+
+    private View buildSettingsPage() {
+        LinearLayout page = new LinearLayout(this);
+        page.setOrientation(LinearLayout.VERTICAL);
+
+        LinearLayout header = new LinearLayout(this);
+        header.setOrientation(LinearLayout.HORIZONTAL);
+        header.setGravity(Gravity.CENTER_VERTICAL);
+
+        Button back = new MinecraftUi.McButton(this, "← 返回");
+        if (MinecraftUi.ORE) back.setVisibility(View.GONE);
+        header.addView(back, new LinearLayout.LayoutParams(dp(84), dp(40)));
+        back.setOnClickListener(v -> showPage(3));
+
+        settingsTitle = MinecraftUi.text(this, "设置", 18, Color.WHITE, true);
+        if (!MinecraftUi.MINIMAL) settingsTitle.setShadowLayer(dp(2), dp(2), 0, 0xFF1A1A1A);
+        LinearLayout.LayoutParams tlp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        tlp.leftMargin = dp(12);
+        header.addView(settingsTitle, tlp);
+        page.addView(header, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+
+        settingsHost = new FrameLayout(this);
+        LinearLayout.LayoutParams hlp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f);
+        hlp.topMargin = dp(8);
+        page.addView(settingsHost, hlp);
+        return page;
+    }
+
+    private void showSettingsSubPage(String title, View content) {
+        if (settingsPage == null) return;
+        settingsTitle.setText(title);
+        settingsHost.removeAllViews();
+        settingsHost.addView(content, new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        if (managePage != null) managePage.setVisibility(View.GONE);
+        for (View p : pages) if (p != null) p.setVisibility(View.GONE);
+        settingsPage.setVisibility(View.VISIBLE);
+        if (oreBack != null) oreBack.setVisibility(View.VISIBLE);
+    }
+
     private View buildManagePage() {
         LinearLayout page = new LinearLayout(this);
         page.setOrientation(LinearLayout.VERTICAL);
@@ -2284,6 +2484,7 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
             if (index >= 0 && index < names.length) oreTitle.setText(names[index]);
         }
         if (managePage != null) managePage.setVisibility(View.GONE);
+        if (settingsPage != null) settingsPage.setVisibility(View.GONE);
         for (int i = 0; i < pages.length; i++) {
             pages[i].setVisibility(i == index ? View.VISIBLE : View.GONE);
         }

@@ -415,6 +415,18 @@ public final class MinecraftUi {
             setTextColor(ON_ACCENT);
         }
 
+        /** 亮红色危险按钮：用于清除数据等。 */
+        public void setBrightDangerStyle() {
+            StateListDrawable bg = new StateListDrawable();
+            bg.addState(new int[]{android.R.attr.state_pressed},
+                    rounded(getContext(), 0xFFC62828, 0xFF7F1111, 2, 0));
+            bg.addState(new int[]{-android.R.attr.state_enabled},
+                    rounded(getContext(), 0xFFE57373, 0xFF7F1111, 2, 0));
+            bg.addState(new int[]{}, rounded(getContext(), 0xFFE53935, 0xFF7F1111, 2, 0));
+            setBackground(bg);
+            setTextColor(0xFFFFFFFF);
+        }
+
         /** 危险操作按钮：红色背景，用于修复/删除等。 */
         public void setDangerStyle() {
             if (ORE) {
