@@ -1,0 +1,35 @@
+# 构建产物
+app/build/
+app/gen/
+*.apk
+*.aab
+
+# 签名与密钥
+*.keystore
+*.jks
+app/debug.keystore
+
+# 本地工具链
+.tooling/
+local.properties
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# 日志与崩溃
+*.log
+hs_err_pid*
+
+# 系统文件
+.DS_Store
+Thumbs.db
+
+# 大型资源（建议用 Git LFS 或 Release 附件分发）
+app/assets/toolchain-rootfs.tar.gz
+
+# 临时文档
+提示词.txt
+新建 文本文档*.txt
+*.docx

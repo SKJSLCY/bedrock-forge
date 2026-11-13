@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>MC BDS · 设计 1 · 监控台</title>
+<style>
+  :root{
+    --bg:#070b10; --panel:#0d141c; --panel2:#111a24; --line:#1d2a37;
+    --text:#e7f1fb; --muted:#7d8fa3; --green:#3dffa2; --cyan:#45c8ff;
+    --amber:#ffc24b; --red:#ff5f6d; --violet:#8b5cf6;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{width:1080px;height:2400px;overflow:hidden}
+  body{
+    background:
+      radial-gradient(1200px 620px at 82% -8%, rgba(69,200,255,.14), transparent 62%),
+      radial-gradient(900px 620px at -8% 108%, rgba(61,255,162,.08), transparent 60%),
+      var(--bg);
+    font-family:"Segoe UI","Microsoft YaHei",sans-serif;color:var(--text);
+  }
+  .phone{width:1080px;height:2400px;padding:58px 48px 40px;display:flex;flex-direction:column;position:relative}
+  .grid{position:absolute;inset:0;pointer-events:none;
+    background-image:linear-gradient(rgba(255,255,255,.026) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.026) 1px,transparent 1px);
+    background-size:64px 64px;}
+  header{display:flex;justify-content:space-between;align-items:flex-start;position:relative;z-index:1}
+  .brand{font-size:46px;font-weight:800;letter-spacing:-1px;line-height:1}
+  .brand span{color:var(--green)}
+  .sub{font-size:19px;color:var(--muted);margin-top:12px;letter-spacing:4px;text-transform:uppercase}
+  .status{display:flex;align-items:center;gap:12px;padding:15px 24px;border:1px solid rgba(255,95,109,.35);
+    background:rgba(255,95,109,.08);border-radius:999px;font-size:23px;color:var(--red);font-weight:700}
+  .dot{width:13px;height:13px;border-radius:50%;background:var(--red);box-shadow:0 0 20px var(--red)}
+  .meta{display:flex;gap:18px;margin-top:38px;position:relative;z-index:1}
+  .cell{flex:1;background:rgba(13,20,28,.82);border:1px solid var(--line);border-radius:18px;padding:20px 22px}
+  .cell label{display:block;font-size:18px;color:var(--muted);letter-spacing:1px}
+  .cell b{display:block;font-size:25px;margin-top:9px;font-weight:600;white-space:nowrap}
+  .hero{display:flex;align-items:center;justify-content:space-between;margin-top:30px;position:relative;z-index:1}
+  .num{font-family:Consolas,monospace;font-size:158px;line-height:.86;font-weight:700;color:#fff}
+  .den{font-family:Consolas,monospace;font-size:56px;color:var(--muted)}
+  .players small{display:block;font-size:20px;color:var(--muted);letter-spacing:4px;margin-top:14px}
+  .ring{width:296px;height:296px;border-radius:50%;position:relative;display:grid;place-items:center;
+    background:conic-gradient(var(--green) 0 50%, #17232f 50% 100%);box-shadow:0 0 70px rgba(61,255,162,.14)}
+  .ring:before{content:"";position:absolute;inset:26px;border-radius:50%;background:var(--bg);border:1px solid var(--line)}
+  .ring .center{position:relative;text-align:center}
+  .ring b{font-family:Consolas,monospace;font-size:62px}
+  .ring small{display:block;font-size:16px;color:var(--muted);letter-spacing:3px;margin-top:4px}
+  .metrics{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:32px;position:relative;z-index:1}
+  .card{background:linear-gradient(180deg,rgba(17,26,36,.94),rgba(10,16,23,.94));border:1px solid var(--line);
+    border-radius:20px;padding:24px;min-height:238px}
+  .row{display:flex;align-items:center;gap:11px;color:var(--muted);font-size:19px;letter-spacing:1px}
+  .row svg{width:25px;height:25px;color:var(--cyan);flex:none}
+  .value{font-family:Consolas,monospace;font-size:48px;margin-top:16px;font-weight:700}
+  .value span{font-size:23px;color:var(--muted);margin-left:4px}
+  .bar{height:10px;background:#16222d;border-radius:999px;margin-top:18px;overflow:hidden}
+  .bar i{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,var(--cyan),var(--green))}
+  .net{display:flex;gap:30px;margin-top:18px}
+  .net b{font-family:Consolas,monospace;font-size:34px;font-weight:700}
+  .net small{display:block;font-family:"Segoe UI";font-size:15px;color:var(--muted);margin-top:3px;letter-spacing:1px}
+  .tpsbars{display:flex;gap:5px;margin-top:22px;align-items:flex-end;height:54px}
+  .tpsbars i{flex:1;background:linear-gradient(180deg,var(--green),#19b06c);border-radius:2px;opacity:.95}
+  .duo{display:grid;grid-template-columns:1.45fr 1fr;gap:18px;margin-top:18px;position:relative;z-index:1}
+  .slim{min-height:188px}
+  .worldline{display:flex;justify-content:space-between;align-items:baseline;margin-top:18px}
+  .worldline b{font-size:40px;font-weight:700}
+  .worldline span{font-family:Consolas,monospace;color:var(--muted);font-size:19px}
+  .chips{display:flex;gap:8px;margin-top:14px}
+  .chips span{font-size:14px;color:var(--cyan);border:1px solid rgba(69,200,255,.25);background:rgba(69,200,255,.08);padding:6px 10px;border-radius:999px}
+  .events{margin-top:18px;min-height:206px;position:relative;z-index:1}
+  .events .row{width:100%}
+  .live{font-size:12px;color:var(--green);border:1px solid rgba(61,255,162,.3);padding:4px 8px;border-radius:999px;margin-left:auto}
+  .log{font-family:Consolas,monospace;font-size:16px;color:#9fb3c8;line-height:2.05;margin-top:10px;white-space:nowrap}
+  .log b{color:var(--green);font-weight:400}
+  .quick{display:flex;gap:12px;margin-top:18px;position:relative;z-index:1}
+  .quick button{flex:1;height:86px;background:rgba(17,26,36,.9);border:1px solid var(--line);border-radius:16px;color:var(--text);font-size:21px;font-weight:600}
+  .guide{margin-top:18px;padding:22px 26px;border:1px dashed rgba(69,200,255,.25);border-radius:18px;
+    background:rgba(69,200,255,.04);position:relative;z-index:1}
+  .guide .gtitle{font-size:17px;color:var(--muted);letter-spacing:3px}
+  .steps{display:flex;gap:18px;margin-top:14px}
+  .steps div{flex:1;font-size:18px;color:var(--text);display:flex;align-items:center;gap:10px}
+  .steps b{width:34px;height:34px;border-radius:10px;background:rgba(61,255,162,.12);color:var(--green);
+    display:grid;place-items:center;font-family:Consolas,monospace;font-size:18px;flex:none}
+  .manage{margin-top:auto;height:108px;border:0;border-radius:20px;color:#04120b;font-size:31px;font-weight:800;
+    letter-spacing:3px;display:flex;align-items:center;justify-content:center;gap:16px;position:relative;z-index:1;
+    background:linear-gradient(90deg,#22d98a,#3dffa2);box-shadow:0 20px 60px rgba(61,255,162,.20)}
+  .manage svg{width:34px;height:34px}
+  .bottomnav{display:flex;gap:10px;margin-top:24px;position:relative;z-index:1}
+  .navitem{flex:1;height:110px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px;
+    border-radius:18px;color:var(--muted);font-size:18px;border:1px solid transparent}
+  .navitem svg{width:29px;height:29px}
+  .navitem.active{color:var(--green);background:rgba(61,255,162,.08);border-color:rgba(61,255,162,.25)}
+</style>
+</head>
+<body>
+<div class="phone"><div class="grid"></div>
+  <header>
+    <div>
+      <div class="brand">MC <span>BDS</span></div>
+      <div class="sub">Server Control Deck</div>
+    </div>
+    <div class="status"><span class="dot"></span>已停止</div>
+  </header>
+
+  <div class="meta">
+    <div class="cell"><label>服务器类型</label><b>Minecraft BDS</b></div>
+    <div class="cell"><label>服务端版本</label><b>1.26.62.1</b></div>
+    <div class="cell"><label>协议 / 游戏</label><b>224 · 1.26.62</b></div>
+  </div>
+
+  <div class="hero">
+    <div class="players">
+      <span class="num">0</span><span class="den">/10</span>
+      <small>玩家在线</small>
+    </div>
+    <div class="ring"><div class="center"><b>50%</b><small>CPU LOAD</small></div></div>
+  </div>
+
+  <div class="metrics">
+    <div class="card">
+      <div class="row">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="7" y="7" width="10" height="10" rx="1.5"/><path d="M9 3v4M15 3v4M9 17v4M15 17v4M3 9h4M3 15h4M17 9h4M17 15h4"/></svg>
+        CPU 占用
+      </div>
+      <div class="value">50<span>%</span></div>
+      <div class="bar"><i style="width:50%"></i></div>
+    </div>
+    <div class="card">
+      <div class="row">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="7" width="18" height="10" rx="2"/><path d="M7 17v3M12 17v3M17 17v3M7 10v4M11 10v4M15 10v4"/></svg>
+        内存占用
+      </div>
+      <div class="value">2.1<span>GB</span></div>
+      <div class="bar"><i style="width:26%;background:linear-gradient(90deg,var(--cyan),var(--violet))"></i></div>
+      <div class="row" style="margin-top:12px;font-size:15px">总内存 8 GB</div>
+    </div>
+    <div class="card">
+      <div class="row">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M7 17V7m0 0L3 11m4-4 4 4M17 7v10m0 0 4-4m-4 4-4-4"/></svg>
+        网络吞吐
+      </div>
+      <div class="net">
+        <div><b>↑1</b><small>Mbps 上行</small></div>
+        <div><b>↓1</b><small>Mbps 下行</small></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="row">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="13" r="8"/><path d="M12 13l4-4M9 2h6"/></svg>
+        服务器 TPS
+      </div>
+      <div class="value">20<span>/20</span></div>
+      <div class="tpsbars">
+        <i style="height:100%"></i><i style="height:96%"></i><i style="height:100%"></i><i style="height:94%"></i><i style="height:100%"></i>
+        <i style="height:98%"></i><i style="height:100%"></i><i style="height:95%"></i><i style="height:100%"></i><i style="height:97%"></i>
+      </div>
+    </div>
+  </div>
+
+  <div class="duo">
+    <div class="card slim">
+      <div class="row">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 7h16v12H4zM4 7l8-4 8 4M8 11v4M12 11v4M16 11v4"/></svg>
+        世界实例
+      </div>
+      <div class="worldline"><b>Nether62</b><span>:19134</span></div>
+      <div class="chips"><span>离线模式</span><span>身份密钥已保存</span></div>
+    </div>
+    <div class="card slim">
+      <div class="row">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+        运行时长
+      </div>
+      <div class="value" style="font-size:42px">--:--</div>
+      <div class="row" style="font-size:15px">等待启动</div>
+    </div>
+  </div>
+
+  <div class="card events">
+    <div class="row">
+      最近事件
+      <span class="live">LIVE</span>
+    </div>
+    <div class="log">
+      <b>04:24:28</b>  Server stop requested<br>
+      <b>04:24:28</b>  Quit correctly<br>
+      <span style="color:#5c6f82">--:--:--</span>  等待下一次启动
+    </div>
+  </div>
+
+  <div class="quick">
+    <button>启动服务</button>
+    <button>打开控制台</button>
+    <button>备份世界</button>
+  </div>
+
+  <div class="guide">
+    <div class="gtitle">如何进入</div>
+    <div class="steps">
+      <div><b>1</b> 同一 Wi-Fi</div>
+      <div><b>2</b> 游戏 → 世界</div>
+      <div><b>3</b> 点击 Phone12662B</div>
+    </div>
+  </div>
+
+  <button class="manage">
+    服务器管理
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M5 12h14m-6-6 6 6-6 6"/></svg>
+  </button>
+
+  <nav class="bottomnav">
+    <div class="navitem active">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="m3 11 9-8 9 8v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>
+      首页
+    </div>
+    <div class="navitem">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="m7 9 3 3-3 3M13 15h4"/></svg>
+      控制台
+    </div>
+    <div class="navitem">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.2 6.8L21 11l-6.8 2.2L12 20l-2.2-6.8L3 11l6.8-2.2z"/></svg>
+      AI
+    </div>
+    <div class="navitem">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="12" cy="12" r="3.2"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M19.1 4.9 17 7M7 17l-2.1 2.1"/></svg>
+      设置
+    </div>
+  </nav>
+</div>
+</body>
+</html>

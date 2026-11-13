@@ -1,0 +1,612 @@
+package com.skjslcy.bedrockforge;
+
+import android.content.Context;
+import android.content.res.ColorStateList;
+import android.graphics.Bitmap;
+import android.graphics.BitmapShader;
+import android.graphics.Canvas;
+import android.graphics.Color;
+import android.graphics.ColorFilter;
+import android.graphics.Paint;
+import android.graphics.PixelFormat;
+import android.graphics.Rect;
+import android.graphics.Shader;
+import android.graphics.Typeface;
+import android.graphics.drawable.Drawable;
+import android.graphics.drawable.StateListDrawable;
+import android.util.TypedValue;
+import android.view.Gravity;
+import android.view.MotionEvent;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.Button;
+import android.widget.LinearLayout;
+import android.widget.TextView;
+
+import java.util.Random;
+
+/** Minecraft-GUI 风格的绘制与控件工具。 */
+public final class MinecraftUi {
+
+    public static final int PANEL = 0xFFC6C6C6;
+    public static final int PANEL_TEXT = 0xFF1B1B1B;
+    public static final int PANEL_MUTED = 0xFF4A4A4A;
+    public static final int SLOT = 0xFFA8A8A8;
+    public static final int SLOT_LIGHT = 0xFFE0E0E0;
+    public static final int SLOT_DARK = 0xFF777777;
+    public static final int GREEN = 0xFF2F7D1F;
+    public static final int GREEN_BRIGHT = 0xFF5BC236;
+    public static final int RED = 0xFFB3261E;
+    public static final int AMBER = 0xFFB26A00;
+
+    private MinecraftUi() {
+    }
+
+    public static int dp(Context c, float v) {
+        return (int) (v * c.getResources().getDisplayMetrics().density + 0.5f);
+    }
+
+    public static Typeface mono() {
+        return Typeface.create("monospace", Typeface.BOLD);
+    }
+
+    public static TextView text(Context c, String s, float sp, int color, boolean bold) {
+        TextView t = new TextView(c);
+        t.setText(s);
+        t.setTextSize(TypedValue.COMPLEX_UNIT_SP, sp);
+        t.setTextColor(color);
+        t.setTypeface(bold ? mono() : Typeface.create("sans-serif", Typeface.NORMAL));
+        t.setIncludeFontPadding(false);
+        return t;
+    }
+
+    // ---------------------------------------------------------------- drawables
+
+    public static class BevelDrawable extends Drawable {
+        private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final int fill, border, light, dark;
+        private final float bw, lw;
+
+        public BevelDrawable(int fill, int border, int light, int dark, float bw, float lw) {
+            this.fill = fill;
+            this.border = border;
+            this.light = light;
+            this.dark = dark;
+            this.bw = Math.max(1f, bw);
+            this.lw = Math.max(1f, lw);
+        }
+
+        @Override
+        public void draw(Canvas canvas) {
+            Rect b = getBounds();
+            if (b.isEmpty()) return;
+            paint.setStyle(Paint.Style.FILL);
+            paint.setColor(border);
+            canvas.drawRect(b, paint);
+            float l = b.left + bw, t = b.top + bw, r = b.right - bw, bo = b.bottom - bw;
+            paint.setColor(fill);
+            canvas.drawRect(l, t, r, bo, paint);
+            paint.setColor(light);
+            canvas.drawRect(l, t, r, t + lw, paint);
+            canvas.drawRect(l, t, l + lw, bo, paint);
+            paint.setColor(dark);
+            canvas.drawRect(l, bo - lw, r, bo, paint);
+            canvas.drawRect(r - lw, t, r, bo, paint);
+        }
+
+        @Override
+        public void setAlpha(int alpha) {
+            paint.setAlpha(alpha);
+        }
+
+        @Override
+        public void setColorFilter(ColorFilter colorFilter) {
+            paint.setColorFilter(colorFilter);
+        }
+
+        @Override
+        public int getOpacity() {
+            return PixelFormat.TRANSLUCENT;
+        }
+    }
+
+    public static Drawable panelDrawable(Context c) {
+        float u = dp(c, 2.5f);
+        return new BevelDrawable(PANEL, 0xFF151515, 0xFFFFFFFF, 0xFF5A5A5A, u, u);
+    }
+
+    public static Drawable slotDrawable(Context c) {
+        float u = dp(c, 1.6f);
+        return new BevelDrawable(SLOT, 0xFF8A8A8A, SLOT_LIGHT, SLOT_DARK, u, u);
+    }
+
+    public static Drawable terminalDrawable(Context c) {
+        float u = dp(c, 2.5f);
+        return new BevelDrawable(0xFF151515, 0xFF000000, 0xFF3A3A3A, 0xFF000000, u, u);
+    }
+
+    public static Drawable hotbarDrawable(Context c) {
+        float u = dp(c, 2.5f);
+        return new BevelDrawable(0xFF2A1D13, 0xFF120D08, 0xFF4C3827, 0xFF0B0805, u, u);
+    }
+
+    public static Drawable hotbarSlotDrawable(Context c, boolean active) {
+        float u = dp(c, 2f);
+        if (active) {
+            return new BevelDrawable(0xFF3A2A1C, GREEN_BRIGHT, 0xFF7EE356, 0xFF21160D, u, u);
+        }
+        return new BevelDrawable(0xFF3A2A1C, 0xFF1A120B, 0xFF523B26, 0xFF21160D, u, u);
+    }
+
+    /** 泥土背景（平铺）。 */
+    public static class DirtDrawable extends Drawable {
+        private final Paint paint = new Paint();
+        private final Paint overlay = new Paint();
+        private final BitmapShader shader;
+
+        public DirtDrawable(Context c) {
+            Bitmap bmp = Bitmap.createBitmap(96, 96, Bitmap.Config.ARGB_8888);
+            Canvas cv = new Canvas(bmp);
+            Paint p = new Paint();
+            int[] palette = {0xFF4A3523, 0xFF3F2D1E, 0xFF553D27, 0xFF332318, 0xFF5C4128};
+            Random r = new Random(7);
+            for (int y = 0; y < 12; y++) {
+                for (int x = 0; x < 12; x++) {
+                    p.setColor(palette[r.nextInt(palette.length)]);
+                    cv.drawRect(x * 8, y * 8, x * 8 + 8, y * 8 + 8, p);
+                }
+            }
+            for (int i = 0; i < 60; i++) {
+                p.setColor(0x22000000);
+                int x = r.nextInt(96), y = r.nextInt(96);
+                cv.drawRect(x, y, x + 4, y + 4, p);
+            }
+            shader = new BitmapShader(bmp, Shader.TileMode.REPEAT, Shader.TileMode.REPEAT);
+            paint.setShader(shader);
+            overlay.setColor(0x66000000);
+        }
+
+        @Override
+        public void draw(Canvas canvas) {
+            canvas.drawRect(getBounds(), paint);
+            canvas.drawRect(getBounds(), overlay);
+        }
+
+        @Override
+        public void setAlpha(int alpha) {
+            overlay.setAlpha(alpha);
+        }
+
+        @Override
+        public void setColorFilter(ColorFilter colorFilter) {
+        }
+
+        @Override
+        public int getOpacity() {
+            return PixelFormat.OPAQUE;
+        }
+    }
+
+    // ---------------------------------------------------------------- widgets
+
+    public static class McButton extends Button {
+        public McButton(Context c, String label) {
+            super(c);
+            setText(label);
+            setAllCaps(false);
+            setGravity(Gravity.CENTER);
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
+            setTypeface(mono());
+            setIncludeFontPadding(false);
+            setShadowLayer(dp(c, 1.5f), dp(c, 1.5f), 0, 0xFF3F3F3F);
+            setPadding(dp(c, 8), 0, dp(c, 8), 0);
+            setMinWidth(0);
+            setMinHeight(0);
+            setStateListAnimator(null);
+
+            StateListDrawable bg = new StateListDrawable();
+            bg.addState(new int[]{android.R.attr.state_pressed},
+                    new BevelDrawable(0xFF6E6E6E, 0xFF151515, 0xFF9A9A9A, 0xFF3F3F3F, dp(c, 2.5f), dp(c, 2.5f)));
+            bg.addState(new int[]{-android.R.attr.state_enabled},
+                    new BevelDrawable(0xFF9A9A9A, 0xFF151515, 0xFFBDBDBD, 0xFF777777, dp(c, 2.5f), dp(c, 2.5f)));
+            bg.addState(new int[]{},
+                    new BevelDrawable(0xFF8B8B8B, 0xFF151515, 0xFFC6C6C6, 0xFF555555, dp(c, 2.5f), dp(c, 2.5f)));
+            setBackground(bg);
+
+            int[][] states = new int[][]{
+                    new int[]{-android.R.attr.state_enabled},
+                    new int[]{}
+            };
+            int[] colors = new int[]{0xFF8A8A8A, 0xFFFFFFFF};
+            setTextColor(new ColorStateList(states, colors));
+        }
+
+        /** 危险操作按钮：红色背景，用于修复/删除等。 */
+        public void setDangerStyle() {
+            StateListDrawable bg = new StateListDrawable();
+            bg.addState(new int[]{android.R.attr.state_pressed},
+                    new BevelDrawable(0xFF7A1F1F, 0xFF220000, 0xFFD85A5A, 0xFF3A0000,
+                            dp(getContext(), 2.5f), dp(getContext(), 2.5f)));
+            bg.addState(new int[]{-android.R.attr.state_enabled},
+                    new BevelDrawable(0xFF8A6A6A, 0xFF220000, 0xFFC09090, 0xFF5A3030,
+                            dp(getContext(), 2.5f), dp(getContext(), 2.5f)));
+            bg.addState(new int[]{},
+                    new BevelDrawable(0xFFB43A3A, 0xFF220000, 0xFFE06060, 0xFF3A0000,
+                            dp(getContext(), 2.5f), dp(getContext(), 2.5f)));
+            setBackground(bg);
+            setTextColor(0xFFFFF2F2);
+        }
+    }
+
+    /** Minecraft 风格滑块开关。 */
+    public static class McSwitch extends View {
+        public interface OnCheckedChangeListener {
+            void onCheckedChanged(McSwitch view, boolean checked);
+        }
+
+        private boolean checked;
+        private boolean enabled = true;
+        private OnCheckedChangeListener listener;
+        private final Paint paint = new Paint();
+
+        public McSwitch(Context c) {
+            super(c);
+            setContentDescription("开关");
+        }
+
+        public void setChecked(boolean checked) {
+            this.checked = checked;
+            invalidate();
+        }
+
+        public boolean isChecked() {
+            return checked;
+        }
+
+        public void setOnCheckedChangeListener(OnCheckedChangeListener l) {
+            listener = l;
+        }
+
+        @Override
+        public void setEnabled(boolean enabled) {
+            this.enabled = enabled;
+            super.setEnabled(enabled);
+            invalidate();
+        }
+
+        @Override
+        public boolean onTouchEvent(MotionEvent event) {
+            if (!enabled) return false;
+            if (event.getAction() == MotionEvent.ACTION_UP) {
+                checked = !checked;
+                invalidate();
+                performClick();
+                if (listener != null) listener.onCheckedChanged(this, checked);
+            }
+            return true;
+        }
+
+        @Override
+        public boolean performClick() {
+            super.performClick();
+            return true;
+        }
+
+        @Override
+        protected void onDraw(Canvas canvas) {
+            super.onDraw(canvas);
+            int w = getWidth();
+            int h = getHeight();
+            int trackH = dp(getContext(), 14);
+            int top = (h - trackH) / 2;
+            int bottom = top + trackH;
+            int b = dp(getContext(), 2);
+
+            // 轨道外框
+            paint.setColor(0xFF151515);
+            canvas.drawRect(0, top, w, bottom, paint);
+            // 轨道主体
+            paint.setColor(enabled ? (checked ? 0xFF3F6B3F : 0xFF6E6E6E) : 0xFF8A8A8A);
+            canvas.drawRect(b, top + b, w - b, bottom - b, paint);
+            // 顶部高光
+            paint.setColor(checked ? 0xFF8FD07A : 0xFF9A9A9A);
+            canvas.drawRect(b, top + b, w - b, top + b + dp(getContext(), 2), paint);
+            // 底部阴影
+            paint.setColor(0x55000000);
+            canvas.drawRect(b, bottom - b - dp(getContext(), 2), w - b, bottom - b, paint);
+
+            int knobW = dp(getContext(), 22);
+            int knobH = dp(getContext(), 20);
+            int kTop = (h - knobH) / 2;
+            int kLeft = checked ? w - knobW - b : b;
+            paint.setColor(0xFF151515);
+            canvas.drawRect(kLeft, kTop, kLeft + knobW, kTop + knobH, paint);
+            paint.setColor(enabled ? (checked ? 0xFFB8FFB0 : 0xFFD0D0D0) : 0xFFB0B0B0);
+            canvas.drawRect(kLeft + b, kTop + b, kLeft + knobW - b, kTop + knobH - b, paint);
+            paint.setColor(0x33FFFFFF);
+            canvas.drawRect(kLeft + b, kTop + b, kLeft + knobW - b, kTop + b + dp(getContext(), 2), paint);
+            paint.setColor(0x44000000);
+            canvas.drawRect(kLeft + b, kTop + knobH - b - dp(getContext(), 2),
+                    kLeft + knobW - b, kTop + knobH - b, paint);
+        }
+    }
+
+    /** 与控制台一致的输入框样式。 */
+    public static android.widget.EditText terminalInput(Context c, String hint) {
+        android.widget.EditText input = new android.widget.EditText(c);
+        input.setSingleLine(true);
+        input.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
+        input.setTextColor(0xFFB8FFB0);
+        input.setHintTextColor(0xFF6A8A6A);
+        input.setHint(hint);
+        input.setTypeface(mono());
+        input.setBackground(terminalDrawable(c));
+        input.setPadding(dp(c, 9), dp(c, 8), dp(c, 9), dp(c, 8));
+        return input;
+    }
+
+    /** 分段像素进度条。 */
+    public static class SegmentBar extends View {
+        private int total = 10;
+        private int filled = 0;
+        private int fillColor = GREEN_BRIGHT;
+
+        public SegmentBar(Context c) {
+            super(c);
+        }
+
+        public void set(int total, int filled) {
+            this.total = Math.max(1, total);
+            this.filled = Math.max(0, Math.min(total, filled));
+            invalidate();
+        }
+
+        public void setColor(int color) {
+            this.fillColor = color;
+            invalidate();
+        }
+
+        @Override
+        protected void onDraw(Canvas canvas) {
+            super.onDraw(canvas);
+            float gap = dp(getContext(), 1.2f);
+            float w = (getWidth() - gap * (total - 1)) / total;
+            Paint p = new Paint();
+            for (int i = 0; i < total; i++) {
+                float l = i * (w + gap);
+                if (i < filled) {
+                    p.setColor(fillColor);
+                } else {
+                    p.setColor(0xFF7B7B7B);
+                }
+                canvas.drawRect(l, 0, l + w, getHeight(), p);
+                p.setColor(0x33000000);
+                canvas.drawRect(l, getHeight() - dp(getContext(), 2), l + w, getHeight(), p);
+            }
+        }
+    }
+
+    /** 12x12 像素图标。 */
+    public static class PixelIconView extends View {
+        public static final int HOME = 0;
+        public static final int CONSOLE = 1;
+        public static final int AI = 2;
+        public static final int SETTINGS = 3;
+        public static final int CPU = 4;
+        public static final int MEM = 5;
+        public static final int NET = 6;
+        public static final int TPS = 7;
+
+        private static final String[][] PATTERNS = new String[][]{
+                { // HOME
+                        ".....##.....",
+                        "....####....",
+                        "...######...",
+                        "..########..",
+                        ".##########.",
+                        "############",
+                        "...######...",
+                        "...#....#...",
+                        "...#....#...",
+                        "...#....#...",
+                        "...#....#...",
+                        "............"
+                },
+                { // CONSOLE
+                        "............",
+                        ".##########.",
+                        ".#........#.",
+                        ".#.>......#.",
+                        ".#..>.....#.",
+                        ".#...>....#.",
+                        ".#........#.",
+                        ".#.....___#.",
+                        ".##########.",
+                        "............",
+                        "............",
+                        "............"
+                },
+                { // AI
+                        ".....##.....",
+                        ".....##.....",
+                        "....####....",
+                        "..########..",
+                        ".##########.",
+                        "############",
+                        ".##########.",
+                        "..########..",
+                        "....####....",
+                        ".....##.....",
+                        ".....##.....",
+                        "............"
+                },
+                { // SETTINGS
+                        "....####....",
+                        "...#....#...",
+                        "..#..##..#..",
+                        ".#..#..#..#.",
+                        "#..#..#..#..",
+                        "#..####..#..",
+                        "#........#..",
+                        ".#..##..#...",
+                        "..#....#....",
+                        "...####.....",
+                        "............",
+                        "............"
+                },
+                { // CPU
+                        "............",
+                        "..#..##..#..",
+                        "..#.####.#..",
+                        "..########..",
+                        "..#......#..",
+                        "..#.####.#..",
+                        "..#......#..",
+                        "..########..",
+                        "..#.####.#..",
+                        "..#..##..#..",
+                        "............",
+                        "............"
+                },
+                { // MEM
+                        "............",
+                        "............",
+                        ".##########.",
+                        ".#.#.#.#.#..",
+                        ".#........#.",
+                        ".#.#.#.#.#..",
+                        ".#........#.",
+                        ".##########.",
+                        "..#......#..",
+                        "..#......#..",
+                        "............",
+                        "............"
+                },
+                { // NET
+                        ".....##.....",
+                        "....####....",
+                        "...######...",
+                        ".....##.....",
+                        ".....##.....",
+                        ".....##.....",
+                        ".....##.....",
+                        "...######...",
+                        "....####....",
+                        ".....##.....",
+                        "............",
+                        "............"
+                },
+                { // TPS
+                        "....####....",
+                        "..##....##..",
+                        ".#........#.",
+                        "#..........#",
+                        "#....##....#",
+                        "#...####...#",
+                        "#....##....#",
+                        ".#........#.",
+                        "..##....##..",
+                        "....####....",
+                        "............",
+                        "............"
+                }
+        };
+
+        private int kind = HOME;
+        private int color = 0xFF1B1B1B;
+
+        public PixelIconView(Context c) {
+            super(c);
+        }
+
+        public void set(int kind, int color) {
+            this.kind = kind;
+            this.color = color;
+            invalidate();
+        }
+
+        @Override
+        protected void onDraw(Canvas canvas) {
+            super.onDraw(canvas);
+            String[] p = PATTERNS[kind];
+            float cell = Math.min(getWidth(), getHeight()) / 12f;
+            float ox = (getWidth() - cell * 12) / 2f;
+            float oy = (getHeight() - cell * 12) / 2f;
+            Paint paint = new Paint();
+            paint.setColor(color);
+            for (int y = 0; y < 12; y++) {
+                String row = p[y];
+                for (int x = 0; x < 12; x++) {
+                    if (row.charAt(x) == '#') {
+                        canvas.drawRect(ox + x * cell, oy + y * cell,
+                                ox + (x + 1) * cell, oy + (y + 1) * cell, paint);
+                    }
+                }
+            }
+        }
+    }
+
+    // ---------------------------------------------------------------- layouts
+
+    public static LinearLayout panel(Context c, String title) {
+        LinearLayout p = new LinearLayout(c);
+        p.setOrientation(LinearLayout.VERTICAL);
+        p.setBackground(panelDrawable(c));
+        p.setPadding(dp(c, 12), dp(c, 10), dp(c, 12), dp(c, 12));
+        if (title != null) {
+            TextView t = text(c, title, 13, 0xFF3A3A3A, true);
+            t.setLetterSpacing(0.12f);
+            t.setPadding(0, 0, 0, dp(c, 8));
+            p.addView(t);
+        }
+        return p;
+    }
+
+    public static LinearLayout slot(Context c) {
+        LinearLayout s = new LinearLayout(c);
+        s.setOrientation(LinearLayout.VERTICAL);
+        s.setBackground(slotDrawable(c));
+        s.setPadding(dp(c, 9), dp(c, 8), dp(c, 9), dp(c, 8));
+        return s;
+    }
+
+    public static LinearLayout infoRow(Context c, String label, TextView value) {
+        LinearLayout row = new LinearLayout(c);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        row.setBackground(slotDrawable(c));
+        row.setPadding(dp(c, 10), dp(c, 6), dp(c, 10), dp(c, 6));
+        TextView k = text(c, label, 12, PANEL_MUTED, true);
+        row.addView(k, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        row.addView(value, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        return row;
+    }
+
+    public static TextView valueText(Context c, String s) {
+        TextView v = text(c, s, 13, 0xFF111111, true);
+        v.setGravity(Gravity.END);
+        return v;
+    }
+
+    public static LinearLayout.LayoutParams matchWrap(Context c) {
+        LinearLayout.LayoutParams p = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        return p;
+    }
+
+    public static LinearLayout.LayoutParams weight(Context c, float w) {
+        return new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, w);
+    }
+
+    public static LinearLayout.LayoutParams box(Context c, int widthDp, int heightDp) {
+        return new LinearLayout.LayoutParams(dp(c, widthDp), dp(c, heightDp));
+    }
+
+    public static void margins(View v, int l, int t, int r, int b) {
+        ViewGroup.LayoutParams lp = v.getLayoutParams();
+        if (lp instanceof ViewGroup.MarginLayoutParams) {
+            ((ViewGroup.MarginLayoutParams) lp).setMargins(dp(v.getContext(), l), dp(v.getContext(), t),
+                    dp(v.getContext(), r), dp(v.getContext(), b));
+        }
+    }
+}

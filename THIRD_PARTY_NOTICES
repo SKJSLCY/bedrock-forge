@@ -1,0 +1,170 @@
+基岩工坊（Bedrock Forge）第三方组件与许可证说明
+
+版本：1.0
+更新日期：2026-11-13
+适用软件：基岩工坊（com.skjslcy.bedrockforge）
+
+本软件包含或随附以下第三方组件。各组件的版权与许可证归其各自权利人所有；
+本清单不改变、不替代各组件自身的许可证。
+
+================================================================
+1. Box64
+================================================================
+
+项目：Box64
+作者/维护：ptitSeb 及贡献者
+许可证：MIT License
+
+用途：
+  在 ARM64 设备上运行 x86_64 的 Minecraft 基岩版服务端（BDS）。
+
+分发形式：
+  · assets/box64-main.tar.gz（源码包）
+  · 在用户设备上编译后安装到 /data/local/tmp/box64
+
+源码获取：
+  https://github.com/ptitSeb/box64
+
+许可证全文：
+  见 box64 源码包内 LICENSE 文件。
+
+MIT License 要点：
+  允许使用、复制、修改、合并、发布、分发、再许可和/或销售本软件，
+  但须在所有副本或实质性部分中保留版权声明与许可声明；
+  本软件按“现状”提供，不提供任何担保。
+
+================================================================
+2. proot
+================================================================
+
+项目：proot（Termux 版本）
+版本：5.1.107.102
+许可证：GNU General Public License v2.0（GPL-2.0）
+
+用途：
+  在没有 Root 的情况下，以普通用户身份模拟 chroot/挂载环境，
+  为 Box64 与 Ubuntu rootfs 提供运行环境。
+
+分发形式：
+  · assets/proot/proot（可执行文件）
+  · assets/proot/lib、assets/proot/libexec（运行库与 loader）
+
+源码获取：
+  https://github.com/termux/proot
+  对应版本源码可通过上述仓库标签/提交获取。
+
+许可证全文：
+  GNU GPL v2.0：https://www.gnu.org/licenses/old-licenses/gpl-2.0.html
+
+说明：
+  · 本软件未修改 proot 的许可证声明。
+  · 如你分发本软件，应同时遵守 GPL-2.0 的源码提供义务。
+  · 本软件与 proot 通过独立进程方式调用，未将 proot 链接进应用代码。
+
+================================================================
+3. Ubuntu Base rootfs
+================================================================
+
+项目：Ubuntu Base 24.04.5 LTS（ARM64）
+提供方：Canonical Ltd. / Ubuntu 项目
+许可证：各软件包分别适用其自身许可证
+        （GPL、LGPL、BSD、MIT、Apache-2.0 等）
+
+用途：
+  作为 Box64 运行 BDS 的 Linux 用户空间环境。
+
+分发形式：
+  · assets/toolchain-rootfs.tar.gz
+
+源码获取：
+  · Ubuntu 源码包：https://archive.ubuntu.com/ubuntu/pool/
+  · Ubuntu Base 镜像：https://cdimage.ubuntu.com/ubuntu-base/releases/24.04/release/
+  · 本软件使用的下载镜像：https://mirrors.tuna.tsinghua.edu.cn/ubuntu-cdimage/
+
+说明：
+  · rootfs 内含各软件包的版权与许可证文件，位于 /usr/share/doc/*/copyright。
+  · 本软件未删除这些版权文件。
+  · 如对 rootfs 内软件包进行了修改，应按对应许可证提供修改后的源码。
+  · 具体源码获取方式见 SOURCES.md。
+
+================================================================
+4. Shizuku
+================================================================
+
+项目：Shizuku
+作者/维护：RikkaApps（RikkaW）
+许可证：Apache License 2.0
+
+用途：
+  通过 shell 身份执行部署、启动服务端等操作。
+
+分发形式：
+  · app/libs/shizuku-api13.jar
+  · app/libs/shizuku-provider13.jar
+
+源码获取：
+  https://github.com/RikkaApps/Shizuku
+
+许可证全文：
+  https://www.apache.org/licenses/LICENSE-2.0
+
+说明：
+  · 保留 Shizuku 项目的版权与 NOTICE 声明。
+  · 本软件不是 Shizuku 官方应用，与 Shizuku 项目无隶属关系。
+
+================================================================
+5. Android Open Source Project（AOSP）
+================================================================
+
+项目：Android Open Source Project
+许可证：Apache License 2.0
+
+用途：
+  Android 平台 API、构建工具与运行环境。
+
+分发形式：
+  本软件基于 Android SDK 构建，未单独分发 AOSP 源代码。
+
+源码获取：
+  https://source.android.com/
+
+================================================================
+6. 服务与数据来源
+================================================================
+
+以下内容不是随软件分发的开源代码，但软件功能依赖其服务或数据：
+
+MCAPKS
+  · 提供 Minecraft 基岩版服务端历史版本列表接口
+  · 地址：https://mcapks.net
+  · 使用时应遵守其服务条款与使用限制
+
+Mojang / Microsoft
+  · 提供 Minecraft 基岩版专用服务端（BDS）官方下载
+  · 本软件不内置 BDS 本体
+  · 本软件与 Mojang Studios、Microsoft 无隶属或授权关系
+
+清华大学 TUNA 镜像
+  · 提供 Ubuntu Base rootfs 下载
+  · 地址：https://mirrors.tuna.tsinghua.edu.cn/
+
+================================================================
+7. 未包含的组件
+================================================================
+
+本软件不包含：
+
+  · QEMU（已在 0.1 版本移除）
+  · Minecraft 客户端、官方服务端本体、官方美术素材
+  · Mojang / Microsoft 的商标素材
+  · 任何付费闭源组件
+
+================================================================
+8. 联系方式
+================================================================
+
+项目仓库：<待补充>
+反馈渠道：<待补充>
+作者：SKJSLCY
+
+如发现第三方组件遗漏或许可证标注错误，请通过上述渠道反馈。
