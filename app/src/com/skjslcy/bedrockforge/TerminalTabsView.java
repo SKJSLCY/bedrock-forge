@@ -56,9 +56,8 @@ public class TerminalTabsView extends LinearLayout {
         }
         Button add = new MinecraftUi.McButton(activity, "+");
         add.setTextSize(14);
-        LinearLayout.LayoutParams addLp = new LinearLayout.LayoutParams(dp(42), dp(36));
+        LinearLayout.LayoutParams addLp = new LinearLayout.LayoutParams(dp(42), dp(38));
         addLp.gravity = android.view.Gravity.CENTER_VERTICAL;
-        addLp.topMargin = dp(2);
         tabRow.addView(add, addLp);
         add.setOnClickListener(v -> {
             terminals.add(new TerminalView(activity));
