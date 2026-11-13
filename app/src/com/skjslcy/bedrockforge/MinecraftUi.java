@@ -41,6 +41,7 @@ public final class MinecraftUi {
     public static int AMBER = 0xFFB26A00;
 
     public static boolean MINIMAL = false;
+    public static boolean ORE = false;
     public static int BG = 0xFF2A1D13;
     public static int BORDER = 0xFF151515;
     public static int TEXT = 0xFF1B1B1B;
@@ -48,8 +49,28 @@ public final class MinecraftUi {
     public static int ACCENT = 0xFF5BC236;
     public static int ON_ACCENT = 0xFF102014;
 
-    static void applyTheme(boolean minimal, boolean dark) {
+    static void applyTheme(boolean minimal, boolean ore, boolean dark) {
         MINIMAL = minimal;
+        ORE = ore;
+        if (ore) {
+            BG = 0xFF383838;
+            PANEL = 0xFF3A3A3A;
+            SLOT = 0xFF333333;
+            SLOT_LIGHT = 0xFF454545;
+            SLOT_DARK = 0xFF2A2A2A;
+            BORDER = 0xFF1B1B1B;
+            PANEL_TEXT = 0xFFF2F2F2;
+            PANEL_MUTED = 0xFFBDBDBD;
+            TEXT = 0xFFF2F2F2;
+            MUTED = 0xFFBDBDBD;
+            ACCENT = 0xFF3D8B2F;
+            ON_ACCENT = 0xFFFFFFFF;
+            GREEN = 0xFF5BB53F;
+            GREEN_BRIGHT = 0xFF3D8B2F;
+            RED = 0xFFB33A3A;
+            AMBER = 0xFFC9A227;
+            return;
+        }
         if (!minimal) {
             PANEL = 0xFFC6C6C6;
             PANEL_TEXT = 0xFF1B1B1B;
@@ -70,16 +91,16 @@ public final class MinecraftUi {
             return;
         }
         if (dark) {
-            BG = 0xFF0D0C0B;
-            PANEL = 0xFF191816;
-            SLOT = 0xFF141311;
-            SLOT_LIGHT = 0xFF22201D;
-            SLOT_DARK = 0xFF2B2925;
-            BORDER = 0xFF2B2925;
-            PANEL_TEXT = 0xFFF2F0EA;
-            PANEL_MUTED = 0xFF9A958B;
-            TEXT = 0xFFF2F0EA;
-            MUTED = 0xFF9A958B;
+            BG = 0xFF000000;
+            PANEL = 0xFF000000;
+            SLOT = 0xFF0A0A0A;
+            SLOT_LIGHT = 0xFF161616;
+            SLOT_DARK = 0xFF222222;
+            BORDER = 0xFF262626;
+            PANEL_TEXT = 0xFFF7F7F4;
+            PANEL_MUTED = 0xFFA3A3A0;
+            TEXT = 0xFFF7F7F4;
+            MUTED = 0xFFA3A3A0;
             ACCENT = 0xFFA5B4FC;
             ON_ACCENT = 0xFF11132A;
             GREEN = 0xFF6EE7A8;
@@ -106,9 +127,6 @@ public final class MinecraftUi {
         }
     }
 
-    private MinecraftUi() {
-    }
-
     public static int dp(Context c, float v) {
         return (int) (v * c.getResources().getDisplayMetrics().density + 0.5f);
     }
@@ -122,7 +140,7 @@ public final class MinecraftUi {
         t.setText(s);
         t.setTextSize(TypedValue.COMPLEX_UNIT_SP, sp);
         t.setTextColor(ThemeManager.mapTextColor(color));
-        if (MINIMAL) {
+        if (MINIMAL || ORE) {
             t.setTypeface(Typeface.create(bold ? "sans-serif-medium" : "sans-serif",
                     bold ? Typeface.BOLD : Typeface.NORMAL));
         } else {
@@ -192,40 +210,46 @@ public final class MinecraftUi {
     }
 
     public static Drawable panelDrawable(Context c) {
+        if (ORE) return rounded(c, PANEL, 0, 0, 0);
         if (MINIMAL) return rounded(c, PANEL, BORDER, 1, 20);
         float u = dp(c, 2.5f);
         return new BevelDrawable(PANEL, 0xFF151515, 0xFFFFFFFF, 0xFF5A5A5A, u, u);
     }
 
     public static Drawable slotDrawable(Context c) {
+        if (ORE) return rounded(c, SLOT, 0xFF4A4A4A, 1, 0);
         if (MINIMAL) return rounded(c, SLOT, 0, 0, 14);
         float u = dp(c, 1.6f);
         return new BevelDrawable(SLOT, 0xFF8A8A8A, SLOT_LIGHT, SLOT_DARK, u, u);
     }
 
     public static Drawable terminalDrawable(Context c) {
+        if (ORE) return rounded(c, 0xFF2A2A2A, BORDER, 2, 0);
         if (MINIMAL) return rounded(c, PANEL, BORDER, 1, 16);
         float u = dp(c, 2.5f);
         return new BevelDrawable(0xFF151515, 0xFF000000, 0xFF3A3A3A, 0xFF000000, u, u);
     }
 
     public static Drawable hotbarDrawable(Context c) {
+        if (ORE) return rounded(c, 0xFF2B2B2B, BORDER, 2, 0);
         if (MINIMAL) return rounded(c, PANEL, BORDER, 1, 24);
         float u = dp(c, 2.5f);
         return new BevelDrawable(0xFF2A1D13, 0xFF120D08, 0xFF4C3827, 0xFF0B0805, u, u);
     }
 
     public static Drawable selectedDrawable(Context c) {
+        if (ORE) return rounded(c, ACCENT, BORDER, 2, 0);
         if (MINIMAL) return rounded(c, ACCENT, ACCENT, 1, 14);
         float u = dp(c, 2f);
         return new BevelDrawable(0xFFC6C6C6, GREEN_BRIGHT, 0xFFFFFFFF, 0xFF5A5A5A, u, u);
     }
 
     public static int selectedTextColor() {
-        return MINIMAL ? ON_ACCENT : 0xFF1B1B1B;
+        return (MINIMAL || ORE) ? ON_ACCENT : 0xFF1B1B1B;
     }
 
     public static Drawable hotbarSlotDrawable(Context c, boolean active) {
+        if (ORE) return rounded(c, active ? ACCENT : 0x00000000, 0, 0, 0);
         if (MINIMAL) {
             return rounded(c, active ? ACCENT : 0x00000000, 0, 0, 18);
         }
@@ -266,7 +290,7 @@ public final class MinecraftUi {
 
         @Override
         public void draw(Canvas canvas) {
-            if (MINIMAL) {
+            if (MINIMAL || ORE) {
                 canvas.drawColor(BG);
                 return;
             }
@@ -305,6 +329,15 @@ public final class MinecraftUi {
             setMinHeight(0);
             setStateListAnimator(null);
 
+            if (ORE) {
+                setTypeface(Typeface.create("sans-serif", Typeface.NORMAL));
+                setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
+                setShadowLayer(0, 0, 0, 0);
+                setBackground(oreBg(c, 0xFFC9C9C9, 0xFFB5B5B5, 0xFFDADADA));
+                setTextColor(0xFF1B1B1B);
+                return;
+            }
+
             if (MINIMAL) {
                 setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
                 setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
@@ -332,6 +365,16 @@ public final class MinecraftUi {
             setTextColor(new ColorStateList(states, colors));
         }
 
+        private static StateListDrawable oreBg(Context c, int fill, int pressed, int disabled) {
+            StateListDrawable bg = new StateListDrawable();
+            bg.addState(new int[]{android.R.attr.state_pressed},
+                    rounded(c, pressed, 0xFF1B1B1B, 2, 0));
+            bg.addState(new int[]{-android.R.attr.state_enabled},
+                    rounded(c, disabled, 0xFF1B1B1B, 2, 0));
+            bg.addState(new int[]{}, rounded(c, fill, 0xFF1B1B1B, 2, 0));
+            return bg;
+        }
+
         private static StateListDrawable minimalBg(Context c, int fill, int border,
                                                    int pressed, int text) {
             StateListDrawable bg = new StateListDrawable();
@@ -354,6 +397,15 @@ public final class MinecraftUi {
 
         /** 简约主题下的主按钮：强调色。 */
         public void setPrimaryStyle() {
+            if (ORE) {
+                StateListDrawable bg = new StateListDrawable();
+                bg.addState(new int[]{android.R.attr.state_pressed},
+                        rounded(getContext(), 0xFF337426, 0xFF1B1B1B, 2, 0));
+                bg.addState(new int[]{}, rounded(getContext(), ACCENT, 0xFF1B1B1B, 2, 0));
+                setBackground(bg);
+                setTextColor(0xFFFFFFFF);
+                return;
+            }
             if (!MINIMAL) return;
             StateListDrawable bg = new StateListDrawable();
             bg.addState(new int[]{android.R.attr.state_pressed},
@@ -365,6 +417,15 @@ public final class MinecraftUi {
 
         /** 危险操作按钮：红色背景，用于修复/删除等。 */
         public void setDangerStyle() {
+            if (ORE) {
+                StateListDrawable bg = new StateListDrawable();
+                bg.addState(new int[]{android.R.attr.state_pressed},
+                        rounded(getContext(), 0xFF8F2C2C, 0xFF1B1B1B, 2, 0));
+                bg.addState(new int[]{}, rounded(getContext(), 0xFFB33A3A, 0xFF1B1B1B, 2, 0));
+                setBackground(bg);
+                setTextColor(0xFFFFFFFF);
+                return;
+            }
             if (MINIMAL) {
                 StateListDrawable bg = new StateListDrawable();
                 bg.addState(new int[]{android.R.attr.state_pressed},
@@ -449,6 +510,20 @@ public final class MinecraftUi {
             super.onDraw(canvas);
             int w = getWidth();
             int h = getHeight();
+            if (ORE) {
+                int th = dp(getContext(), 28);
+                int top = (h - th) / 2;
+                paint.setColor(checked ? ACCENT : 0xFFBDBDBD);
+                canvas.drawRect(0, top, w, top + th, paint);
+                paint.setColor(0xFF1B1B1B);
+                canvas.drawRect(0, top, w, top + 2, paint);
+                canvas.drawRect(0, top + th - 2, w, top + th, paint);
+                int kw = dp(getContext(), 26);
+                int left = checked ? w - kw - 3 : 3;
+                paint.setColor(0xFFF2F2F2);
+                canvas.drawRect(left, top + 3, left + kw, top + th - 3, paint);
+                return;
+            }
             if (MINIMAL) {
                 float r = dp(getContext(), 14);
                 float top = (h - dp(getContext(), 28)) / 2f;
@@ -498,7 +573,7 @@ public final class MinecraftUi {
     }
 
     public static void styleInput(android.widget.EditText input) {
-        if (!MINIMAL) return;
+        if (!MINIMAL && !ORE) return;
         Context c = input.getContext();
         input.setTextColor(PANEL_TEXT);
         input.setHintTextColor(PANEL_MUTED);
@@ -512,7 +587,7 @@ public final class MinecraftUi {
         android.widget.EditText input = new android.widget.EditText(c);
         input.setSingleLine(true);
         input.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
-        if (MINIMAL) {
+        if (MINIMAL || ORE) {
             input.setTextColor(PANEL_TEXT);
             input.setHintTextColor(PANEL_MUTED);
             input.setTypeface(Typeface.create("sans-serif", Typeface.NORMAL));
@@ -551,6 +626,16 @@ public final class MinecraftUi {
         @Override
         protected void onDraw(Canvas canvas) {
             super.onDraw(canvas);
+            if (ORE) {
+                float gap = dp(getContext(), 2f);
+                float w = (getWidth() - gap * (total - 1)) / total;
+                Paint p = new Paint();
+                for (int i = 0; i < total; i++) {
+                    p.setColor(i < filled ? fillColor : 0xFF555555);
+                    canvas.drawRect(i * (w + gap), 0, i * (w + gap) + w, getHeight(), p);
+                }
+                return;
+            }
             float gap = dp(getContext(), MINIMAL ? 2f : 1.2f);
             float w = (getWidth() - gap * (total - 1)) / total;
             Paint p = new Paint();

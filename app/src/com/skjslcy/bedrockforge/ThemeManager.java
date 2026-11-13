@@ -8,6 +8,7 @@ final class ThemeManager {
 
     static final String CLASSIC = "classic";
     static final String MINIMAL = "minimal";
+    static final String ORE = "ore";
 
     static final String MODE_LIGHT = "light";
     static final String MODE_DARK = "dark";
@@ -18,7 +19,9 @@ final class ThemeManager {
     static String style(Context c) {
         String v = c.getSharedPreferences("ui", Context.MODE_PRIVATE)
                 .getString("theme", CLASSIC);
-        return MINIMAL.equals(v) ? MINIMAL : CLASSIC;
+        if (MINIMAL.equals(v)) return MINIMAL;
+        if (ORE.equals(v)) return ORE;
+        return CLASSIC;
     }
 
     static String mode(Context c) {
@@ -29,6 +32,10 @@ final class ThemeManager {
 
     static boolean isMinimal(Context c) {
         return MINIMAL.equals(style(c));
+    }
+
+    static boolean isOre(Context c) {
+        return ORE.equals(style(c));
     }
 
     static boolean isDark(Context c) {
@@ -46,26 +53,29 @@ final class ThemeManager {
     }
 
     static void apply(Context c) {
-        MinecraftUi.applyTheme(isMinimal(c), isDark(c));
+        MinecraftUi.applyTheme(isMinimal(c), isOre(c), isMinimal(c) && isDark(c));
     }
 
     static void apply(Activity a) {
-        MinecraftUi.applyTheme(isMinimal(a), isMinimal(a) && isDark(a));
         boolean minimal = isMinimal(a);
+        boolean ore = isOre(a);
+        MinecraftUi.applyTheme(minimal, ore, minimal && isDark(a));
         boolean dark = minimal && isDark(a);
-        a.getWindow().setStatusBarColor(minimal
-                ? (dark ? 0xFF0D0C0B : 0xFFEEECE6) : 0xFF1A120B);
-        a.getWindow().setNavigationBarColor(minimal
-                ? (dark ? 0xFF0D0C0B : 0xFFEEECE6) : 0xFF1A120B);
-        if (minimal) {
+        int statusColor = ore ? 0xFFEDEDED
+                : (minimal ? (dark ? 0xFF000000 : 0xFFEEECE6) : 0xFF1A120B);
+        int navColor = ore ? 0xFF383838
+                : (minimal ? (dark ? 0xFF000000 : 0xFFEEECE6) : 0xFF1A120B);
+        a.getWindow().setStatusBarColor(statusColor);
+        a.getWindow().setNavigationBarColor(navColor);
+        if (minimal || ore) {
             a.getWindow().getDecorView().setSystemUiVisibility(
-                    dark ? 0 : android.view.View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR);
+                    (minimal && dark) ? 0 : android.view.View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR);
         }
     }
 
     /** 把经典配色映射到简约主题的等价颜色。 */
     static int mapTextColor(int color) {
-        if (!MinecraftUi.MINIMAL) return color;
+        if (!MinecraftUi.MINIMAL && !MinecraftUi.ORE) return color;
         switch (color) {
             case 0xFFFFFFFF:
             case 0xFF1B1B1B:

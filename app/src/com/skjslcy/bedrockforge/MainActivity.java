@@ -224,7 +224,7 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
         setTheme(R.style.AppTheme);
         super.onCreate(savedInstanceState);
         ThemeManager.apply(this);
-        if (!MinecraftUi.MINIMAL) {
+        if (!MinecraftUi.MINIMAL && !MinecraftUi.ORE) {
             getWindow().setStatusBarColor(0xFF1A120B);
             getWindow().setNavigationBarColor(0xFF1A120B);
         }
@@ -620,7 +620,11 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
 
         LinearLayout shell = new LinearLayout(this);
         shell.setOrientation(LinearLayout.VERTICAL);
-        shell.setPadding(dp(12), dp(10), dp(12), dp(8));
+        if (MinecraftUi.ORE) {
+            shell.setPadding(0, 0, 0, 0);
+        } else {
+            shell.setPadding(dp(12), dp(10), dp(12), dp(8));
+        }
         root.addView(shell, new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
 
@@ -628,9 +632,12 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
         content = new FrameLayout(this);
+        if (MinecraftUi.ORE) {
+            content.setPadding(dp(12), 0, dp(12), 0);
+        }
         LinearLayout.LayoutParams cp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f);
-        cp.topMargin = dp(10);
+        cp.topMargin = MinecraftUi.ORE ? 0 : dp(10);
         shell.addView(content, cp);
 
         shell.addView(buildHotbar(), new LinearLayout.LayoutParams(
@@ -675,6 +682,28 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
         LinearLayout header = new LinearLayout(this);
         header.setOrientation(LinearLayout.HORIZONTAL);
         header.setGravity(Gravity.BOTTOM);
+
+        if (MinecraftUi.ORE) {
+            header.setGravity(Gravity.CENTER_VERTICAL);
+            header.setBackgroundColor(0xFFEDEDED);
+            header.setPadding(dp(18), dp(20), dp(18), dp(20));
+            TextView title = new TextView(this);
+            title.setText("基岩工坊");
+            title.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 26);
+            title.setTextColor(0xFF1B1B1B);
+            title.setGravity(Gravity.CENTER);
+            title.setTypeface(Typeface.create("sans-serif", Typeface.NORMAL));
+            header.addView(title, new LinearLayout.LayoutParams(0,
+                    ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+            TextView gear = new TextView(this);
+            gear.setText("⚙");
+            gear.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 24);
+            gear.setTextColor(0xFF333333);
+            gear.setPadding(dp(14), 0, 0, 0);
+            gear.setOnClickListener(v -> showPage(3));
+            header.addView(gear);
+            return header;
+        }
 
         LinearLayout left = new LinearLayout(this);
         left.setOrientation(LinearLayout.VERTICAL);
@@ -864,6 +893,8 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
             ((MinecraftUi.McButton) startBtn).setPrimaryStyle();
             stopBtn.setTextColor(MinecraftUi.PANEL_TEXT);
             restartBtn.setTextColor(MinecraftUi.PANEL_TEXT);
+        } else if (MinecraftUi.ORE) {
+            ((MinecraftUi.McButton) startBtn).setPrimaryStyle();
         } else {
             startBtn.setTextColor(0xFFE8FFE0);
             stopBtn.setTextColor(0xFFFFE0E0);
@@ -1655,6 +1686,8 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
         panel.addView(classic, dialogBtnLp(0));
         Button minimal = new MinecraftUi.McButton(this, "简约风格");
         panel.addView(minimal, dialogBtnLp(6));
+        Button ore = new MinecraftUi.McButton(this, "Ore UI");
+        panel.addView(ore, dialogBtnLp(6));
 
         TextView modeLabel = MinecraftUi.text(this, "简约风格明暗", 9,
                 MinecraftUi.PANEL_MUTED, true);
@@ -1673,6 +1706,7 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
         final Runnable refresh = () -> {
             classic.setText(ThemeManager.CLASSIC.equals(sel[0]) ? "经典风格（当前）" : "经典风格");
             minimal.setText(ThemeManager.MINIMAL.equals(sel[0]) ? "简约风格（当前）" : "简约风格");
+            ore.setText(ThemeManager.ORE.equals(sel[0]) ? "Ore UI（当前）" : "Ore UI");
             light.setText(ThemeManager.MODE_LIGHT.equals(sel[1]) ? "浅色模式（当前）" : "浅色模式");
             dark.setText(ThemeManager.MODE_DARK.equals(sel[1]) ? "深色模式（当前）" : "深色模式");
             boolean minimalSel = ThemeManager.MINIMAL.equals(sel[0]);
@@ -1681,12 +1715,19 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
             light.setAlpha(minimalSel ? 1f : 0.5f);
             dark.setAlpha(minimalSel ? 1f : 0.5f);
             String modeText = ThemeManager.MODE_DARK.equals(sel[1]) ? "深色模式" : "浅色模式";
-            summary.setText("重启后使用：" + (minimalSel ? "简约风格 · " + modeText : "经典风格"));
+            if (ThemeManager.ORE.equals(sel[0])) {
+                summary.setText("重启后使用：Ore UI · 标准外观（不支持明暗模式）");
+            } else if (minimalSel) {
+                summary.setText("重启后使用：简约风格 · " + modeText);
+            } else {
+                summary.setText("重启后使用：经典风格");
+            }
         };
         refresh.run();
 
         classic.setOnClickListener(v -> { sel[0] = ThemeManager.CLASSIC; refresh.run(); });
         minimal.setOnClickListener(v -> { sel[0] = ThemeManager.MINIMAL; refresh.run(); });
+        ore.setOnClickListener(v -> { sel[0] = ThemeManager.ORE; refresh.run(); });
         light.setOnClickListener(v -> { sel[1] = ThemeManager.MODE_LIGHT; refresh.run(); });
         dark.setOnClickListener(v -> { sel[1] = ThemeManager.MODE_DARK; refresh.run(); });
 
@@ -1819,8 +1860,8 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
             slot.setBackground(MinecraftUi.hotbarSlotDrawable(this, i == 0));
 
             MinecraftUi.PixelIconView icon = new MinecraftUi.PixelIconView(this);
-            if (MinecraftUi.MINIMAL) {
-                icon.set(icons[i], i == 0 ? MinecraftUi.ON_ACCENT : MinecraftUi.MUTED);
+            if (MinecraftUi.MINIMAL || MinecraftUi.ORE) {
+                icon.set(icons[i], i == 0 ? 0xFFFFFFFF : MinecraftUi.MUTED);
             } else {
                 icon.set(icons[i], i == 0 ? MinecraftUi.GREEN_BRIGHT : 0xFFCBBBA4);
             }
@@ -1828,8 +1869,8 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
             slot.addView(icon, ilp);
 
             TextView label = MinecraftUi.text(this, labels[i], 9,
-                    i == 0 ? (MinecraftUi.MINIMAL ? MinecraftUi.ON_ACCENT : 0xFFEAFFDF)
-                            : (MinecraftUi.MINIMAL ? MinecraftUi.MUTED : 0xFFCBBBA4), true);
+                    i == 0 ? ((MinecraftUi.MINIMAL || MinecraftUi.ORE) ? 0xFFFFFFFF : 0xFFEAFFDF)
+                            : ((MinecraftUi.MINIMAL || MinecraftUi.ORE) ? MinecraftUi.MUTED : 0xFFCBBBA4), true);
             label.setGravity(Gravity.CENTER);
             label.setPadding(0, dp(4), 0, 0);
             slot.addView(label);
@@ -2088,11 +2129,11 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
             navIcons[i].set(i == 0 ? MinecraftUi.PixelIconView.HOME :
                     i == 1 ? MinecraftUi.PixelIconView.CONSOLE :
                     i == 2 ? MinecraftUi.PixelIconView.AI : MinecraftUi.PixelIconView.SETTINGS,
-                    MinecraftUi.MINIMAL
-                            ? (active ? MinecraftUi.ON_ACCENT : MinecraftUi.MUTED)
+                    (MinecraftUi.MINIMAL || MinecraftUi.ORE)
+                            ? (active ? 0xFFFFFFFF : MinecraftUi.MUTED)
                             : (active ? MinecraftUi.GREEN_BRIGHT : 0xFFCBBBA4));
-            navLabels[i].setTextColor(MinecraftUi.MINIMAL
-                    ? (active ? MinecraftUi.ON_ACCENT : MinecraftUi.MUTED)
+            navLabels[i].setTextColor((MinecraftUi.MINIMAL || MinecraftUi.ORE)
+                    ? (active ? 0xFFFFFFFF : MinecraftUi.MUTED)
                     : (active ? 0xFFEAFFDF : 0xFFCBBBA4));
         }
     }
@@ -2240,6 +2281,8 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
             ((MinecraftUi.McButton) start).setPrimaryStyle();
             stop.setTextColor(MinecraftUi.PANEL_TEXT);
             restart.setTextColor(MinecraftUi.PANEL_TEXT);
+        } else if (MinecraftUi.ORE) {
+            ((MinecraftUi.McButton) start).setPrimaryStyle();
         } else {
             start.setTextColor(0xFFE8FFE0);
             stop.setTextColor(0xFFFFE0E0);
