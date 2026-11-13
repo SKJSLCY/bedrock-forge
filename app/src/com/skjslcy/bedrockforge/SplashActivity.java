@@ -23,8 +23,13 @@ public class SplashActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         setTheme(R.style.SplashTheme);
         super.onCreate(savedInstanceState);
-        getWindow().setStatusBarColor(0xFF1A120B);
-        getWindow().setNavigationBarColor(0xFF1A120B);
+        ThemeManager.apply(this);
+        getWindow().setStatusBarColor(MinecraftUi.MINIMAL
+                ? (MinecraftUi.MINIMAL && ThemeManager.isDark(this) ? 0xFF0D0C0B : 0xFFEEECE6)
+                : 0xFF1A120B);
+        getWindow().setNavigationBarColor(MinecraftUi.MINIMAL
+                ? (MinecraftUi.MINIMAL && ThemeManager.isDark(this) ? 0xFF0D0C0B : 0xFFEEECE6)
+                : 0xFF1A120B);
 
         FrameLayout root = new FrameLayout(this);
         root.setBackground(new MinecraftUi.DirtDrawable(this));
@@ -33,15 +38,30 @@ public class SplashActivity extends Activity {
         box.setOrientation(LinearLayout.VERTICAL);
         box.setGravity(Gravity.CENTER_HORIZONTAL);
 
-        PixelLogoView logo = new PixelLogoView(this);
-        LinearLayout.LayoutParams llp = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        llp.bottomMargin = dp(6);
-        box.addView(logo, llp);
+        if (MinecraftUi.MINIMAL) {
+            TextView title = new TextView(this);
+            title.setText("基岩工坊");
+            title.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 34);
+            title.setTextColor(MinecraftUi.PANEL_TEXT);
+            title.setTypeface(android.graphics.Typeface.create("serif",
+                    android.graphics.Typeface.BOLD));
+            title.setLetterSpacing(0.1f);
+            title.setIncludeFontPadding(false);
+            LinearLayout.LayoutParams tl = new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            tl.bottomMargin = dp(10);
+            box.addView(title, tl);
+        } else {
+            PixelLogoView logo = new PixelLogoView(this);
+            LinearLayout.LayoutParams llp = new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            llp.bottomMargin = dp(6);
+            box.addView(logo, llp);
+        }
 
         TextView tag = MinecraftUi.text(this, "BEDROCK FORGE", 8, 0xFFD8C7AE, true);
         tag.setLetterSpacing(0.28f);
-        tag.setShadowLayer(dp(1.5f), dp(1.5f), 0, 0xFF1A1A1A);
+        if (!MinecraftUi.MINIMAL) tag.setShadowLayer(dp(1.5f), dp(1.5f), 0, 0xFF1A1A1A);
         LinearLayout.LayoutParams tlp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         tlp.bottomMargin = dp(26);

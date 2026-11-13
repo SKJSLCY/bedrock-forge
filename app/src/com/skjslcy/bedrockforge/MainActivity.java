@@ -224,8 +224,10 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
         setTheme(R.style.AppTheme);
         super.onCreate(savedInstanceState);
         ThemeManager.apply(this);
-        getWindow().setStatusBarColor(0xFF1A120B);
-        getWindow().setNavigationBarColor(0xFF1A120B);
+        if (!MinecraftUi.MINIMAL) {
+            getWindow().setStatusBarColor(0xFF1A120B);
+            getWindow().setNavigationBarColor(0xFF1A120B);
+        }
         buildUi();
         if (savedInstanceState == null) showSplash();
         AppLog.add("App 启动");
@@ -677,6 +679,44 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
         left.setOrientation(LinearLayout.VERTICAL);
         header.addView(left, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
 
+        if (MinecraftUi.MINIMAL) {
+            TextView title = new TextView(this);
+            title.setText("基岩工坊");
+            title.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 30);
+            title.setTextColor(MinecraftUi.PANEL_TEXT);
+            title.setTypeface(android.graphics.Typeface.create("serif",
+                    android.graphics.Typeface.BOLD));
+            title.setLetterSpacing(0.08f);
+            title.setIncludeFontPadding(false);
+            left.addView(title);
+            TextView mtag = MinecraftUi.text(this, "BEDROCK FORGE", 8,
+                    MinecraftUi.PANEL_MUTED, true);
+            mtag.setLetterSpacing(0.28f);
+            mtag.setPadding(0, dp(4), 0, 0);
+            left.addView(mtag);
+
+            LinearLayout mlamp = new LinearLayout(this);
+            mlamp.setOrientation(LinearLayout.HORIZONTAL);
+            mlamp.setGravity(Gravity.CENTER_VERTICAL);
+            mlamp.setPadding(dp(12), dp(7), dp(14), dp(7));
+            android.graphics.drawable.GradientDrawable g =
+                    new android.graphics.drawable.GradientDrawable();
+            g.setColor(MinecraftUi.PANEL);
+            g.setCornerRadius(dp(999));
+            g.setStroke(dp(1), MinecraftUi.BORDER);
+            mlamp.setBackground(g);
+            lampDot = new View(this);
+            lampDot.setBackgroundColor(MinecraftUi.RED);
+            LinearLayout.LayoutParams mdot = new LinearLayout.LayoutParams(dp(9), dp(9));
+            mdot.rightMargin = dp(7);
+            mlamp.addView(lampDot, mdot);
+            lampText = MinecraftUi.text(this, "已停止", 11, MinecraftUi.RED, true);
+            mlamp.addView(lampText);
+            header.addView(mlamp, new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+            return header;
+        }
+
         PixelLogoView logo = new PixelLogoView(this);
         logo.setPadding(0, 0, 0, dp(2));
         left.addView(logo);
@@ -817,11 +857,17 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
         col.addView(buttons, blp);
 
         startBtn = new MinecraftUi.McButton(this, "启动");
-        startBtn.setTextColor(0xFFE8FFE0);
         stopBtn = new MinecraftUi.McButton(this, "停止");
-        stopBtn.setTextColor(0xFFFFE0E0);
         restartBtn = new MinecraftUi.McButton(this, "重启");
-        restartBtn.setTextColor(Color.WHITE);
+        if (MinecraftUi.MINIMAL) {
+            ((MinecraftUi.McButton) startBtn).setPrimaryStyle();
+            stopBtn.setTextColor(MinecraftUi.PANEL_TEXT);
+            restartBtn.setTextColor(MinecraftUi.PANEL_TEXT);
+        } else {
+            startBtn.setTextColor(0xFFE8FFE0);
+            stopBtn.setTextColor(0xFFFFE0E0);
+            restartBtn.setTextColor(Color.WHITE);
+        }
 
         buttons.addView(startBtn, buttonParams(0, 4));
         buttons.addView(stopBtn, buttonParams(4, 4));
@@ -1597,46 +1643,118 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
         wrap.addView(panel, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
-        final String current = ThemeManager.current(this);
-        for (int i = 0; i < ThemeManager.IDS.length; i++) {
-            final String id = ThemeManager.IDS[i];
-            String name = ThemeManager.NAMES[i];
-            if (id.equals(current)) name += "（当前）";
-            Button b = new MinecraftUi.McButton(this, name);
-            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT, dp(46));
-            lp.topMargin = i == 0 ? 0 : dp(6);
-            panel.addView(b, lp);
-            b.setOnClickListener(new View.OnClickListener() {
-                @Override public void onClick(View v) {
-                    ThemeManager.set(MainActivity.this, id);
-                    toast("已应用：" + ThemeManager.label(id));
-                    d.dismiss();
-                }
-            });
-        }
+        final String oldStyle = ThemeManager.style(this);
+        final String oldMode = ThemeManager.mode(this);
+        final String[] sel = {oldStyle, oldMode};
 
-        Button more = new MinecraftUi.McButton(this, "更多主题（开发中）");
-        more.setEnabled(false);
-        more.setAlpha(0.5f);
-        LinearLayout.LayoutParams mlp = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, dp(46));
-        mlp.topMargin = dp(8);
-        panel.addView(more, mlp);
+        TextView styleLabel = MinecraftUi.text(this, "风格", 9, MinecraftUi.PANEL_MUTED, true);
+        styleLabel.setPadding(0, dp(2), 0, dp(4));
+        panel.addView(styleLabel);
+        Button classic = new MinecraftUi.McButton(this, "经典风格");
+        panel.addView(classic, dialogBtnLp(0));
+        Button minimal = new MinecraftUi.McButton(this, "简约风格");
+        panel.addView(minimal, dialogBtnLp(6));
 
-        TextView note = MinecraftUi.text(this,
-                "当前版本仅提供经典风格；后续主题会在此处增加。",
-                8.5f, MinecraftUi.PANEL_MUTED, false);
-        note.setPadding(0, dp(8), 0, 0);
-        panel.addView(note);
+        TextView modeLabel = MinecraftUi.text(this, "简约风格明暗", 9,
+                MinecraftUi.PANEL_MUTED, true);
+        modeLabel.setPadding(0, dp(12), 0, dp(4));
+        panel.addView(modeLabel);
+        Button light = new MinecraftUi.McButton(this, "浅色模式");
+        panel.addView(light, dialogBtnLp(0));
+        Button dark = new MinecraftUi.McButton(this, "深色模式");
+        panel.addView(dark, dialogBtnLp(6));
+
+        final TextView summary = MinecraftUi.text(this, "", 8.5f,
+                MinecraftUi.PANEL_MUTED, false);
+        summary.setPadding(0, dp(10), 0, 0);
+        panel.addView(summary);
+
+        final Runnable refresh = () -> {
+            classic.setText(ThemeManager.CLASSIC.equals(sel[0]) ? "经典风格（当前）" : "经典风格");
+            minimal.setText(ThemeManager.MINIMAL.equals(sel[0]) ? "简约风格（当前）" : "简约风格");
+            light.setText(ThemeManager.MODE_LIGHT.equals(sel[1]) ? "浅色模式（当前）" : "浅色模式");
+            dark.setText(ThemeManager.MODE_DARK.equals(sel[1]) ? "深色模式（当前）" : "深色模式");
+            boolean minimalSel = ThemeManager.MINIMAL.equals(sel[0]);
+            light.setEnabled(minimalSel);
+            dark.setEnabled(minimalSel);
+            light.setAlpha(minimalSel ? 1f : 0.5f);
+            dark.setAlpha(minimalSel ? 1f : 0.5f);
+            String modeText = ThemeManager.MODE_DARK.equals(sel[1]) ? "深色模式" : "浅色模式";
+            summary.setText("重启后使用：" + (minimalSel ? "简约风格 · " + modeText : "经典风格"));
+        };
+        refresh.run();
+
+        classic.setOnClickListener(v -> { sel[0] = ThemeManager.CLASSIC; refresh.run(); });
+        minimal.setOnClickListener(v -> { sel[0] = ThemeManager.MINIMAL; refresh.run(); });
+        light.setOnClickListener(v -> { sel[1] = ThemeManager.MODE_LIGHT; refresh.run(); });
+        dark.setOnClickListener(v -> { sel[1] = ThemeManager.MODE_DARK; refresh.run(); });
+
+        Button apply = new MinecraftUi.McButton(this, "应用主题");
+        panel.addView(apply, dialogBtnLp(12));
+        apply.setOnClickListener(v -> {
+            if (sel[0].equals(oldStyle) && sel[1].equals(oldMode)) {
+                toast("当前已是该主题");
+                return;
+            }
+            d.dismiss();
+            showRestartPrompt(sel[0], sel[1]);
+        });
 
         Button close = new MinecraftUi.McButton(this, "关闭");
-        LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, dp(44));
-        clp.topMargin = dp(8);
-        wrap.addView(close, clp);
+        wrap.addView(close, dialogBtnLp(8));
         close.setOnClickListener(v -> d.dismiss());
 
+        d.setContentView(wrap);
+        d.show();
+        Window w = d.getWindow();
+        if (w != null) {
+            w.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+            w.setLayout((int) (getResources().getDisplayMetrics().widthPixels * 0.9f),
+                    ViewGroup.LayoutParams.WRAP_CONTENT);
+        }
+    }
+
+    private LinearLayout.LayoutParams dialogBtnLp(int topDp) {
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(44));
+        lp.topMargin = dp(topDp);
+        return lp;
+    }
+
+    private void showRestartPrompt(final String style, final String mode) {
+        final Dialog d = new Dialog(this);
+        d.requestWindowFeature(Window.FEATURE_NO_TITLE);
+        LinearLayout wrap = new LinearLayout(this);
+        wrap.setOrientation(LinearLayout.VERTICAL);
+        wrap.setPadding(dp(14), dp(14), dp(14), dp(14));
+        LinearLayout panel = MinecraftUi.panel(this, "重启应用");
+        TextView msg = MinecraftUi.text(this,
+                "主题已更改，需要重启应用后生效。\n\n"
+                        + "点击“立即重启”保存并重启；点击“取消”放弃本次更改。",
+                9.5f, MinecraftUi.PANEL_TEXT, false);
+        msg.setPadding(0, dp(2), 0, dp(10));
+        panel.addView(msg);
+
+        Button restart = new MinecraftUi.McButton(this, "立即重启");
+        panel.addView(restart, dialogBtnLp(0));
+        restart.setOnClickListener(v -> {
+            ThemeManager.setStyle(MainActivity.this, style);
+            ThemeManager.setMode(MainActivity.this, mode);
+            d.dismiss();
+            android.content.Intent i = new android.content.Intent(
+                    MainActivity.this, SplashActivity.class);
+            i.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK
+                    | android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK);
+            startActivity(i);
+            overridePendingTransition(0, 0);
+            finishAffinity();
+        });
+
+        Button cancel = new MinecraftUi.McButton(this, "取消");
+        panel.addView(cancel, dialogBtnLp(6));
+        cancel.setOnClickListener(v -> d.dismiss());
+
+        wrap.addView(panel);
         d.setContentView(wrap);
         d.show();
         Window w = d.getWindow();
@@ -1700,12 +1818,17 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
             slot.setBackground(MinecraftUi.hotbarSlotDrawable(this, i == 0));
 
             MinecraftUi.PixelIconView icon = new MinecraftUi.PixelIconView(this);
-            icon.set(icons[i], i == 0 ? MinecraftUi.GREEN_BRIGHT : 0xFFCBBBA4);
+            if (MinecraftUi.MINIMAL) {
+                icon.set(icons[i], i == 0 ? MinecraftUi.ON_ACCENT : MinecraftUi.MUTED);
+            } else {
+                icon.set(icons[i], i == 0 ? MinecraftUi.GREEN_BRIGHT : 0xFFCBBBA4);
+            }
             LinearLayout.LayoutParams ilp = new LinearLayout.LayoutParams(dp(23), dp(23));
             slot.addView(icon, ilp);
 
             TextView label = MinecraftUi.text(this, labels[i], 9,
-                    i == 0 ? 0xFFEAFFDF : 0xFFCBBBA4, true);
+                    i == 0 ? (MinecraftUi.MINIMAL ? MinecraftUi.ON_ACCENT : 0xFFEAFFDF)
+                            : (MinecraftUi.MINIMAL ? MinecraftUi.MUTED : 0xFFCBBBA4), true);
             label.setGravity(Gravity.CENTER);
             label.setPadding(0, dp(4), 0, 0);
             slot.addView(label);
@@ -1748,7 +1871,7 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
         });
 
         manageTitle = MinecraftUi.text(this, "服务器管理", 18, Color.WHITE, true);
-        manageTitle.setShadowLayer(dp(2), dp(2), 0, 0xFF1A1A1A);
+        if (!MinecraftUi.MINIMAL) manageTitle.setShadowLayer(dp(2), dp(2), 0, 0xFF1A1A1A);
         LinearLayout.LayoutParams tlp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         tlp.leftMargin = dp(12);
@@ -1964,8 +2087,12 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
             navIcons[i].set(i == 0 ? MinecraftUi.PixelIconView.HOME :
                     i == 1 ? MinecraftUi.PixelIconView.CONSOLE :
                     i == 2 ? MinecraftUi.PixelIconView.AI : MinecraftUi.PixelIconView.SETTINGS,
-                    active ? MinecraftUi.GREEN_BRIGHT : 0xFFCBBBA4);
-            navLabels[i].setTextColor(active ? 0xFFEAFFDF : 0xFFCBBBA4);
+                    MinecraftUi.MINIMAL
+                            ? (active ? MinecraftUi.ON_ACCENT : MinecraftUi.MUTED)
+                            : (active ? MinecraftUi.GREEN_BRIGHT : 0xFFCBBBA4));
+            navLabels[i].setTextColor(MinecraftUi.MINIMAL
+                    ? (active ? MinecraftUi.ON_ACCENT : MinecraftUi.MUTED)
+                    : (active ? 0xFFEAFFDF : 0xFFCBBBA4));
         }
     }
 
@@ -2106,11 +2233,17 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
         LinearLayout row = new LinearLayout(this);
         row.setOrientation(LinearLayout.HORIZONTAL);
         Button start = new MinecraftUi.McButton(this, "启动");
-        start.setTextColor(0xFFE8FFE0);
         Button stop = new MinecraftUi.McButton(this, "停止");
-        stop.setTextColor(0xFFFFE0E0);
         Button restart = new MinecraftUi.McButton(this, "重启");
-        restart.setTextColor(Color.WHITE);
+        if (MinecraftUi.MINIMAL) {
+            ((MinecraftUi.McButton) start).setPrimaryStyle();
+            stop.setTextColor(MinecraftUi.PANEL_TEXT);
+            restart.setTextColor(MinecraftUi.PANEL_TEXT);
+        } else {
+            start.setTextColor(0xFFE8FFE0);
+            stop.setTextColor(0xFFFFE0E0);
+            restart.setTextColor(Color.WHITE);
+        }
         start.setEnabled(!running);
         stop.setEnabled(running);
         restart.setEnabled(running);
@@ -2335,7 +2468,7 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
         if (!running) {
             if (playersValue != null) {
                 playersValue.setText("--/--");
-                playersValue.setTextColor(0xFF4A4A4A);
+                playersValue.setTextColor(MinecraftUi.MINIMAL ? MinecraftUi.PANEL_MUTED : 0xFF4A4A4A);
             }
             serverReady = false;
         } else if (!ready && playersValue != null) {
@@ -2418,7 +2551,7 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
                     : (tps >= 15 ? MinecraftUi.GREEN_BRIGHT : (tps >= 8 ? MinecraftUi.AMBER : MinecraftUi.RED));
             tpsBar.set(10, showMetrics ? Math.min(10, tps / 2) : 0);
             tpsBar.setColor(tpsColor);
-            if (tpsValue != null) tpsValue.setTextColor(0xFF111111);
+            if (tpsValue != null) tpsValue.setTextColor(MinecraftUi.MINIMAL ? MinecraftUi.PANEL_TEXT : 0xFF111111);
         }
     }
 

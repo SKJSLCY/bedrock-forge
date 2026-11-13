@@ -3,41 +3,109 @@ package com.skjslcy.bedrockforge;
 import android.app.Activity;
 import android.content.Context;
 
-/** 主题管理：当前仅经典风格，预留后续主题 ID。 */
+/** 主题管理：经典风格 / 简约风格（浅色、深色）。 */
 final class ThemeManager {
 
     static final String CLASSIC = "classic";
+    static final String MINIMAL = "minimal";
 
-    static final String[] IDS = {CLASSIC};
-    static final String[] NAMES = {"经典风格"};
+    static final String MODE_LIGHT = "light";
+    static final String MODE_DARK = "dark";
 
     private ThemeManager() {
     }
 
-    static String current(Context c) {
+    static String style(Context c) {
         String v = c.getSharedPreferences("ui", Context.MODE_PRIVATE)
                 .getString("theme", CLASSIC);
-        for (String id : IDS) {
-            if (id.equals(v)) return v;
-        }
-        return CLASSIC;
+        return MINIMAL.equals(v) ? MINIMAL : CLASSIC;
     }
 
-    static void set(Context c, String id) {
+    static String mode(Context c) {
+        String v = c.getSharedPreferences("ui", Context.MODE_PRIVATE)
+                .getString("theme_mode", MODE_LIGHT);
+        return MODE_DARK.equals(v) ? MODE_DARK : MODE_LIGHT;
+    }
+
+    static boolean isMinimal(Context c) {
+        return MINIMAL.equals(style(c));
+    }
+
+    static boolean isDark(Context c) {
+        return MODE_DARK.equals(mode(c));
+    }
+
+    static void setStyle(Context c, String style) {
         c.getSharedPreferences("ui", Context.MODE_PRIVATE).edit()
-                .putString("theme", id).apply();
+                .putString("theme", style).apply();
     }
 
-    static String label(String id) {
-        for (int i = 0; i < IDS.length; i++) {
-            if (IDS[i].equals(id)) return NAMES[i];
-        }
-        return NAMES[0];
+    static void setMode(Context c, String mode) {
+        c.getSharedPreferences("ui", Context.MODE_PRIVATE).edit()
+                .putString("theme_mode", mode).apply();
+    }
+
+    static void apply(Context c) {
+        MinecraftUi.applyTheme(isMinimal(c), isDark(c));
     }
 
     static void apply(Activity a) {
-        // 目前只有经典风格；后续主题在这里切换调色板与背景。
-        a.getWindow().setStatusBarColor(0xFF1A120B);
-        a.getWindow().setNavigationBarColor(0xFF1A120B);
+        MinecraftUi.applyTheme(isMinimal(a), isMinimal(a) && isDark(a));
+        boolean minimal = isMinimal(a);
+        boolean dark = minimal && isDark(a);
+        a.getWindow().setStatusBarColor(minimal
+                ? (dark ? 0xFF0D0C0B : 0xFFEEECE6) : 0xFF1A120B);
+        a.getWindow().setNavigationBarColor(minimal
+                ? (dark ? 0xFF0D0C0B : 0xFFEEECE6) : 0xFF1A120B);
+        if (minimal) {
+            a.getWindow().getDecorView().setSystemUiVisibility(
+                    dark ? 0 : android.view.View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR);
+        }
+    }
+
+    /** 把经典配色映射到简约主题的等价颜色。 */
+    static int mapTextColor(int color) {
+        if (!MinecraftUi.MINIMAL) return color;
+        switch (color) {
+            case 0xFFFFFFFF:
+            case 0xFF1B1B1B:
+            case 0xFF111111:
+            case 0xFF3A3A3A:
+            case 0xFF151515:
+                return MinecraftUi.PANEL_TEXT;
+            case 0xFF4A4A4A:
+            case 0xFF8A8A8A:
+            case 0xFFD8C7AE:
+            case 0xFFCBBBA4:
+            case 0xFFB0B0B0:
+            case 0xFF9A9A9A:
+            case 0xFF6A8A6A:
+            case 0xFFE8E8E8:
+            case 0xFFD8D8D8:
+            case 0xFFD0D0D0:
+            case 0xFFC0C0C0:
+                return MinecraftUi.PANEL_MUTED;
+            case 0xFFEAFFDF:
+            case 0xFFB8FFB0:
+            case 0xFFE8FFE0:
+            case 0xFF7EE787:
+            case 0xFF5BC236:
+            case 0xFF2F7D1F:
+                return MinecraftUi.GREEN;
+            case 0xFFFF6B6B:
+            case 0xFFFF7062:
+            case 0xFFB3261E:
+            case 0xFFFFE0E0:
+                return MinecraftUi.RED;
+            case 0xFFFFD166:
+            case 0xFFFFD180:
+            case 0xFFFFB74D:
+            case 0xFFB26A00:
+                return MinecraftUi.AMBER;
+            case 0xFFFFF2F2:
+                return 0xFFFFFFFF;
+            default:
+                return color;
+        }
     }
 }

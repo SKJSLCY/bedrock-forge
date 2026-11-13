@@ -13,6 +13,7 @@ import android.graphics.Rect;
 import android.graphics.Shader;
 import android.graphics.Typeface;
 import android.graphics.drawable.Drawable;
+import android.graphics.drawable.GradientDrawable;
 import android.graphics.drawable.StateListDrawable;
 import android.util.TypedValue;
 import android.view.Gravity;
@@ -28,16 +29,82 @@ import java.util.Random;
 /** Minecraft-GUI 风格的绘制与控件工具。 */
 public final class MinecraftUi {
 
-    public static final int PANEL = 0xFFC6C6C6;
-    public static final int PANEL_TEXT = 0xFF1B1B1B;
-    public static final int PANEL_MUTED = 0xFF4A4A4A;
-    public static final int SLOT = 0xFFA8A8A8;
-    public static final int SLOT_LIGHT = 0xFFE0E0E0;
-    public static final int SLOT_DARK = 0xFF777777;
-    public static final int GREEN = 0xFF2F7D1F;
-    public static final int GREEN_BRIGHT = 0xFF5BC236;
-    public static final int RED = 0xFFB3261E;
-    public static final int AMBER = 0xFFB26A00;
+    public static int PANEL = 0xFFC6C6C6;
+    public static int PANEL_TEXT = 0xFF1B1B1B;
+    public static int PANEL_MUTED = 0xFF4A4A4A;
+    public static int SLOT = 0xFFA8A8A8;
+    public static int SLOT_LIGHT = 0xFFE0E0E0;
+    public static int SLOT_DARK = 0xFF777777;
+    public static int GREEN = 0xFF2F7D1F;
+    public static int GREEN_BRIGHT = 0xFF5BC236;
+    public static int RED = 0xFFB3261E;
+    public static int AMBER = 0xFFB26A00;
+
+    public static boolean MINIMAL = false;
+    public static int BG = 0xFF2A1D13;
+    public static int BORDER = 0xFF151515;
+    public static int TEXT = 0xFF1B1B1B;
+    public static int MUTED = 0xFF4A4A4A;
+    public static int ACCENT = 0xFF5BC236;
+    public static int ON_ACCENT = 0xFF102014;
+
+    static void applyTheme(boolean minimal, boolean dark) {
+        MINIMAL = minimal;
+        if (!minimal) {
+            PANEL = 0xFFC6C6C6;
+            PANEL_TEXT = 0xFF1B1B1B;
+            PANEL_MUTED = 0xFF4A4A4A;
+            SLOT = 0xFFA8A8A8;
+            SLOT_LIGHT = 0xFFE0E0E0;
+            SLOT_DARK = 0xFF777777;
+            GREEN = 0xFF2F7D1F;
+            GREEN_BRIGHT = 0xFF5BC236;
+            RED = 0xFFB3261E;
+            AMBER = 0xFFB26A00;
+            BG = 0xFF2A1D13;
+            BORDER = 0xFF151515;
+            TEXT = 0xFF1B1B1B;
+            MUTED = 0xFF4A4A4A;
+            ACCENT = 0xFF5BC236;
+            ON_ACCENT = 0xFF102014;
+            return;
+        }
+        if (dark) {
+            BG = 0xFF0D0C0B;
+            PANEL = 0xFF191816;
+            SLOT = 0xFF141311;
+            SLOT_LIGHT = 0xFF22201D;
+            SLOT_DARK = 0xFF2B2925;
+            BORDER = 0xFF2B2925;
+            PANEL_TEXT = 0xFFF2F0EA;
+            PANEL_MUTED = 0xFF9A958B;
+            TEXT = 0xFFF2F0EA;
+            MUTED = 0xFF9A958B;
+            ACCENT = 0xFFA5B4FC;
+            ON_ACCENT = 0xFF11132A;
+            GREEN = 0xFF6EE7A8;
+            GREEN_BRIGHT = 0xFFA5B4FC;
+            RED = 0xFFFF7062;
+            AMBER = 0xFFF0A35E;
+        } else {
+            BG = 0xFFEEECE6;
+            PANEL = 0xFFFFFFFF;
+            SLOT = 0xFFF5F3EE;
+            SLOT_LIGHT = 0xFFFFFFFF;
+            SLOT_DARK = 0xFFE3E0D8;
+            BORDER = 0xFFE3E0D8;
+            PANEL_TEXT = 0xFF171614;
+            PANEL_MUTED = 0xFF77736B;
+            TEXT = 0xFF171614;
+            MUTED = 0xFF77736B;
+            ACCENT = 0xFF4338CA;
+            ON_ACCENT = 0xFFFFFFFF;
+            GREEN = 0xFF15803D;
+            GREEN_BRIGHT = 0xFF4338CA;
+            RED = 0xFFB42318;
+            AMBER = 0xFFB45309;
+        }
+    }
 
     private MinecraftUi() {
     }
@@ -54,8 +121,13 @@ public final class MinecraftUi {
         TextView t = new TextView(c);
         t.setText(s);
         t.setTextSize(TypedValue.COMPLEX_UNIT_SP, sp);
-        t.setTextColor(color);
-        t.setTypeface(bold ? mono() : Typeface.create("sans-serif", Typeface.NORMAL));
+        t.setTextColor(ThemeManager.mapTextColor(color));
+        if (MINIMAL) {
+            t.setTypeface(Typeface.create(bold ? "sans-serif-medium" : "sans-serif",
+                    bold ? Typeface.BOLD : Typeface.NORMAL));
+        } else {
+            t.setTypeface(bold ? mono() : Typeface.create("sans-serif", Typeface.NORMAL));
+        }
         t.setIncludeFontPadding(false);
         return t;
     }
@@ -110,27 +182,43 @@ public final class MinecraftUi {
         }
     }
 
+    private static Drawable rounded(Context c, int fill, int stroke, int strokeWidth, int radiusDp) {
+        GradientDrawable g = new GradientDrawable();
+        g.setShape(GradientDrawable.RECTANGLE);
+        g.setColor(fill);
+        g.setCornerRadius(dp(c, radiusDp));
+        if (strokeWidth > 0) g.setStroke(dp(c, strokeWidth), stroke);
+        return g;
+    }
+
     public static Drawable panelDrawable(Context c) {
+        if (MINIMAL) return rounded(c, PANEL, BORDER, 1, 20);
         float u = dp(c, 2.5f);
         return new BevelDrawable(PANEL, 0xFF151515, 0xFFFFFFFF, 0xFF5A5A5A, u, u);
     }
 
     public static Drawable slotDrawable(Context c) {
+        if (MINIMAL) return rounded(c, SLOT, 0, 0, 14);
         float u = dp(c, 1.6f);
         return new BevelDrawable(SLOT, 0xFF8A8A8A, SLOT_LIGHT, SLOT_DARK, u, u);
     }
 
     public static Drawable terminalDrawable(Context c) {
+        if (MINIMAL) return rounded(c, 0xFF171614, BORDER, 1, 16);
         float u = dp(c, 2.5f);
         return new BevelDrawable(0xFF151515, 0xFF000000, 0xFF3A3A3A, 0xFF000000, u, u);
     }
 
     public static Drawable hotbarDrawable(Context c) {
+        if (MINIMAL) return rounded(c, PANEL, BORDER, 1, 24);
         float u = dp(c, 2.5f);
         return new BevelDrawable(0xFF2A1D13, 0xFF120D08, 0xFF4C3827, 0xFF0B0805, u, u);
     }
 
     public static Drawable hotbarSlotDrawable(Context c, boolean active) {
+        if (MINIMAL) {
+            return rounded(c, active ? ACCENT : 0x00000000, 0, 0, 18);
+        }
         float u = dp(c, 2f);
         if (active) {
             return new BevelDrawable(0xFF3A2A1C, GREEN_BRIGHT, 0xFF7EE356, 0xFF21160D, u, u);
@@ -168,6 +256,10 @@ public final class MinecraftUi {
 
         @Override
         public void draw(Canvas canvas) {
+            if (MINIMAL) {
+                canvas.drawColor(BG);
+                return;
+            }
             canvas.drawRect(getBounds(), paint);
             canvas.drawRect(getBounds(), overlay);
         }
@@ -198,12 +290,21 @@ public final class MinecraftUi {
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
             setTypeface(mono());
             setIncludeFontPadding(false);
-            setShadowLayer(dp(c, 1.5f), dp(c, 1.5f), 0, 0xFF3F3F3F);
             setPadding(dp(c, 8), 0, dp(c, 8), 0);
             setMinWidth(0);
             setMinHeight(0);
             setStateListAnimator(null);
 
+            if (MINIMAL) {
+                setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
+                setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
+                setShadowLayer(0, 0, 0, 0);
+                setBackground(minimalBg(c, PANEL, BORDER, SLOT, TEXT));
+                setTextColor(textStates(TEXT, MUTED));
+                return;
+            }
+
+            setShadowLayer(dp(c, 1.5f), dp(c, 1.5f), 0, 0xFF3F3F3F);
             StateListDrawable bg = new StateListDrawable();
             bg.addState(new int[]{android.R.attr.state_pressed},
                     new BevelDrawable(0xFF6E6E6E, 0xFF151515, 0xFF9A9A9A, 0xFF3F3F3F, dp(c, 2.5f), dp(c, 2.5f)));
@@ -221,8 +322,49 @@ public final class MinecraftUi {
             setTextColor(new ColorStateList(states, colors));
         }
 
+        private static StateListDrawable minimalBg(Context c, int fill, int border,
+                                                   int pressed, int text) {
+            StateListDrawable bg = new StateListDrawable();
+            bg.addState(new int[]{android.R.attr.state_pressed},
+                    rounded(c, pressed, border, 1, 14));
+            bg.addState(new int[]{-android.R.attr.state_enabled},
+                    rounded(c, SLOT, border, 1, 14));
+            bg.addState(new int[]{}, rounded(c, fill, border, 1, 14));
+            return bg;
+        }
+
+        private static ColorStateList textStates(int normal, int disabled) {
+            int[][] states = new int[][]{
+                    new int[]{-android.R.attr.state_enabled},
+                    new int[]{}
+            };
+            int[] colors = new int[]{disabled, normal};
+            return new ColorStateList(states, colors);
+        }
+
+        /** 简约主题下的主按钮：强调色。 */
+        public void setPrimaryStyle() {
+            if (!MINIMAL) return;
+            StateListDrawable bg = new StateListDrawable();
+            bg.addState(new int[]{android.R.attr.state_pressed},
+                    rounded(getContext(), SLOT_DARK, ACCENT, 1, 14));
+            bg.addState(new int[]{}, rounded(getContext(), ACCENT, ACCENT, 1, 14));
+            setBackground(bg);
+            setTextColor(ON_ACCENT);
+        }
+
         /** 危险操作按钮：红色背景，用于修复/删除等。 */
         public void setDangerStyle() {
+            if (MINIMAL) {
+                StateListDrawable bg = new StateListDrawable();
+                bg.addState(new int[]{android.R.attr.state_pressed},
+                        rounded(getContext(), 0xFF7F1D1D, RED, 1, 14));
+                bg.addState(new int[]{},
+                        rounded(getContext(), RED, RED, 1, 14));
+                setBackground(bg);
+                setTextColor(0xFFFFFFFF);
+                return;
+            }
             StateListDrawable bg = new StateListDrawable();
             bg.addState(new int[]{android.R.attr.state_pressed},
                     new BevelDrawable(0xFF7A1F1F, 0xFF220000, 0xFFD85A5A, 0xFF3A0000,
@@ -297,6 +439,20 @@ public final class MinecraftUi {
             super.onDraw(canvas);
             int w = getWidth();
             int h = getHeight();
+            if (MINIMAL) {
+                float r = dp(getContext(), 14);
+                float top = (h - dp(getContext(), 28)) / 2f;
+                float bottom = top + dp(getContext(), 28);
+                paint.setAntiAlias(true);
+                paint.setColor(enabled ? (checked ? ACCENT : SLOT_DARK) : SLOT);
+                canvas.drawRoundRect(0, top, w, bottom, r, r, paint);
+                float knob = dp(getContext(), 22);
+                float left = checked ? w - knob - dp(getContext(), 3) : dp(getContext(), 3);
+                paint.setColor(enabled ? PANEL : SLOT);
+                canvas.drawRoundRect(left, top + dp(getContext(), 3),
+                        left + knob, bottom - dp(getContext(), 3), knob / 2, knob / 2, paint);
+                return;
+            }
             int trackH = dp(getContext(), 14);
             int top = (h - trackH) / 2;
             int bottom = top + trackH;
@@ -336,8 +492,8 @@ public final class MinecraftUi {
         android.widget.EditText input = new android.widget.EditText(c);
         input.setSingleLine(true);
         input.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
-        input.setTextColor(0xFFB8FFB0);
-        input.setHintTextColor(0xFF6A8A6A);
+        input.setTextColor(MINIMAL ? 0xFFB8FFB0 : 0xFFB8FFB0);
+        input.setHintTextColor(MINIMAL ? 0xFF7E8C7A : 0xFF6A8A6A);
         input.setHint(hint);
         input.setTypeface(mono());
         input.setBackground(terminalDrawable(c));
@@ -554,7 +710,7 @@ public final class MinecraftUi {
         p.setBackground(panelDrawable(c));
         p.setPadding(dp(c, 12), dp(c, 10), dp(c, 12), dp(c, 12));
         if (title != null) {
-            TextView t = text(c, title, 13, 0xFF3A3A3A, true);
+            TextView t = text(c, title, 13, PANEL_TEXT, true);
             t.setLetterSpacing(0.12f);
             t.setPadding(0, 0, 0, dp(c, 8));
             p.addView(t);
