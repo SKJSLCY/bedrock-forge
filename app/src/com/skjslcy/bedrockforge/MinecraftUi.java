@@ -365,13 +365,56 @@ public final class MinecraftUi {
             setTextColor(new ColorStateList(states, colors));
         }
 
+        private static Drawable ore3d(Context c, final int top, final int bottom,
+                                      final int bevel, final boolean pressed) {
+            return new Drawable() {
+                private final Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
+                private final int b = dp(c, 2);
+                private final int bev = pressed ? dp(c, 2) : dp(c, 7);
+                private final int w = Math.max(1, dp(c, 2));
+
+                @Override public void draw(Canvas canvas) {
+                    Rect r = getBounds();
+                    if (r.isEmpty()) return;
+                    p.setStyle(Paint.Style.FILL);
+                    p.setColor(0xFF1B1B1B);
+                    canvas.drawRect(r, p);
+
+                    p.setColor(bevel);
+                    canvas.drawRect(r.left + b, r.top + b, r.right - b, r.bottom - b, p);
+
+                    int faceBottom = r.bottom - b - bev;
+                    p.setShader(new android.graphics.LinearGradient(
+                            r.left, r.top, r.left, faceBottom, top, bottom,
+                            android.graphics.Shader.TileMode.CLAMP));
+                    canvas.drawRect(r.left + b, r.top + b, r.right - b, faceBottom, p);
+                    p.setShader(null);
+                    p.setStyle(Paint.Style.FILL);
+                    p.setColor(0x66FFFFFF);
+                    canvas.drawRect(r.left + b, r.top + b,
+                            r.right - b, r.top + b + Math.max(1, dp(c, 2)), p);
+
+                    p.setStyle(Paint.Style.STROKE);
+                    p.setStrokeWidth(w);
+                    p.setColor(0xFF1B1B1B);
+                    canvas.drawRect(r.left + b, r.top + b,
+                            r.right - b, faceBottom, p);
+                }
+
+                @Override public void setAlpha(int alpha) { p.setAlpha(alpha); }
+                @Override public void setColorFilter(android.graphics.ColorFilter cf) { p.setColorFilter(cf); }
+                @Override public int getOpacity() { return android.graphics.PixelFormat.OPAQUE; }
+            };
+        }
+
         private static StateListDrawable oreBg(Context c, int fill, int pressed, int disabled) {
             StateListDrawable bg = new StateListDrawable();
             bg.addState(new int[]{android.R.attr.state_pressed},
-                    rounded(c, pressed, 0xFF1B1B1B, 2, 0));
+                    ore3d(c, 0xFFC4C4C4, 0xFFB0B0B0, 0xFF111111, true));
             bg.addState(new int[]{-android.R.attr.state_enabled},
-                    rounded(c, disabled, 0xFF1B1B1B, 2, 0));
-            bg.addState(new int[]{}, rounded(c, fill, 0xFF1B1B1B, 2, 0));
+                    ore3d(c, 0xFFE0E0E0, 0xFFD0D0D0, 0xFF8A8A8A, false));
+            bg.addState(new int[]{},
+                    ore3d(c, 0xFFE6E6E6, 0xFFC0C0C0, 0xFF333333, false));
             return bg;
         }
 
