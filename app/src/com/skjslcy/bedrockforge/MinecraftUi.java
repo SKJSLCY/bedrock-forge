@@ -237,23 +237,23 @@ public final class MinecraftUi {
         return new BevelDrawable(0xFF2A1D13, 0xFF120D08, 0xFF4C3827, 0xFF0B0805, u, u);
     }
 
-    public static Drawable oreGreenDrawable(Context c, final boolean pressed) {
+    public static Drawable oreRaisedDrawable(Context c, final int lip, final int top,
+                                             final int bottom, final int stroke,
+                                             final boolean pressed) {
         return new Drawable() {
             private final Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
             private final int b = dp(c, 2);
-            private final int bev = pressed ? dp(c, 1) : dp(c, 2);
+            private final int bev = pressed ? dp(c, 2) : dp(c, 4);
 
             @Override public void draw(Canvas canvas) {
                 Rect r = getBounds();
                 if (r.isEmpty()) return;
                 p.setStyle(Paint.Style.FILL);
-                p.setColor(0xFF245214);
+                p.setColor(lip);
                 canvas.drawRect(r, p);
                 int faceBottom = r.bottom - bev;
                 p.setShader(new android.graphics.LinearGradient(
-                        r.left, r.top, r.left, faceBottom,
-                        pressed ? 0xFF55A83C : 0xFF65BE4A,
-                        pressed ? 0xFF438A2E : 0xFF3F8A2A,
+                        r.left, r.top, r.left, faceBottom, top, bottom,
                         android.graphics.Shader.TileMode.CLAMP));
                 canvas.drawRect(r.left + b, r.top + b, r.right - b, faceBottom, p);
                 p.setShader(null);
@@ -263,7 +263,7 @@ public final class MinecraftUi {
                         r.top + b + Math.max(1, dp(c, 2)), p);
                 p.setStyle(Paint.Style.STROKE);
                 p.setStrokeWidth(Math.max(1, dp(c, 1)));
-                p.setColor(0xFF2A5C1A);
+                p.setColor(stroke);
                 canvas.drawRect(r.left + b, r.top + b, r.right - b, faceBottom, p);
             }
 
@@ -271,6 +271,13 @@ public final class MinecraftUi {
             @Override public void setColorFilter(android.graphics.ColorFilter cf) { p.setColorFilter(cf); }
             @Override public int getOpacity() { return android.graphics.PixelFormat.OPAQUE; }
         };
+    }
+
+    public static Drawable oreGreenDrawable(Context c, boolean pressed) {
+        return oreRaisedDrawable(c, 0xFF1F4A12,
+                pressed ? 0xFF55A83C : 0xFF6CCB4E,
+                pressed ? 0xFF438A2E : 0xFF3E8A28,
+                0xFF2A5C1A, pressed);
     }
 
     public static Drawable selectedDrawable(Context c) {
@@ -495,6 +502,18 @@ public final class MinecraftUi {
 
         /** 亮红色危险按钮：用于清除数据等。 */
         public void setBrightDangerStyle() {
+            if (ORE) {
+                StateListDrawable ore = new StateListDrawable();
+                ore.addState(new int[]{android.R.attr.state_pressed},
+                        oreRaisedDrawable(getContext(), 0xFF5E1212,
+                                0xFFE05555, 0xFFA62E2E, 0xFF7F1111, true));
+                ore.addState(new int[]{},
+                        oreRaisedDrawable(getContext(), 0xFF6B1515,
+                                0xFFE85A5A, 0xFFB33A3A, 0xFF7F1111, false));
+                setBackground(ore);
+                setTextColor(0xFFFFFFFF);
+                return;
+            }
             StateListDrawable bg = new StateListDrawable();
             bg.addState(new int[]{android.R.attr.state_pressed},
                     rounded(getContext(), 0xFFC62828, 0xFF7F1111, 2, 0));
@@ -510,8 +529,11 @@ public final class MinecraftUi {
             if (ORE) {
                 StateListDrawable bg = new StateListDrawable();
                 bg.addState(new int[]{android.R.attr.state_pressed},
-                        rounded(getContext(), 0xFF8F2C2C, 0xFF1B1B1B, 2, 0));
-                bg.addState(new int[]{}, rounded(getContext(), 0xFFB33A3A, 0xFF1B1B1B, 2, 0));
+                        oreRaisedDrawable(getContext(), 0xFF5E1212,
+                                0xFFE05555, 0xFFA62E2E, 0xFF7F1111, true));
+                bg.addState(new int[]{},
+                        oreRaisedDrawable(getContext(), 0xFF6B1515,
+                                0xFFE85A5A, 0xFFB33A3A, 0xFF7F1111, false));
                 setBackground(bg);
                 setTextColor(0xFFFFFFFF);
                 return;
