@@ -1739,7 +1739,7 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
         panel.addView(classic, dialogBtnLp(0));
         Button minimal = new MinecraftUi.McButton(this, "简约风格");
         panel.addView(minimal, dialogBtnLp(6));
-        Button ore = new MinecraftUi.McButton(this, "Ore UI");
+        Button ore = new MinecraftUi.McButton(this, "苔石风格");
         panel.addView(ore, dialogBtnLp(6));
 
         TextView modeLabel = MinecraftUi.text(this, "简约风格明暗", 9,
@@ -1759,7 +1759,7 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
         final Runnable refresh = () -> {
             classic.setText(ThemeManager.CLASSIC.equals(sel[0]) ? "经典风格（当前）" : "经典风格");
             minimal.setText(ThemeManager.MINIMAL.equals(sel[0]) ? "简约风格（当前）" : "简约风格");
-            ore.setText(ThemeManager.ORE.equals(sel[0]) ? "Ore UI（当前）" : "Ore UI");
+            ore.setText(ThemeManager.ORE.equals(sel[0]) ? "苔石风格（当前）" : "苔石风格");
             light.setText(ThemeManager.MODE_LIGHT.equals(sel[1]) ? "浅色模式（当前）" : "浅色模式");
             dark.setText(ThemeManager.MODE_DARK.equals(sel[1]) ? "深色模式（当前）" : "深色模式");
             boolean minimalSel = ThemeManager.MINIMAL.equals(sel[0]);
@@ -1769,7 +1769,7 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
             dark.setAlpha(minimalSel ? 1f : 0.5f);
             String modeText = ThemeManager.MODE_DARK.equals(sel[1]) ? "深色模式" : "浅色模式";
             if (ThemeManager.ORE.equals(sel[0])) {
-                summary.setText("重启后使用：Ore UI · 标准外观（不支持明暗模式）");
+                summary.setText("重启后使用：苔石风格 · 标准外观（不支持明暗模式）");
             } else if (minimalSel) {
                 summary.setText("重启后使用：简约风格 · " + modeText);
             } else {
@@ -1990,7 +1990,7 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
         panel.addView(classic, dialogBtnLp(0));
         final Button minimal = new MinecraftUi.McButton(this, "简约风格");
         panel.addView(minimal, dialogBtnLp(6));
-        final Button ore = new MinecraftUi.McButton(this, "Ore UI");
+        final Button ore = new MinecraftUi.McButton(this, "苔石风格");
         panel.addView(ore, dialogBtnLp(6));
 
         panel.addView(MinecraftUi.text(this, "简约风格明暗", 9, MinecraftUi.PANEL_MUTED, true));
@@ -2002,7 +2002,7 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
         final Runnable refresh = () -> {
             classic.setText(ThemeManager.CLASSIC.equals(sel[0]) ? "经典风格（当前）" : "经典风格");
             minimal.setText(ThemeManager.MINIMAL.equals(sel[0]) ? "简约风格（当前）" : "简约风格");
-            ore.setText(ThemeManager.ORE.equals(sel[0]) ? "Ore UI（当前）" : "Ore UI");
+            ore.setText(ThemeManager.ORE.equals(sel[0]) ? "苔石风格（当前）" : "苔石风格");
             light.setText(ThemeManager.MODE_LIGHT.equals(sel[1]) ? "浅色模式（当前）" : "浅色模式");
             dark.setText(ThemeManager.MODE_DARK.equals(sel[1]) ? "深色模式（当前）" : "深色模式");
             boolean minimalSel = ThemeManager.MINIMAL.equals(sel[0]);
