@@ -103,6 +103,7 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
     };
 
     private View lampDot;
+    private TextView oreTitle;
     private TextView lampText;
     private TextView runStateValue;
     private TextView playersValue;
@@ -686,22 +687,16 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
         if (MinecraftUi.ORE) {
             header.setGravity(Gravity.CENTER_VERTICAL);
             header.setBackgroundColor(0xFFEDEDED);
-            header.setPadding(dp(18), dp(20), dp(18), dp(20));
+            header.setPadding(dp(20), dp(10), dp(20), dp(10));
             TextView title = new TextView(this);
-            title.setText("基岩工坊");
-            title.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 26);
+            title.setText("首页");
+            title.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 21);
             title.setTextColor(0xFF1B1B1B);
             title.setGravity(Gravity.CENTER);
             title.setTypeface(Typeface.create("sans-serif", Typeface.NORMAL));
             header.addView(title, new LinearLayout.LayoutParams(0,
                     ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
-            TextView gear = new TextView(this);
-            gear.setText("⚙");
-            gear.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 24);
-            gear.setTextColor(0xFF333333);
-            gear.setPadding(dp(14), 0, 0, 0);
-            gear.setOnClickListener(v -> showPage(3));
-            header.addView(gear);
+            oreTitle = title;
             return header;
         }
 
@@ -1964,6 +1959,7 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
     }
 
     private void showManagePage() {
+        if (oreTitle != null) oreTitle.setText("服务器管理");
         for (View p : pages) p.setVisibility(View.GONE);
         managePage.setVisibility(View.VISIBLE);
         currentPage = 4;
@@ -2235,6 +2231,10 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
             aiAssistantView.refreshStatus();
         }
         currentPage = index;
+        if (oreTitle != null) {
+            String[] names = {"首页", "控制台", "AI", "设置"};
+            if (index >= 0 && index < names.length) oreTitle.setText(names[index]);
+        }
         if (managePage != null) managePage.setVisibility(View.GONE);
         for (int i = 0; i < pages.length; i++) {
             pages[i].setVisibility(i == index ? View.VISIBLE : View.GONE);
