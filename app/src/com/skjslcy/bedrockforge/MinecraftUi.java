@@ -237,8 +237,44 @@ public final class MinecraftUi {
         return new BevelDrawable(0xFF2A1D13, 0xFF120D08, 0xFF4C3827, 0xFF0B0805, u, u);
     }
 
+    public static Drawable oreGreenDrawable(Context c, final boolean pressed) {
+        return new Drawable() {
+            private final Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
+            private final int b = dp(c, 2);
+            private final int bev = pressed ? dp(c, 1) : dp(c, 2);
+
+            @Override public void draw(Canvas canvas) {
+                Rect r = getBounds();
+                if (r.isEmpty()) return;
+                p.setStyle(Paint.Style.FILL);
+                p.setColor(0xFF245214);
+                canvas.drawRect(r, p);
+                int faceBottom = r.bottom - bev;
+                p.setShader(new android.graphics.LinearGradient(
+                        r.left, r.top, r.left, faceBottom,
+                        pressed ? 0xFF55A83C : 0xFF65BE4A,
+                        pressed ? 0xFF438A2E : 0xFF3F8A2A,
+                        android.graphics.Shader.TileMode.CLAMP));
+                canvas.drawRect(r.left + b, r.top + b, r.right - b, faceBottom, p);
+                p.setShader(null);
+                p.setStyle(Paint.Style.FILL);
+                p.setColor(0x44FFFFFF);
+                canvas.drawRect(r.left + b, r.top + b, r.right - b,
+                        r.top + b + Math.max(1, dp(c, 2)), p);
+                p.setStyle(Paint.Style.STROKE);
+                p.setStrokeWidth(Math.max(1, dp(c, 1)));
+                p.setColor(0xFF2A5C1A);
+                canvas.drawRect(r.left + b, r.top + b, r.right - b, faceBottom, p);
+            }
+
+            @Override public void setAlpha(int alpha) { p.setAlpha(alpha); }
+            @Override public void setColorFilter(android.graphics.ColorFilter cf) { p.setColorFilter(cf); }
+            @Override public int getOpacity() { return android.graphics.PixelFormat.OPAQUE; }
+        };
+    }
+
     public static Drawable selectedDrawable(Context c) {
-        if (ORE) return rounded(c, ACCENT, BORDER, 2, 0);
+        if (ORE) return oreGreenDrawable(c, false);
         if (MINIMAL) return rounded(c, ACCENT, ACCENT, 1, 14);
         float u = dp(c, 2f);
         return new BevelDrawable(0xFFC6C6C6, GREEN_BRIGHT, 0xFFFFFFFF, 0xFF5A5A5A, u, u);
@@ -442,8 +478,8 @@ public final class MinecraftUi {
             if (ORE) {
                 StateListDrawable bg = new StateListDrawable();
                 bg.addState(new int[]{android.R.attr.state_pressed},
-                        rounded(getContext(), 0xFF337426, 0xFF1B1B1B, 2, 0));
-                bg.addState(new int[]{}, rounded(getContext(), ACCENT, 0xFF1B1B1B, 2, 0));
+                        oreGreenDrawable(getContext(), true));
+                bg.addState(new int[]{}, oreGreenDrawable(getContext(), false));
                 setBackground(bg);
                 setTextColor(0xFFFFFFFF);
                 return;
