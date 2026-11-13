@@ -313,7 +313,7 @@ final class AboutDialog {
         }
     }
 
-    private static void showFaq(final Activity a) {
+    static void showFaq(final Activity a) {
         String text = "Q1：Shizuku 显示未运行\n"
                 + "A：先在 Shizuku 内启动服务，再回到本应用授予权限。\n\n"
                 + "Q2：部署卡在编译 Box64\n"
@@ -343,8 +343,12 @@ final class AboutDialog {
         showTextDialog(a, "常见问题", text);
     }
 
-    private static void showChangelog(final Activity a) {
+    static void showChangelog(final Activity a) {
         showTextDialog(a, "更新日志", readAsset(a, "legal/changelog.txt"));
+    }
+
+    static void showLicense(final Activity a) {
+        showTextDialog(a, "GNU GPL v3.0", reflow(readAsset(a, "legal/gpl-3.0.txt")));
     }
 
     private static void showTextDialog(final Activity a, String title, String text) {

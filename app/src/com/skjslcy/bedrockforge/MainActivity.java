@@ -1817,6 +1817,10 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
     }
 
     private void showRestartPrompt(final String style, final String mode) {
+        showRestartPrompt(style, mode, null);
+    }
+
+    private void showRestartPrompt(final String style, final String mode, final Runnable onCancel) {
         final Dialog d = new Dialog(this);
         d.requestWindowFeature(Window.FEATURE_NO_TITLE);
         LinearLayout wrap = new LinearLayout(this);
@@ -1847,7 +1851,10 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
 
         Button cancel = new MinecraftUi.McButton(this, "取消");
         panel.addView(cancel, dialogBtnLp(6));
-        cancel.setOnClickListener(v -> d.dismiss());
+        cancel.setOnClickListener(v -> {
+            d.dismiss();
+            if (onCancel != null) onCancel.run();
+        });
 
         wrap.addView(panel);
         d.setContentView(wrap);
@@ -1992,10 +1999,6 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
         final Button dark = new MinecraftUi.McButton(this, "深色模式");
         panel.addView(dark, dialogBtnLp(6));
 
-        final TextView summary = MinecraftUi.text(this, "", 8.5f, MinecraftUi.PANEL_MUTED, false);
-        summary.setPadding(0, dp(10), 0, 0);
-        panel.addView(summary);
-
         final Runnable refresh = () -> {
             classic.setText(ThemeManager.CLASSIC.equals(sel[0]) ? "经典风格（当前）" : "经典风格");
             minimal.setText(ThemeManager.MINIMAL.equals(sel[0]) ? "简约风格（当前）" : "简约风格");
@@ -2007,13 +2010,6 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
             dark.setEnabled(minimalSel);
             light.setAlpha(minimalSel ? 1f : 0.5f);
             dark.setAlpha(minimalSel ? 1f : 0.5f);
-            if (ThemeManager.ORE.equals(sel[0])) {
-                summary.setText("Ore UI · 标准外观（不支持明暗模式）");
-            } else if (minimalSel) {
-                summary.setText("简约风格 · " + (ThemeManager.MODE_DARK.equals(sel[1]) ? "深色模式" : "浅色模式"));
-            } else {
-                summary.setText("经典风格");
-            }
         };
         refresh.run();
         classic.setOnClickListener(v -> { sel[0] = ThemeManager.CLASSIC; refresh.run(); });
@@ -2029,7 +2025,11 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
                 toast("当前已是该主题");
                 return;
             }
-            showRestartPrompt(sel[0], sel[1]);
+            showRestartPrompt(sel[0], sel[1], () -> {
+                sel[0] = oldStyle;
+                sel[1] = oldMode;
+                refresh.run();
+            });
         });
 
         sv.addView(col);
@@ -2043,37 +2043,190 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
         col.setPadding(dp(2), 0, dp(2), 0);
 
         LinearLayout head = MinecraftUi.panel(this, null);
-        TextView name = MinecraftUi.text(this, "基岩工坊", 22, MinecraftUi.PANEL_TEXT, true);
-        head.addView(name);
+        head.addView(MinecraftUi.text(this, "基岩工坊", 24, MinecraftUi.PANEL_TEXT, true));
+        head.addView(MinecraftUi.text(this, "BEDROCK FORGE", 9,
+                MinecraftUi.PANEL_MUTED, true));
         String ver = "0.1";
+        String code = "1";
+        String updated = "--";
         try {
-            ver = getPackageManager().getPackageInfo(getPackageName(), 0).versionName;
+            android.content.pm.PackageInfo pi = getPackageManager()
+                    .getPackageInfo(getPackageName(), 0);
+            ver = pi.versionName == null ? "0.1" : pi.versionName;
+            code = String.valueOf(pi.versionCode);
+            updated = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm",
+                    java.util.Locale.CHINA).format(new java.util.Date(pi.lastUpdateTime));
         } catch (Throwable ignored) {
         }
-        head.addView(MinecraftUi.text(this, "BEDROCK FORGE · 版本 " + ver, 9,
-                MinecraftUi.PANEL_MUTED, false));
-        head.addView(MinecraftUi.text(this, "手机上的 Minecraft 基岩版服务端管理工具。软件完全免费。",
-                9, MinecraftUi.PANEL_TEXT, false));
+        final String fVer = ver;
+        final String fCode = code;
+        head.addView(MinecraftUi.text(this,
+                "手机上的 Minecraft 基岩版服务端管理工具。\n"
+                        + "支持运行环境、服务端、世界与玩家数据、备份、addons 与 AI 助手。\n"
+                        + "软件完全免费。", 9, MinecraftUi.PANEL_TEXT, false));
         col.addView(head);
+
+        LinearLayout version = MinecraftUi.panel(this, "版本信息");
+        addAboutRow(version, "应用版本", ver + "（" + code + "）");
+        addAboutRow(version, "安装/更新时间", updated);
+        addAboutRow(version, "包名", getPackageName());
+        col.addView(version);
 
         LinearLayout links = MinecraftUi.panel(this, "快捷入口");
         Button ua = new MinecraftUi.McButton(this, "用户协议");
         links.addView(ua, dialogBtnLp(0));
         ua.setOnClickListener(v -> AgreementDialog.show(this, false, null));
+        Button license = new MinecraftUi.McButton(this, "开源许可证");
+        links.addView(license, dialogBtnLp(6));
+        license.setOnClickListener(v -> AboutDialog.showLicense(this));
         addLink(links, "项目仓库", "https://github.com/SKJSLCY/bedrock-forge");
         addLink(links, "反馈问题", "https://github.com/SKJSLCY/bedrock-forge/issues");
         addLink(links, "QQ 交流群", "https://qun.qq.com/universal-share/share?ac=1&authKey=aXbbDrFrIwkpxJWFhcclaTZyZFjQDRq%2FQDR0P3gUHSRNAbsG3aD9lb1CbRCc9yGq&busi_data=eyJncm91cENvZGUiOiIxMTI4OTM1NzE5IiwidG9rZW4iOiIveC9SQ3dvNXV1ZUFMNE5wbVFDYnJYSTkxenNoWjk0cy9VNGtxRUdhb3pFU2VZUEptRzJYWHZ3UGZPbGR1TWUvIiwidWluIjoiMTc5NDE5NjkxMCJ9&data=yGAGNaWN2jy6ZnJloDPda8gfQmSA1EsYMxjwmfDp3-KHEv5LlI0GSpgBilPvAARl0bzOz30CQcG-4XWs6yapRw&svctype=4&tempid=h5_group_info");
         addLink(links, "赞助作者", "https://afdian.com/a/SKJSLCY");
         col.addView(links);
 
+        final LinearLayout env = MinecraftUi.panel(this, "环境信息");
+        String shz;
+        try {
+            shz = !ShizukuGate.isRunning() ? "未运行"
+                    : (ShizukuGate.isAuthorized() ? "已授权" : "待授权");
+        } catch (Throwable t2) {
+            shz = "未知";
+        }
+        final String fShz = shz;
+        addAboutRow(env, "Android", Build.VERSION.RELEASE + "（API " + Build.VERSION.SDK_INT + "）");
+        addAboutRow(env, "设备", (Build.MANUFACTURER + " " + Build.MODEL).trim());
+        addAboutRow(env, "Shizuku", shz);
+        final TextView boxV = addAboutRow(env, "Box64", "读取中…");
+        final TextView ubV = addAboutRow(env, "Ubuntu", "读取中…");
+        final TextView bdsV = addAboutRow(env, "服务端", "读取中…");
+        final TextView worldV = addAboutRow(env, "世界", "读取中…");
+        Button copy = new MinecraftUi.McButton(this, "复制诊断信息");
+        env.addView(copy, dialogBtnLp(8));
+        copy.setOnClickListener(v -> {
+            String text = "基岩工坊 " + fVer + "（" + fCode + "）\n"
+                    + "包名：" + getPackageName() + "\n"
+                    + "Android：" + Build.VERSION.RELEASE + "（API " + Build.VERSION.SDK_INT + "）\n"
+                    + "设备：" + (Build.MANUFACTURER + " " + Build.MODEL).trim() + "\n"
+                    + "Shizuku：" + fShz + "\n"
+                    + "Box64：" + boxV.getText() + "\n"
+                    + "Ubuntu：" + ubV.getText() + "\n"
+                    + "服务端：" + bdsV.getText() + "\n"
+                    + "世界：" + worldV.getText();
+            android.content.ClipboardManager cm = (android.content.ClipboardManager)
+                    getSystemService(CLIPBOARD_SERVICE);
+            if (cm != null) {
+                cm.setPrimaryClip(android.content.ClipData.newPlainText("诊断信息", text));
+                toast("诊断信息已复制");
+            }
+        });
+        col.addView(env);
+
+        new Thread(() -> {
+            String box = "未部署", ubuntu = "未部署", bds = "未部署", world = "未知";
+            try {
+                DeployManager.Status rt = DeployManager.detect(this, DeployManager.TYPE_RUNTIME);
+                if (rt.installed) {
+                    box = rt.box64 ? (rt.box64Version == null || rt.box64Version.isEmpty()
+                            ? "已编译" : rt.box64Version) : "未编译";
+                    ubuntu = rt.version == null || rt.version.isEmpty() ? "未知" : rt.version;
+                }
+            } catch (Throwable ignored) {
+            }
+            try {
+                DeployManager.Status srv = DeployManager.detect(this, DeployManager.TYPE_SERVER);
+                if (srv.installed) bds = srv.version == null || srv.version.isEmpty() ? "未知" : srv.version;
+            } catch (Throwable ignored) {
+            }
+            try {
+                String props = ShizukuShell.read(DeployManager.SERVER_DIR + "/server.properties");
+                for (String line : props.split("\n")) {
+                    if (line.startsWith("level-name=")) {
+                        String w = line.substring("level-name=".length()).trim();
+                        if (!w.isEmpty()) world = w;
+                    }
+                }
+            } catch (Throwable ignored) {
+            }
+            final String fb = box, fu = ubuntu, fs = bds, fw = world;
+            runOnUiThread(() -> {
+                boxV.setText(fb);
+                ubV.setText(fu);
+                bdsV.setText(fs);
+                worldV.setText(fw);
+            });
+        }, "about-env").start();
+
+        LinearLayout help = MinecraftUi.panel(this, "帮助");
+        Button faq = new MinecraftUi.McButton(this, "常见问题");
+        help.addView(faq, dialogBtnLp(0));
+        faq.setOnClickListener(v -> AboutDialog.showFaq(this));
+        Button changelog = new MinecraftUi.McButton(this, "更新日志");
+        help.addView(changelog, dialogBtnLp(6));
+        changelog.setOnClickListener(v -> AboutDialog.showChangelog(this));
+        col.addView(help);
+
+        LinearLayout compat = MinecraftUi.panel(this, "兼容性说明");
+        compat.addView(MinecraftUi.text(this,
+                "· Android 8.0（API 26）及以上\n"
+                        + "· arm64 设备（不支持 32 位 / x86 模拟器）\n"
+                        + "· 需要 Shizuku（shell 权限）\n"
+                        + "· 至少 4 GB 可用存储，建议 6 GB 以上内存\n"
+                        + "· 已测试 BDS 1.26.60.6 / 1.26.63.1\n"
+                        + "· 玩家数据编辑依赖 LevelDB 格式\n"
+                        + "· 不提供公网中继、账号系统或服务器托管\n"
+                        + "· 修改数据、回滚备份前必须停止服务端",
+                8.5f, MinecraftUi.PANEL_MUTED, false));
+        col.addView(compat);
+
+        LinearLayout credits = MinecraftUi.panel(this, "贡献者名单");
+        credits.addView(MinecraftUi.text(this,
+                "开发者：SKJSLCY\n"
+                        + "制作方式：由 AI 制作\n"
+                        + "数据与接口：MCAPKS、Mojang 官方 BDS 下载\n"
+                        + "开源组件：Box64、proot、Ubuntu Base、Shizuku、AOSP\n"
+                        + "界面素材：自制像素纹理与图标\n"
+                        + "测试与反馈：待补充",
+                8.5f, MinecraftUi.PANEL_MUTED, false));
+        col.addView(credits);
+
+        LinearLayout thanks = MinecraftUi.panel(this, "致谢");
+        thanks.addView(MinecraftUi.text(this,
+                "感谢 Box64、proot、Ubuntu Base、Termux、Shizuku、AOSP，\n"
+                        + "MCAPKS 提供历史版本列表接口，\n"
+                        + "清华大学 TUNA 镜像提供 rootfs 下载，\n"
+                        + "以及所有提交反馈与测试的用户。",
+                8.5f, MinecraftUi.PANEL_MUTED, false));
+        col.addView(thanks);
+
         LinearLayout notice = MinecraftUi.panel(this, "非官方声明");
         notice.addView(MinecraftUi.text(this,
-                "本软件由 AI 制作。\n本软件为非官方工具，与 Mojang Studios、Microsoft 及其关联公司无隶属、授权或合作关系。\nMinecraft、Minecraft Bedrock Edition 及相关商标归其权利人所有。",
+                "本软件由 AI 制作。\n"
+                        + "本软件为非官方工具，与 Mojang Studios、Microsoft 及其关联公司无隶属、授权或合作关系。\n"
+                        + "Minecraft、Minecraft Bedrock Edition 及相关商标归其权利人所有。",
                 8.5f, MinecraftUi.PANEL_MUTED, false));
         col.addView(notice);
 
         sv.addView(col);
         return sv;
+    }
+
+    private TextView addAboutRow(LinearLayout panel, String label, String value) {
+        LinearLayout row = new LinearLayout(this);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setBackground(MinecraftUi.slotDrawable(this));
+        row.setPadding(dp(8), dp(6), dp(8), dp(6));
+        TextView k = MinecraftUi.text(this, label, 8.5f, MinecraftUi.PANEL_MUTED, false);
+        row.addView(k, new LinearLayout.LayoutParams(0,
+                ViewGroup.LayoutParams.WRAP_CONTENT, 0.36f));
+        TextView v = MinecraftUi.text(this, value, 9f, MinecraftUi.PANEL_TEXT, false);
+        row.addView(v, new LinearLayout.LayoutParams(0,
+                ViewGroup.LayoutParams.WRAP_CONTENT, 0.64f));
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        lp.topMargin = dp(4);
+        panel.addView(row, lp);
+        return v;
     }
 
     private void addLink(LinearLayout panel, String label, final String url) {
@@ -2108,6 +2261,9 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
                 ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         tlp.leftMargin = dp(12);
         header.addView(settingsTitle, tlp);
+        if (MinecraftUi.ORE) {
+            header.setVisibility(View.GONE);
+        }
         page.addView(header, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
