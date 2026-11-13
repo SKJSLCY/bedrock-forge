@@ -107,7 +107,7 @@ final class AboutDialog {
         Button license = new MinecraftUi.McButton(a, "开源许可证（GPL-3.0）");
         links.addView(license, btnLp(a, 5));
         license.setOnClickListener(v -> showTextDialog(a,
-                "GNU GPL v3.0", readAsset(a, "legal/gpl-3.0.txt")));
+                "GNU GPL v3.0", reflow(readAsset(a, "legal/gpl-3.0.txt"))));
         content.addView(links, cardLp(a));
 
         // 环境信息
@@ -361,6 +361,19 @@ final class AboutDialog {
             w.setLayout((int) (a.getResources().getDisplayMetrics().widthPixels * 0.94f),
                     (int) (a.getResources().getDisplayMetrics().heightPixels * 0.85f));
         }
+    }
+
+    private static String reflow(String s) {
+        StringBuilder out = new StringBuilder();
+        for (String line : s.split("\n")) {
+            String t = line.trim();
+            if (t.isEmpty()) {
+                out.append("\n\n");
+            } else {
+                out.append(t).append(' ');
+            }
+        }
+        return out.toString().replaceAll("\n{3,}", "\n\n");
     }
 
     private static String readAsset(Activity a, String name) {

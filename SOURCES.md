@@ -20,7 +20,7 @@
 许可证：GPL-3.0-or-later（见 LICENSE）
 
 源码仓库：
-  <待补充>
+  https://github.com/SKJSLCY/bedrock-forge
 
 源码范围：
   · app/src 下的全部 Java 源码
