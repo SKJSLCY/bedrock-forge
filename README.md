@@ -143,8 +143,8 @@ C. 从 SOURCES.md 中的 Ubuntu Base 地址自行构建
 ## 反馈
 
 ```text
-项目仓库：<待补充>
-反馈渠道：<待补充>
+项目仓库：https://github.com/SKJSLCY/bedrock-forge
+反馈渠道：https://github.com/SKJSLCY/bedrock-forge/issues
 作者：SKJSLCY
 ```
 

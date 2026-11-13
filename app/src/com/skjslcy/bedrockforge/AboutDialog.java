@@ -95,17 +95,19 @@ final class AboutDialog {
         links.addView(agreement, btnLp(a, 0));
         agreement.setOnClickListener(v -> AgreementDialog.show(a, false, null));
 
-        Button repo = new MinecraftUi.McButton(a, "项目仓库（未配置）");
+        Button repo = new MinecraftUi.McButton(a, "项目仓库");
         links.addView(repo, btnLp(a, 5));
-        repo.setOnClickListener(v -> toast(a, "项目仓库尚未配置"));
+        repo.setOnClickListener(v -> openUrl(a, "https://github.com/SKJSLCY/bedrock-forge"));
 
-        Button feedback = new MinecraftUi.McButton(a, "反馈问题（未配置）");
+        Button feedback = new MinecraftUi.McButton(a, "反馈问题（GitHub Issues）");
         links.addView(feedback, btnLp(a, 5));
-        feedback.setOnClickListener(v -> toast(a, "反馈渠道尚未配置"));
+        feedback.setOnClickListener(v -> openUrl(a,
+                "https://github.com/SKJSLCY/bedrock-forge/issues"));
 
-        Button license = new MinecraftUi.McButton(a, "开源许可证（未发布）");
+        Button license = new MinecraftUi.McButton(a, "开源许可证（GPL-3.0）");
         links.addView(license, btnLp(a, 5));
-        license.setOnClickListener(v -> toast(a, "开源许可证将在正式开源后提供"));
+        license.setOnClickListener(v -> showTextDialog(a,
+                "GNU GPL v3.0", readAsset(a, "legal/gpl-3.0.txt")));
         content.addView(links, cardLp(a));
 
         // 环境信息
@@ -409,6 +411,17 @@ final class AboutDialog {
                 ViewGroup.LayoutParams.MATCH_PARENT, dp(a, 42));
         lp.topMargin = dp(a, top);
         return lp;
+    }
+
+    private static void openUrl(Activity a, String url) {
+        try {
+            android.content.Intent i = new android.content.Intent(
+                    android.content.Intent.ACTION_VIEW,
+                    android.net.Uri.parse(url));
+            a.startActivity(i);
+        } catch (Throwable t) {
+            toast(a, "无法打开链接：" + url);
+        }
     }
 
     private static void toast(Activity a, String s) {

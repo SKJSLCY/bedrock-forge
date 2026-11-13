@@ -23,7 +23,7 @@ import java.io.InputStream;
 /** 用户协议：首次启动同意 + 设置页查看。 */
 final class AgreementDialog {
 
-    static final String VERSION = "1.1";
+    static final String VERSION = "1.2";
 
     private AgreementDialog() {
     }

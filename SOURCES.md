@@ -6,8 +6,8 @@
 
 本文件说明本软件随附第三方组件的源码获取方式，以及本软件自身的源码信息。
 
-项目仓库：<待补充>
-反馈渠道：<待补充>
+项目仓库：https://github.com/SKJSLCY/bedrock-forge
+反馈渠道：https://github.com/SKJSLCY/bedrock-forge/issues
 作者：SKJSLCY
 许可证：GPL-3.0-or-later
 
@@ -215,7 +215,7 @@ Mojang / Microsoft
 
 联系方式：
   · 作者：SKJSLCY
-  · 项目仓库：<待补充>
-  · 反馈渠道：<待补充>
+  · 项目仓库：https://github.com/SKJSLCY/bedrock-forge
+  · 反馈渠道：https://github.com/SKJSLCY/bedrock-forge/issues
 
 如发现源码获取方式有遗漏或错误，请通过上述渠道反馈。
