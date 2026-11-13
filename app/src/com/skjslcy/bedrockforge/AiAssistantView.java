@@ -219,12 +219,11 @@ final class AiAssistantView extends LinearLayout {
         }
         Button add = new MinecraftUi.McButton(activity, "+");
         add.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
-        add.setPadding(dp(12), 0, dp(12), 0);
+        add.setPadding(0, 0, 0, 0);
         add.setMinWidth(0);
         add.setMinHeight(0);
-        LinearLayout.LayoutParams lp = new LayoutParams(dp(52), dp(40));
-        lp.bottomMargin = dp(4);
-        lp.gravity = android.view.Gravity.BOTTOM;
+        LinearLayout.LayoutParams lp = new LayoutParams(dp(44), dp(40));
+        lp.gravity = android.view.Gravity.TOP;
         tabRow.addView(add, lp);
         add.setOnClickListener(v -> {
             if (busy) return;
