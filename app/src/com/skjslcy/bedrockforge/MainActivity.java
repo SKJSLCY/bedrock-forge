@@ -223,6 +223,7 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
     protected void onCreate(Bundle savedInstanceState) {
         setTheme(R.style.AppTheme);
         super.onCreate(savedInstanceState);
+        ThemeManager.apply(this);
         getWindow().setStatusBarColor(0xFF1A120B);
         getWindow().setNavigationBarColor(0xFF1A120B);
         buildUi();
@@ -1325,7 +1326,7 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
         LinearLayout panel = MinecraftUi.panel(this, "设置");
         addPanel(col, panel);
 
-        String[] items = {"主题", "权限管理", "AI 智能体", "清除所有数据", "关于"};
+        String[] items = {"主题", "语言", "权限管理", "AI 智能体", "清除所有数据", "关于"};
         for (int i = 0; i < items.length; i++) {
             final String title = items[i];
             Button item = new MinecraftUi.McButton(this, title);
@@ -1335,7 +1336,11 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
             panel.addView(item, lp);
             item.setOnClickListener(new View.OnClickListener() {
                 @Override public void onClick(View v) {
-                    if ("权限管理".equals(title)) {
+                    if ("主题".equals(title)) {
+                        showThemeDialog();
+                    } else if ("语言".equals(title)) {
+                        toast("语言功能暂未实装");
+                    } else if ("权限管理".equals(title)) {
                         showPermissionsDialog();
                     } else if ("AI 智能体".equals(title)) {
                         showAiAgentDialog();
@@ -1578,6 +1583,66 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
         if (w != null) {
             w.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
             w.setLayout((int) (getResources().getDisplayMetrics().widthPixels * 0.94f),
+                    ViewGroup.LayoutParams.WRAP_CONTENT);
+        }
+    }
+
+    private void showThemeDialog() {
+        final Dialog d = new Dialog(this);
+        d.requestWindowFeature(Window.FEATURE_NO_TITLE);
+        LinearLayout wrap = new LinearLayout(this);
+        wrap.setOrientation(LinearLayout.VERTICAL);
+        wrap.setPadding(dp(14), dp(14), dp(14), dp(14));
+        LinearLayout panel = MinecraftUi.panel(this, "主题");
+        wrap.addView(panel, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+
+        final String current = ThemeManager.current(this);
+        for (int i = 0; i < ThemeManager.IDS.length; i++) {
+            final String id = ThemeManager.IDS[i];
+            String name = ThemeManager.NAMES[i];
+            if (id.equals(current)) name += "（当前）";
+            Button b = new MinecraftUi.McButton(this, name);
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, dp(46));
+            lp.topMargin = i == 0 ? 0 : dp(6);
+            panel.addView(b, lp);
+            b.setOnClickListener(new View.OnClickListener() {
+                @Override public void onClick(View v) {
+                    ThemeManager.set(MainActivity.this, id);
+                    toast("已应用：" + ThemeManager.label(id));
+                    d.dismiss();
+                }
+            });
+        }
+
+        Button more = new MinecraftUi.McButton(this, "更多主题（开发中）");
+        more.setEnabled(false);
+        more.setAlpha(0.5f);
+        LinearLayout.LayoutParams mlp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(46));
+        mlp.topMargin = dp(8);
+        panel.addView(more, mlp);
+
+        TextView note = MinecraftUi.text(this,
+                "当前版本仅提供经典风格；后续主题会在此处增加。",
+                8.5f, MinecraftUi.PANEL_MUTED, false);
+        note.setPadding(0, dp(8), 0, 0);
+        panel.addView(note);
+
+        Button close = new MinecraftUi.McButton(this, "关闭");
+        LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(44));
+        clp.topMargin = dp(8);
+        wrap.addView(close, clp);
+        close.setOnClickListener(v -> d.dismiss());
+
+        d.setContentView(wrap);
+        d.show();
+        Window w = d.getWindow();
+        if (w != null) {
+            w.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+            w.setLayout((int) (getResources().getDisplayMetrics().widthPixels * 0.9f),
                     ViewGroup.LayoutParams.WRAP_CONTENT);
         }
     }
