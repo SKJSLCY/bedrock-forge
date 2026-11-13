@@ -260,44 +260,38 @@ public class WorldSectionView extends ScrollView {
         }
     }
 
+    private interface NameCallback { void onName(String name); }
+
     private void renameWorld(final String name) {
         if (!ensureStopped()) return;
-        final EditText input = new EditText(activity);
-        input.setText(name);
-        new android.app.AlertDialog.Builder(activity)
-                .setTitle("重命名世界")
-                .setMessage("只支持字母、数字、下划线、横线。")
-                .setView(input)
-                .setPositiveButton("重命名", (d, w) -> {
-                    String nn = input.getText().toString().trim();
-                    if (!nn.matches("[A-Za-z0-9_-]{1,32}")) {
-                        toast("名称不合法");
+        showInputDialog("重命名世界", "只支持字母、数字、下划线、横线。", name, null, "重命名", nn -> {
+            final String n2 = nn.trim();
+            if (!n2.matches("[A-Za-z0-9_-]{1,32}")) {
+                toast("名称不合法");
+                return;
+            }
+            if (n2.equals(name)) return;
+            new Thread(() -> {
+                try {
+                    String base = DeployManager.SERVER_DIR + "/worlds/";
+                    if (ShizukuShell.sh("test -e " + q(base + n2) + " && echo 1 || echo 0").trim().equals("1")) {
+                        handler.post(() -> toast("目标世界已存在"));
                         return;
                     }
-                    if (nn.equals(name)) return;
-                    new Thread(() -> {
-                        try {
-                            String base = DeployManager.SERVER_DIR + "/worlds/";
-                            if (ShizukuShell.sh("test -e " + q(base + nn) + " && echo 1 || echo 0").trim().equals("1")) {
-                                handler.post(() -> toast("目标世界已存在"));
-                                return;
-                            }
-                            ShizukuShell.sh("mv " + q(base + name) + " " + q(base + nn));
-                            String props = ShizukuShell.read(DeployManager.SERVER_DIR + "/server.properties");
-                            boolean active = props.contains("level-name=" + name);
-                            if (active) setLevelName(nn);
-                            AppLog.add("[存档] 重命名 " + name + " -> " + nn);
-                            handler.post(() -> {
-                                toast("已重命名为 " + nn);
-                                refresh();
-                            });
-                        } catch (Throwable e) {
-                            handler.post(() -> toast("重命名失败：" + e.getMessage()));
-                        }
-                    }, "world-rename").start();
-                })
-                .setNegativeButton("取消", null)
-                .show();
+                    ShizukuShell.sh("mv " + q(base + name) + " " + q(base + n2));
+                    String props = ShizukuShell.read(DeployManager.SERVER_DIR + "/server.properties");
+                    boolean active = props.contains("level-name=" + name);
+                    if (active) setLevelName(n2);
+                    AppLog.add("[存档] 重命名 " + name + " -> " + n2);
+                    handler.post(() -> {
+                        toast("已重命名为 " + n2);
+                        refresh();
+                    });
+                } catch (Throwable e) {
+                    handler.post(() -> toast("重命名失败：" + e.getMessage()));
+                }
+            }, "world-rename").start();
+        });
     }
 
     private void deleteWorld(final String name, String active) {
@@ -306,43 +300,31 @@ public class WorldSectionView extends ScrollView {
             toast("当前存档不能删除，请先切换到其他存档");
             return;
         }
-        new android.app.AlertDialog.Builder(activity)
-                .setTitle("删除世界")
-                .setMessage("永久删除 world/" + name + "？")
-                .setPositiveButton("删除", (d, w) -> new Thread(() -> {
+        showConfirmDialog("删除世界", "永久删除 world/" + name + "？", "删除", true, () ->
+                new Thread(() -> {
                     try {
                         ShizukuShell.sh("rm -rf " + q(DeployManager.SERVER_DIR + "/worlds/" + name));
                         handler.post(() -> {
                             AppLog.add("[存档] 删除 " + name);
-                toast("已删除 " + name);
+                            toast("已删除 " + name);
                             refresh();
                         });
                     } catch (Throwable e) {
                         handler.post(() -> toast("删除失败：" + e.getMessage()));
                     }
-                }, "world-delete").start())
-                .setNegativeButton("取消", null)
-                .show();
+                }, "world-delete").start());
     }
 
     private void newWorld() {
         if (!ensureStopped()) return;
-        final EditText input = new EditText(activity);
-        input.setHint("例如 World2");
-        new android.app.AlertDialog.Builder(activity)
-                .setTitle("新建世界")
-                .setMessage("只支持字母、数字、下划线和横线。")
-                .setView(input)
-                .setPositiveButton("创建", (d, w) -> {
-                    String name = input.getText().toString().trim();
-                    if (!name.matches("[A-Za-z0-9_-]{1,32}")) {
-                        toast("世界名只支持字母、数字、下划线、横线");
-                        return;
-                    }
-                    createWorld(name);
-                })
-                .setNegativeButton("取消", null)
-                .show();
+        showInputDialog("新建世界", "只支持字母、数字、下划线和横线。", "", "例如 World2", "创建", name -> {
+            final String n = name.trim();
+            if (!n.matches("[A-Za-z0-9_-]{1,32}")) {
+                toast("世界名只支持字母、数字、下划线、横线");
+                return;
+            }
+            createWorld(n);
+        });
     }
 
     private void createWorld(final String name) {
@@ -363,23 +345,96 @@ public class WorldSectionView extends ScrollView {
 
     private void switchWorld(final String name) {
         if (!ensureStopped()) return;
-        new android.app.AlertDialog.Builder(activity)
-                .setTitle("切换存档")
-                .setMessage("下次启动使用世界 " + name + "？")
-                .setPositiveButton("切换", (d, w) -> new Thread(() -> {
+        showConfirmDialog("切换存档", "下次启动使用世界 " + name + "？", "切换", false, () ->
+                new Thread(() -> {
                     try {
                         setLevelName(name);
                         handler.post(() -> {
                             AppLog.add("[存档] 切换到 " + name);
-                toast("已切换到 " + name);
+                            toast("已切换到 " + name);
                             refresh();
                         });
                     } catch (Throwable e) {
                         handler.post(() -> toast("切换失败：" + e.getMessage()));
                     }
-                }, "world-switch").start())
-                .setNegativeButton("取消", null)
-                .show();
+                }, "world-switch").start());
+    }
+
+    private void showInputDialog(String title, String message, String initial, String hint,
+                                 String positive, final NameCallback cb) {
+        final Dialog d = new Dialog(activity);
+        d.requestWindowFeature(Window.FEATURE_NO_TITLE);
+        LinearLayout wrap = new LinearLayout(activity);
+        wrap.setOrientation(LinearLayout.VERTICAL);
+        wrap.setPadding(dp(14), dp(14), dp(14), dp(14));
+        LinearLayout panel = MinecraftUi.panel(activity, title);
+        TextView msg = MinecraftUi.text(activity, message, 9f, MinecraftUi.PANEL_MUTED, false);
+        msg.setPadding(0, dp(2), 0, dp(8));
+        panel.addView(msg);
+        EditText input = new EditText(activity);
+        MinecraftUi.styleInput(input);
+        input.setSingleLine(true);
+        if (initial != null) input.setText(initial);
+        if (hint != null) input.setHint(hint);
+        panel.addView(input, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(46)));
+        Button ok = new MinecraftUi.McButton(activity, positive);
+        if (MinecraftUi.ORE || MinecraftUi.MINIMAL) ((MinecraftUi.McButton) ok).setPrimaryStyle();
+        panel.addView(ok, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(44)));
+        Button cancel = new MinecraftUi.McButton(activity, "取消");
+        LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(44));
+        clp.topMargin = dp(6);
+        panel.addView(cancel, clp);
+        ok.setOnClickListener(v -> {
+            d.dismiss();
+            cb.onName(input.getText().toString());
+        });
+        cancel.setOnClickListener(v -> d.dismiss());
+        wrap.addView(panel);
+        d.setContentView(wrap);
+        d.show();
+        Window w = d.getWindow();
+        if (w != null) {
+            w.setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(0x00000000));
+            w.setLayout((int) (activity.getResources().getDisplayMetrics().widthPixels * 0.92f),
+                    ViewGroup.LayoutParams.WRAP_CONTENT);
+        }
+    }
+
+    private void showConfirmDialog(String title, String message, String positive,
+                                   final boolean danger, final Runnable action) {
+        final Dialog d = new Dialog(activity);
+        d.requestWindowFeature(Window.FEATURE_NO_TITLE);
+        LinearLayout wrap = new LinearLayout(activity);
+        wrap.setOrientation(LinearLayout.VERTICAL);
+        wrap.setPadding(dp(14), dp(14), dp(14), dp(14));
+        LinearLayout panel = MinecraftUi.panel(activity, title);
+        TextView msg = MinecraftUi.text(activity, message, 9.5f, MinecraftUi.PANEL_TEXT, false);
+        msg.setPadding(0, dp(2), 0, dp(10));
+        panel.addView(msg);
+        Button ok = new MinecraftUi.McButton(activity, positive);
+        if (danger) ((MinecraftUi.McButton) ok).setDangerStyle();
+        else if (MinecraftUi.ORE || MinecraftUi.MINIMAL) ((MinecraftUi.McButton) ok).setPrimaryStyle();
+        panel.addView(ok, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(44)));
+        Button cancel = new MinecraftUi.McButton(activity, "取消");
+        LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(44));
+        clp.topMargin = dp(6);
+        panel.addView(cancel, clp);
+        ok.setOnClickListener(v -> { d.dismiss(); action.run(); });
+        cancel.setOnClickListener(v -> d.dismiss());
+        wrap.addView(panel);
+        d.setContentView(wrap);
+        d.show();
+        Window w = d.getWindow();
+        if (w != null) {
+            w.setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(0x00000000));
+            w.setLayout((int) (activity.getResources().getDisplayMetrics().widthPixels * 0.92f),
+                    ViewGroup.LayoutParams.WRAP_CONTENT);
+        }
     }
 
     private void importWorld() {

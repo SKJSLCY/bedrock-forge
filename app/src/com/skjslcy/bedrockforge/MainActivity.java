@@ -104,6 +104,7 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
 
     private View lampDot;
     private TextView oreTitle;
+    private TextView oreBack;
     private TextView lampText;
     private TextView runStateValue;
     private TextView playersValue;
@@ -687,9 +688,7 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
         if (MinecraftUi.ORE) {
             LinearLayout oreBar = new LinearLayout(this);
             oreBar.setOrientation(LinearLayout.VERTICAL);
-            LinearLayout row = new LinearLayout(this);
-            row.setOrientation(LinearLayout.HORIZONTAL);
-            row.setGravity(Gravity.CENTER_VERTICAL);
+            android.widget.FrameLayout row = new android.widget.FrameLayout(this);
             android.graphics.drawable.GradientDrawable bodyBg =
                     new android.graphics.drawable.GradientDrawable(
                             android.graphics.drawable.GradientDrawable.Orientation.TOP_BOTTOM,
@@ -702,8 +701,30 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
             brand.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 18);
             brand.setTextColor(0xFF1B1B1B);
             brand.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
-            row.addView(brand, new LinearLayout.LayoutParams(0,
-                    ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+            android.widget.FrameLayout.LayoutParams brandLp =
+                    new android.widget.FrameLayout.LayoutParams(
+                            ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            brandLp.gravity = Gravity.CENTER;
+            row.addView(brand, brandLp);
+
+            TextView back = new TextView(this);
+            back.setText("‹");
+            back.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 30);
+            back.setTextColor(0xFF1B1B1B);
+            back.setGravity(Gravity.CENTER);
+            back.setPadding(dp(8), 0, dp(14), 0);
+            android.widget.FrameLayout.LayoutParams backLp =
+                    new android.widget.FrameLayout.LayoutParams(
+                            ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.MATCH_PARENT);
+            backLp.gravity = Gravity.START | Gravity.CENTER_VERTICAL;
+            row.addView(back, backLp);
+            back.setVisibility(View.GONE);
+            back.setOnClickListener(v -> {
+                if (managePage != null && managePage.getVisibility() == View.VISIBLE) {
+                    if (manageSectionOpen) showManageList(); else showPage(0);
+                }
+            });
+            oreBack = back;
 
             oreBar.addView(row, new LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
@@ -1917,6 +1938,7 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
         header.setGravity(Gravity.CENTER_VERTICAL);
 
         Button back = new MinecraftUi.McButton(this, "← 返回");
+        if (MinecraftUi.ORE) back.setVisibility(View.GONE);
         LinearLayout.LayoutParams blp = new LinearLayout.LayoutParams(dp(84), dp(40));
         header.addView(back, blp);
         back.setOnClickListener(new View.OnClickListener() {
@@ -1981,6 +2003,7 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
     }
 
     private void showManagePage() {
+        if (oreBack != null) oreBack.setVisibility(View.VISIBLE);
         if (oreTitle != null) oreTitle.setText("服务器管理");
         for (View p : pages) p.setVisibility(View.GONE);
         managePage.setVisibility(View.VISIBLE);
@@ -2253,6 +2276,7 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
             aiAssistantView.refreshStatus();
         }
         currentPage = index;
+        if (oreBack != null) oreBack.setVisibility(View.GONE);
         if (oreTitle != null) {
             String[] names = {"首页", "控制台", "AI", "设置"};
             if (index >= 0 && index < names.length) oreTitle.setText(names[index]);
