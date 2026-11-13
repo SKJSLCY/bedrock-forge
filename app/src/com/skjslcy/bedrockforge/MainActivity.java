@@ -635,7 +635,7 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
 
         content = new FrameLayout(this);
         if (MinecraftUi.ORE) {
-            content.setPadding(dp(12), 0, dp(12), 0);
+            content.setPadding(dp(12), dp(14), dp(12), 0);
         }
         LinearLayout.LayoutParams cp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f);
