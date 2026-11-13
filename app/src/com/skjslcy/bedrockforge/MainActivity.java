@@ -690,8 +690,8 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
             LinearLayout row = new LinearLayout(this);
             row.setOrientation(LinearLayout.HORIZONTAL);
             row.setGravity(Gravity.CENTER_VERTICAL);
-            row.setBackgroundColor(0xFFD8D8D8);
-            row.setPadding(dp(20), dp(8), dp(20), dp(8));
+            row.setBackgroundColor(0xFFE8E8E8);
+            row.setPadding(dp(20), dp(10), dp(20), dp(10));
 
             TextView brand = new TextView(this);
             brand.setText("基岩工坊");
@@ -701,20 +701,21 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
             row.addView(brand, new LinearLayout.LayoutParams(0,
                     ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
 
-            TextView page = new TextView(this);
-            page.setText("首页");
-            page.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 14);
-            page.setTextColor(0xFF5A5A5A);
-            page.setTypeface(Typeface.create("sans-serif", Typeface.NORMAL));
-            row.addView(page);
-
             oreBar.addView(row, new LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
             View line = new View(this);
             line.setBackgroundColor(0xFF1B1B1B);
             oreBar.addView(line, new LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT, dp(2)));
-            oreTitle = page;
+            View shadow = new View(this);
+            android.graphics.drawable.GradientDrawable gd =
+                    new android.graphics.drawable.GradientDrawable(
+                            android.graphics.drawable.GradientDrawable.Orientation.TOP_BOTTOM,
+                            new int[]{0x88000000, 0x44000000, 0x00000000});
+            shadow.setBackground(gd);
+            oreBar.addView(shadow, new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, dp(16)));
+            oreBar.setElevation(dp(10));
             return oreBar;
         }
 
