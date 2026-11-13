@@ -9,6 +9,7 @@ final class ThemeManager {
     static final String CLASSIC = "classic";
     static final String MINIMAL = "minimal";
     static final String ORE = "ore";
+    static final String LIQUID = "liquid";
 
     static final String MODE_LIGHT = "light";
     static final String MODE_DARK = "dark";
@@ -21,6 +22,7 @@ final class ThemeManager {
                 .getString("theme", CLASSIC);
         if (MINIMAL.equals(v)) return MINIMAL;
         if (ORE.equals(v)) return ORE;
+        if (LIQUID.equals(v)) return LIQUID;
         return CLASSIC;
     }
 
@@ -38,6 +40,10 @@ final class ThemeManager {
         return ORE.equals(style(c));
     }
 
+    static boolean isLiquid(Context c) {
+        return LIQUID.equals(style(c));
+    }
+
     static boolean isDark(Context c) {
         return MODE_DARK.equals(mode(c));
     }
@@ -53,13 +59,14 @@ final class ThemeManager {
     }
 
     static void apply(Context c) {
-        MinecraftUi.applyTheme(isMinimal(c), isOre(c), isMinimal(c) && isDark(c));
+        MinecraftUi.applyTheme(isMinimal(c), isOre(c), isLiquid(c), isMinimal(c) && isDark(c));
     }
 
     static void apply(Activity a) {
         boolean minimal = isMinimal(a);
         boolean ore = isOre(a);
-        MinecraftUi.applyTheme(minimal, ore, minimal && isDark(a));
+        boolean liquid = isLiquid(a);
+        MinecraftUi.applyTheme(minimal, ore, liquid, minimal && isDark(a));
         boolean dark = minimal && isDark(a);
         int statusColor = ore ? 0xFFEDEDED
                 : (minimal ? (dark ? 0xFF000000 : 0xFFEEECE6) : 0xFF1A120B);
@@ -67,15 +74,15 @@ final class ThemeManager {
                 : (minimal ? (dark ? 0xFF000000 : 0xFFEEECE6) : 0xFF1A120B);
         a.getWindow().setStatusBarColor(statusColor);
         a.getWindow().setNavigationBarColor(navColor);
-        if (minimal || ore) {
+        if (minimal || ore || liquid) {
             a.getWindow().getDecorView().setSystemUiVisibility(
-                    (minimal && dark) ? 0 : android.view.View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR);
+                    (!liquid && minimal && dark) ? 0 : android.view.View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR);
         }
     }
 
     /** 把经典配色映射到简约主题的等价颜色。 */
     static int mapTextColor(int color) {
-        if (!MinecraftUi.MINIMAL && !MinecraftUi.ORE) return color;
+        if (!MinecraftUi.MINIMAL && !MinecraftUi.ORE && !MinecraftUi.LIQUID) return color;
         switch (color) {
             case 0xFFFFFFFF:
             case 0xFF1B1B1B:

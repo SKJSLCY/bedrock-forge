@@ -108,6 +108,9 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
     private View lampDot;
     private TextView oreTitle;
     private TextView oreBack;
+    private static final int REQ_WALLPAPER = 993;
+    private String pendingStyle;
+    private String pendingMode;
     private TextView lampText;
     private TextView runStateValue;
     private TextView playersValue;
@@ -229,7 +232,7 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
         setTheme(R.style.AppTheme);
         super.onCreate(savedInstanceState);
         ThemeManager.apply(this);
-        if (!MinecraftUi.MINIMAL && !MinecraftUi.ORE) {
+        if (!MinecraftUi.MINIMAL && !MinecraftUi.ORE && !MinecraftUi.LIQUID) {
             getWindow().setStatusBarColor(0xFF1A120B);
             getWindow().setNavigationBarColor(0xFF1A120B);
         }
@@ -305,6 +308,18 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == REQ_WALLPAPER) {
+            if (resultCode == RESULT_OK && data != null && data.getData() != null) {
+                try {
+                    getContentResolver().takePersistableUriPermission(data.getData(),
+                            android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                } catch (Throwable ignored) {
+                }
+                LiquidWallpaper.set(this, data.getData().toString());
+                showRestartPrompt(pendingStyle, pendingMode);
+            }
+            return;
+        }
         if (requestCode == AiAssistantView.REQ_IMAGE || requestCode == AiAssistantView.REQ_FILE) {
             if (aiAssistantView != null) {
                 aiAssistantView.onActivityResult(requestCode, resultCode, data);
@@ -621,7 +636,15 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
 
     private void buildUi() {
         FrameLayout root = new FrameLayout(this);
-        root.setBackground(new MinecraftUi.DirtDrawable(this));
+        if (MinecraftUi.LIQUID) {
+            root.setBackgroundColor(0x00000000);
+            LiquidWallpaper.View wv = new LiquidWallpaper.View(this);
+            wv.setBitmap(LiquidWallpaper.loadBlurred(this));
+            root.addView(wv, new FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        } else {
+            root.setBackground(new MinecraftUi.DirtDrawable(this));
+        }
 
         LinearLayout shell = new LinearLayout(this);
         shell.setOrientation(LinearLayout.VERTICAL);
@@ -694,6 +717,37 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
         LinearLayout header = new LinearLayout(this);
         header.setOrientation(LinearLayout.HORIZONTAL);
         header.setGravity(Gravity.BOTTOM);
+
+        if (MinecraftUi.LIQUID) {
+            LinearLayout wrap = new LinearLayout(this);
+            wrap.setOrientation(LinearLayout.VERTICAL);
+            LinearLayout row = new LinearLayout(this);
+            row.setOrientation(LinearLayout.HORIZONTAL);
+            row.setGravity(Gravity.CENTER_VERTICAL);
+            row.setPadding(dp(22), dp(14), dp(22), dp(14));
+            android.graphics.drawable.GradientDrawable g =
+                    new android.graphics.drawable.GradientDrawable(
+                            android.graphics.drawable.GradientDrawable.Orientation.TOP_BOTTOM,
+                            new int[]{0x33FFFFFF, 0x14FFFFFF});
+            g.setCornerRadius(dp(28));
+            g.setStroke(dp(1), 0x66FFFFFF);
+            row.setBackground(g);
+            TextView brand = new TextView(this);
+            brand.setText("基岩工坊");
+            brand.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 24);
+            brand.setTextColor(0xFFFFFFFF);
+            brand.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
+            row.addView(brand, new LinearLayout.LayoutParams(0,
+                    ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+            TextView status = new TextView(this);
+            status.setText("● 已停止");
+            status.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 14);
+            status.setTextColor(0xFFFFB4AA);
+            row.addView(status);
+            wrap.addView(row, new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+            return wrap;
+        }
 
         if (MinecraftUi.ORE) {
             LinearLayout oreBar = new LinearLayout(this);
@@ -1741,6 +1795,8 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
         panel.addView(minimal, dialogBtnLp(6));
         Button ore = new MinecraftUi.McButton(this, "苔石风格");
         panel.addView(ore, dialogBtnLp(6));
+        Button liquid = new MinecraftUi.McButton(this, "液态玻璃");
+        panel.addView(liquid, dialogBtnLp(6));
 
         TextView modeLabel = MinecraftUi.text(this, "简约风格明暗", 9,
                 MinecraftUi.PANEL_MUTED, true);
@@ -1760,6 +1816,7 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
             classic.setText(ThemeManager.CLASSIC.equals(sel[0]) ? "经典风格（当前）" : "经典风格");
             minimal.setText(ThemeManager.MINIMAL.equals(sel[0]) ? "简约风格（当前）" : "简约风格");
             ore.setText(ThemeManager.ORE.equals(sel[0]) ? "苔石风格（当前）" : "苔石风格");
+            liquid.setText(ThemeManager.LIQUID.equals(sel[0]) ? "液态玻璃（当前）" : "液态玻璃");
             light.setText(ThemeManager.MODE_LIGHT.equals(sel[1]) ? "浅色模式（当前）" : "浅色模式");
             dark.setText(ThemeManager.MODE_DARK.equals(sel[1]) ? "深色模式（当前）" : "深色模式");
             boolean minimalSel = ThemeManager.MINIMAL.equals(sel[0]);
@@ -1768,7 +1825,9 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
             light.setAlpha(minimalSel ? 1f : 0.5f);
             dark.setAlpha(minimalSel ? 1f : 0.5f);
             String modeText = ThemeManager.MODE_DARK.equals(sel[1]) ? "深色模式" : "浅色模式";
-            if (ThemeManager.ORE.equals(sel[0])) {
+            if (ThemeManager.LIQUID.equals(sel[0])) {
+                summary.setText("重启后使用：液态玻璃 · 需先导入壁纸");
+            } else if (ThemeManager.ORE.equals(sel[0])) {
                 summary.setText("重启后使用：苔石风格 · 标准外观（不支持明暗模式）");
             } else if (minimalSel) {
                 summary.setText("重启后使用：简约风格 · " + modeText);
@@ -1781,6 +1840,7 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
         classic.setOnClickListener(v -> { sel[0] = ThemeManager.CLASSIC; refresh.run(); });
         minimal.setOnClickListener(v -> { sel[0] = ThemeManager.MINIMAL; refresh.run(); });
         ore.setOnClickListener(v -> { sel[0] = ThemeManager.ORE; refresh.run(); });
+        liquid.setOnClickListener(v -> { sel[0] = ThemeManager.LIQUID; refresh.run(); });
         light.setOnClickListener(v -> { sel[1] = ThemeManager.MODE_LIGHT; refresh.run(); });
         dark.setOnClickListener(v -> { sel[1] = ThemeManager.MODE_DARK; refresh.run(); });
 
@@ -1806,6 +1866,18 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
             w.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
             w.setLayout((int) (getResources().getDisplayMetrics().widthPixels * 0.9f),
                     ViewGroup.LayoutParams.WRAP_CONTENT);
+        }
+    }
+
+    private void pickWallpaper() {
+        try {
+            android.content.Intent i = new android.content.Intent(
+                    android.content.Intent.ACTION_OPEN_DOCUMENT);
+            i.addCategory(android.content.Intent.CATEGORY_OPENABLE);
+            i.setType("image/*");
+            startActivityForResult(i, REQ_WALLPAPER);
+        } catch (Throwable t) {
+            toast("无法打开图片选择器");
         }
     }
 
@@ -1920,7 +1992,7 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
             slot.setBackground(MinecraftUi.hotbarSlotDrawable(this, i == 0));
 
             MinecraftUi.PixelIconView icon = new MinecraftUi.PixelIconView(this);
-            if (MinecraftUi.MINIMAL || MinecraftUi.ORE) {
+            if (MinecraftUi.MINIMAL || MinecraftUi.ORE || MinecraftUi.LIQUID) {
                 icon.set(icons[i], i == 0 ? 0xFFFFFFFF : MinecraftUi.MUTED);
             } else {
                 icon.set(icons[i], i == 0 ? MinecraftUi.GREEN_BRIGHT : 0xFFCBBBA4);
@@ -1929,8 +2001,8 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
             slot.addView(icon, ilp);
 
             TextView label = MinecraftUi.text(this, labels[i], 9,
-                    i == 0 ? ((MinecraftUi.MINIMAL || MinecraftUi.ORE) ? 0xFFFFFFFF : 0xFFEAFFDF)
-                            : ((MinecraftUi.MINIMAL || MinecraftUi.ORE) ? MinecraftUi.MUTED : 0xFFCBBBA4), true);
+                    i == 0 ? ((MinecraftUi.MINIMAL || MinecraftUi.ORE || MinecraftUi.LIQUID) ? 0xFFFFFFFF : 0xFFEAFFDF)
+                            : ((MinecraftUi.MINIMAL || MinecraftUi.ORE || MinecraftUi.LIQUID) ? MinecraftUi.MUTED : 0xFFCBBBA4), true);
             label.setGravity(Gravity.CENTER);
             label.setPadding(0, dp(4), 0, 0);
             slot.addView(label);
@@ -1992,6 +2064,8 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
         panel.addView(minimal, dialogBtnLp(6));
         final Button ore = new MinecraftUi.McButton(this, "苔石风格");
         panel.addView(ore, dialogBtnLp(6));
+        final Button liquid = new MinecraftUi.McButton(this, "液态玻璃");
+        panel.addView(liquid, dialogBtnLp(6));
 
         panel.addView(MinecraftUi.text(this, "简约风格明暗", 9, MinecraftUi.PANEL_MUTED, true));
         final Button light = new MinecraftUi.McButton(this, "浅色模式");
@@ -2003,6 +2077,7 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
             classic.setText(ThemeManager.CLASSIC.equals(sel[0]) ? "经典风格（当前）" : "经典风格");
             minimal.setText(ThemeManager.MINIMAL.equals(sel[0]) ? "简约风格（当前）" : "简约风格");
             ore.setText(ThemeManager.ORE.equals(sel[0]) ? "苔石风格（当前）" : "苔石风格");
+            liquid.setText(ThemeManager.LIQUID.equals(sel[0]) ? "液态玻璃（当前）" : "液态玻璃");
             light.setText(ThemeManager.MODE_LIGHT.equals(sel[1]) ? "浅色模式（当前）" : "浅色模式");
             dark.setText(ThemeManager.MODE_DARK.equals(sel[1]) ? "深色模式（当前）" : "深色模式");
             boolean minimalSel = ThemeManager.MINIMAL.equals(sel[0]);
@@ -2015,6 +2090,7 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
         classic.setOnClickListener(v -> { sel[0] = ThemeManager.CLASSIC; refresh.run(); });
         minimal.setOnClickListener(v -> { sel[0] = ThemeManager.MINIMAL; refresh.run(); });
         ore.setOnClickListener(v -> { sel[0] = ThemeManager.ORE; refresh.run(); });
+        liquid.setOnClickListener(v -> { sel[0] = ThemeManager.LIQUID; refresh.run(); });
         light.setOnClickListener(v -> { sel[1] = ThemeManager.MODE_LIGHT; refresh.run(); });
         dark.setOnClickListener(v -> { sel[1] = ThemeManager.MODE_DARK; refresh.run(); });
 
@@ -2023,6 +2099,12 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
         apply.setOnClickListener(v -> {
             if (sel[0].equals(oldStyle) && sel[1].equals(oldMode)) {
                 toast("当前已是该主题");
+                return;
+            }
+            if (ThemeManager.LIQUID.equals(sel[0]) && !LiquidWallpaper.has(MainActivity.this)) {
+                pendingStyle = sel[0];
+                pendingMode = sel[1];
+                pickWallpaper();
                 return;
             }
             showRestartPrompt(sel[0], sel[1], () -> {
@@ -2531,7 +2613,7 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
                     (MinecraftUi.MINIMAL || MinecraftUi.ORE)
                             ? (active ? 0xFFFFFFFF : MinecraftUi.MUTED)
                             : (active ? MinecraftUi.GREEN_BRIGHT : 0xFFCBBBA4));
-            navLabels[i].setTextColor((MinecraftUi.MINIMAL || MinecraftUi.ORE)
+            navLabels[i].setTextColor((MinecraftUi.MINIMAL || MinecraftUi.ORE || MinecraftUi.LIQUID)
                     ? (active ? 0xFFFFFFFF : MinecraftUi.MUTED)
                     : (active ? 0xFFEAFFDF : 0xFFCBBBA4));
         }
