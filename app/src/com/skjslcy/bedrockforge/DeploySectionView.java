@@ -871,6 +871,7 @@ public class DeploySectionView extends LinearLayout {
                 "只支持字母和数字，不支持中文、空格、下划线、横线或其他符号。\n最长 32 个字符。",
                 9, MinecraftUi.AMBER, false));
         final android.widget.EditText input = new android.widget.EditText(activity);
+        MinecraftUi.styleInput(input);
         input.setSingleLine(true);
         input.setTextSize(14);
         input.setHint("例如 Survival1");
@@ -961,6 +962,7 @@ public class DeploySectionView extends LinearLayout {
                 "压缩包文件名里没有版本号，无法自动识别。\n请输入该服务端的完整版本号，例如 1.26.63.1。",
                 9, MinecraftUi.AMBER, false));
         final android.widget.EditText input = new android.widget.EditText(activity);
+        MinecraftUi.styleInput(input);
         input.setSingleLine(true);
         input.setHint("1.26.63.1");
         LinearLayout.LayoutParams ilp = new LinearLayout.LayoutParams(
@@ -1337,6 +1339,7 @@ public class DeploySectionView extends LinearLayout {
                 "只支持字母和数字，不支持中文、空格、下划线、横线或其他符号。最长 32 个字符。",
                 9, MinecraftUi.AMBER, false));
         final android.widget.EditText input = new android.widget.EditText(activity);
+        MinecraftUi.styleInput(input);
         input.setSingleLine(true);
         LinearLayout.LayoutParams ilp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, dp(46));

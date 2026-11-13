@@ -80,6 +80,7 @@ final class ThemeManager {
             case 0xFFB0B0B0:
             case 0xFF9A9A9A:
             case 0xFF6A8A6A:
+            case 0xFF79C0FF:
             case 0xFFE8E8E8:
             case 0xFFD8D8D8:
             case 0xFFD0D0D0:

@@ -385,12 +385,18 @@ final class AiAssistantView extends LinearLayout {
         block.addView(label);
 
         LinearLayout bubble = new LinearLayout(activity);
-        bubble.setBackground(new MinecraftUi.BevelDrawable(
-                right ? 0xFF8FBF6A : 0xFFC6C6C6, 0xFF151515,
-                right ? 0xFFCBE8B0 : 0xFFFFFFFF,
-                right ? 0xFF5A7F3A : 0xFF5A5A5A, dp(2), dp(2)));
+        if (MinecraftUi.MINIMAL) {
+            bubble.setBackground(right ? MinecraftUi.selectedDrawable(activity)
+                    : MinecraftUi.slotDrawable(activity));
+        } else {
+            bubble.setBackground(new MinecraftUi.BevelDrawable(
+                    right ? 0xFF8FBF6A : 0xFFC6C6C6, 0xFF151515,
+                    right ? 0xFFCBE8B0 : 0xFFFFFFFF,
+                    right ? 0xFF5A7F3A : 0xFF5A5A5A, dp(2), dp(2)));
+        }
         bubble.setPadding(dp(10), dp(8), dp(10), dp(8));
-        TextView msg = MinecraftUi.text(activity, text, 12, 0xFF1B1B1B, false);
+        TextView msg = MinecraftUi.text(activity, text, 12,
+                MinecraftUi.MINIMAL && right ? MinecraftUi.ON_ACCENT : 0xFF1B1B1B, false);
         msg.setMaxWidth(dp(280));
         bubble.addView(msg);
         LinearLayout.LayoutParams lp = new LayoutParams(
@@ -731,10 +737,8 @@ final class AiAssistantView extends LinearLayout {
             Button b = new MinecraftUi.McButton(activity,
                     (selected ? "✓ " : "") + labels[i]);
             if (selected) {
-                b.setTextColor(0xFF1B1B1B);
-                b.setBackground(new MinecraftUi.BevelDrawable(0xFFC6C6C6,
-                        MinecraftUi.GREEN_BRIGHT, 0xFFFFFFFF, 0xFF5A5A5A,
-                        dp(2), dp(2)));
+                b.setTextColor(MinecraftUi.selectedTextColor());
+                b.setBackground(MinecraftUi.selectedDrawable(activity));
             }
             LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
                     LayoutParams.MATCH_PARENT, dp(42));

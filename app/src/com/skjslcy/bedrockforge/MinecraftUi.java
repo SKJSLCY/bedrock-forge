@@ -204,7 +204,7 @@ public final class MinecraftUi {
     }
 
     public static Drawable terminalDrawable(Context c) {
-        if (MINIMAL) return rounded(c, 0xFF171614, BORDER, 1, 16);
+        if (MINIMAL) return rounded(c, PANEL, BORDER, 1, 16);
         float u = dp(c, 2.5f);
         return new BevelDrawable(0xFF151515, 0xFF000000, 0xFF3A3A3A, 0xFF000000, u, u);
     }
@@ -213,6 +213,16 @@ public final class MinecraftUi {
         if (MINIMAL) return rounded(c, PANEL, BORDER, 1, 24);
         float u = dp(c, 2.5f);
         return new BevelDrawable(0xFF2A1D13, 0xFF120D08, 0xFF4C3827, 0xFF0B0805, u, u);
+    }
+
+    public static Drawable selectedDrawable(Context c) {
+        if (MINIMAL) return rounded(c, ACCENT, ACCENT, 1, 14);
+        float u = dp(c, 2f);
+        return new BevelDrawable(0xFFC6C6C6, GREEN_BRIGHT, 0xFFFFFFFF, 0xFF5A5A5A, u, u);
+    }
+
+    public static int selectedTextColor() {
+        return MINIMAL ? ON_ACCENT : 0xFF1B1B1B;
     }
 
     public static Drawable hotbarSlotDrawable(Context c, boolean active) {
@@ -487,15 +497,31 @@ public final class MinecraftUi {
         }
     }
 
+    public static void styleInput(android.widget.EditText input) {
+        if (!MINIMAL) return;
+        Context c = input.getContext();
+        input.setTextColor(PANEL_TEXT);
+        input.setHintTextColor(PANEL_MUTED);
+        input.setBackground(terminalDrawable(c));
+        input.setPadding(dp(c, 9), dp(c, 8), dp(c, 9), dp(c, 8));
+        input.setTypeface(Typeface.create("sans-serif", Typeface.NORMAL));
+    }
+
     /** 与控制台一致的输入框样式。 */
     public static android.widget.EditText terminalInput(Context c, String hint) {
         android.widget.EditText input = new android.widget.EditText(c);
         input.setSingleLine(true);
         input.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
-        input.setTextColor(MINIMAL ? 0xFFB8FFB0 : 0xFFB8FFB0);
-        input.setHintTextColor(MINIMAL ? 0xFF7E8C7A : 0xFF6A8A6A);
+        if (MINIMAL) {
+            input.setTextColor(PANEL_TEXT);
+            input.setHintTextColor(PANEL_MUTED);
+            input.setTypeface(Typeface.create("sans-serif", Typeface.NORMAL));
+        } else {
+            input.setTextColor(0xFFB8FFB0);
+            input.setHintTextColor(0xFF6A8A6A);
+            input.setTypeface(mono());
+        }
         input.setHint(hint);
-        input.setTypeface(mono());
         input.setBackground(terminalDrawable(c));
         input.setPadding(dp(c, 9), dp(c, 8), dp(c, 9), dp(c, 8));
         return input;

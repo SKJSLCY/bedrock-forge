@@ -25,10 +25,10 @@ public class SplashActivity extends Activity {
         super.onCreate(savedInstanceState);
         ThemeManager.apply(this);
         getWindow().setStatusBarColor(MinecraftUi.MINIMAL
-                ? (MinecraftUi.MINIMAL && ThemeManager.isDark(this) ? 0xFF0D0C0B : 0xFFEEECE6)
+                ? (MinecraftUi.MINIMAL && ThemeManager.isDark(this) ? 0xFF000000 : 0xFFEEECE6)
                 : 0xFF1A120B);
         getWindow().setNavigationBarColor(MinecraftUi.MINIMAL
-                ? (MinecraftUi.MINIMAL && ThemeManager.isDark(this) ? 0xFF0D0C0B : 0xFFEEECE6)
+                ? (MinecraftUi.MINIMAL && ThemeManager.isDark(this) ? 0xFF000000 : 0xFFEEECE6)
                 : 0xFF1A120B);
 
         FrameLayout root = new FrameLayout(this);

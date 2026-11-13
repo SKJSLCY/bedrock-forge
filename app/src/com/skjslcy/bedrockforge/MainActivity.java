@@ -365,6 +365,7 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
             return;
         }
         final android.widget.EditText input = new android.widget.EditText(this);
+        MinecraftUi.styleInput(input);
         input.setHint("1.26.63.1");
         new android.app.AlertDialog.Builder(this)
                 .setTitle("导入服务端版本")
@@ -1052,10 +1053,10 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
         LinearLayout legend = new LinearLayout(this);
         legend.setOrientation(LinearLayout.HORIZONTAL);
         legend.setGravity(Gravity.CENTER_VERTICAL);
-        addLegend(legend, "INFO", 0xFF7EE787);
-        addLegend(legend, "WARN", 0xFFFFD166);
-        addLegend(legend, "ERROR", 0xFFFF6B6B);
-        addLegend(legend, "DEBUG", 0xFF79C0FF);
+        addLegend(legend, "INFO", MinecraftUi.MINIMAL ? MinecraftUi.GREEN : 0xFF7EE787);
+        addLegend(legend, "WARN", MinecraftUi.MINIMAL ? MinecraftUi.AMBER : 0xFFFFD166);
+        addLegend(legend, "ERROR", MinecraftUi.MINIMAL ? MinecraftUi.RED : 0xFFFF6B6B);
+        addLegend(legend, "DEBUG", MinecraftUi.MINIMAL ? MinecraftUi.ACCENT : 0xFF79C0FF);
         terminal.addView(legend, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
@@ -1113,8 +1114,8 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
         consoleInput = new EditText(this);
         consoleInput.setSingleLine(true);
         consoleInput.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
-        consoleInput.setTextColor(0xFFB8FFB0);
-        consoleInput.setHintTextColor(0xFF6A8A6A);
+        consoleInput.setTextColor(MinecraftUi.MINIMAL ? MinecraftUi.PANEL_TEXT : 0xFFB8FFB0);
+        consoleInput.setHintTextColor(MinecraftUi.MINIMAL ? MinecraftUi.PANEL_MUTED : 0xFF6A8A6A);
         consoleInput.setHint("输入命令，如 list");
         consoleInput.setTypeface(Typeface.MONOSPACE);
         consoleInput.setBackground(MinecraftUi.terminalDrawable(this));
@@ -2585,7 +2586,8 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
             if (isGametimeNoise(line) && logColor(line) != MinecraftUi.RED) continue;
             int start = sb.length();
             sb.append(line).append('\n');
-            sb.setSpan(new ForegroundColorSpan(logColor(line)), start, sb.length(),
+            sb.setSpan(new ForegroundColorSpan(
+                    ThemeManager.mapTextColor(logColor(line))), start, sb.length(),
                     Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
         }
         consoleText.setText(sb.length() == 0 ? "等待服务端日志…" : sb);

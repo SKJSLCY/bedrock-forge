@@ -378,6 +378,7 @@ public class ServerSettingsView extends LinearLayout {
 
         if (spec.type.equals(TEXT) || spec.type.equals(NUMBER) || spec.type.equals(DECIMAL)) {
             final EditText edit = new EditText(activity);
+        MinecraftUi.styleInput(edit);
             edit.setSingleLine(true);
             edit.setText(value);
             edit.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10.5f);

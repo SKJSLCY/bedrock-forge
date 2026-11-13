@@ -320,6 +320,7 @@ final class PlayerDataEditor {
         row.addView(l, new LinearLayout.LayoutParams(0,
                 ViewGroup.LayoutParams.WRAP_CONTENT, 0.42f));
         EditText e = new EditText(activity);
+        MinecraftUi.styleInput(e);
         e.setSingleLine(true);
         e.setText(value == null ? "" : value);
         e.setTextSize(10f);
@@ -572,6 +573,7 @@ final class PlayerDataEditor {
         row.setPadding(dp(8), dp(5), dp(8), dp(5));
         row.addView(MinecraftUi.text(activity, label, 8.5f, MinecraftUi.PANEL_MUTED, false));
         EditText e = new EditText(activity);
+        MinecraftUi.styleInput(e);
         e.setText(value == null ? "" : value);
         e.setTextSize(9.5f);
         e.setTextColor(0xFFB8FFB0);

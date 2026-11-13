@@ -128,9 +128,8 @@ final class AiSettingsView extends LinearLayout {
             Button b = new MinecraftUi.McButton(activity, row[1]);
             b.setTextSize(8f);
             if (row[0].equals(currentPreset)) {
-                b.setTextColor(0xFF1B1B1B);
-                b.setBackground(new MinecraftUi.BevelDrawable(0xFFC6C6C6,
-                        MinecraftUi.GREEN_BRIGHT, 0xFFFFFFFF, 0xFF5A5A5A, dp(2), dp(2)));
+                b.setTextColor(MinecraftUi.selectedTextColor());
+                b.setBackground(MinecraftUi.selectedDrawable(activity));
             }
             LinearLayout.LayoutParams blp = new LinearLayout.LayoutParams(dp(120), dp(34));
             blp.rightMargin = dp(4);
@@ -143,9 +142,8 @@ final class AiSettingsView extends LinearLayout {
         Button customPreset = new MinecraftUi.McButton(activity, "自定义");
         customPreset.setTextSize(8f);
         if ("custom".equals(currentPreset)) {
-            customPreset.setTextColor(0xFF1B1B1B);
-            customPreset.setBackground(new MinecraftUi.BevelDrawable(0xFFC6C6C6,
-                    MinecraftUi.GREEN_BRIGHT, 0xFFFFFFFF, 0xFF5A5A5A, dp(2), dp(2)));
+            customPreset.setTextColor(MinecraftUi.selectedTextColor());
+            customPreset.setBackground(MinecraftUi.selectedDrawable(activity));
         }
         LinearLayout.LayoutParams clp2 = new LinearLayout.LayoutParams(dp(90), dp(34));
         clp2.rightMargin = dp(4);
@@ -377,10 +375,8 @@ final class AiSettingsView extends LinearLayout {
                     (selected ? "✓ " : "") + m);
             b.setTextSize(8.5f);
             if (selected) {
-                b.setTextColor(0xFF1B1B1B);
-                b.setBackground(new MinecraftUi.BevelDrawable(0xFFC6C6C6,
-                        MinecraftUi.GREEN_BRIGHT, 0xFFFFFFFF, 0xFF5A5A5A,
-                        dp(2), dp(2)));
+                b.setTextColor(MinecraftUi.selectedTextColor());
+                b.setBackground(MinecraftUi.selectedDrawable(activity));
             }
             LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT, dp(38));
