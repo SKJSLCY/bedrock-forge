@@ -685,19 +685,37 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
         header.setGravity(Gravity.BOTTOM);
 
         if (MinecraftUi.ORE) {
-            header.setGravity(Gravity.CENTER_VERTICAL);
-            header.setBackgroundColor(0xFFEDEDED);
-            header.setPadding(dp(20), dp(10), dp(20), dp(10));
-            TextView title = new TextView(this);
-            title.setText("首页");
-            title.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 21);
-            title.setTextColor(0xFF1B1B1B);
-            title.setGravity(Gravity.CENTER);
-            title.setTypeface(Typeface.create("sans-serif", Typeface.NORMAL));
-            header.addView(title, new LinearLayout.LayoutParams(0,
+            LinearLayout oreBar = new LinearLayout(this);
+            oreBar.setOrientation(LinearLayout.VERTICAL);
+            LinearLayout row = new LinearLayout(this);
+            row.setOrientation(LinearLayout.HORIZONTAL);
+            row.setGravity(Gravity.CENTER_VERTICAL);
+            row.setBackgroundColor(0xFFD8D8D8);
+            row.setPadding(dp(20), dp(8), dp(20), dp(8));
+
+            TextView brand = new TextView(this);
+            brand.setText("基岩工坊");
+            brand.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 20);
+            brand.setTextColor(0xFF1B1B1B);
+            brand.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
+            row.addView(brand, new LinearLayout.LayoutParams(0,
                     ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
-            oreTitle = title;
-            return header;
+
+            TextView page = new TextView(this);
+            page.setText("首页");
+            page.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 14);
+            page.setTextColor(0xFF5A5A5A);
+            page.setTypeface(Typeface.create("sans-serif", Typeface.NORMAL));
+            row.addView(page);
+
+            oreBar.addView(row, new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+            View line = new View(this);
+            line.setBackgroundColor(0xFF1B1B1B);
+            oreBar.addView(line, new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, dp(2)));
+            oreTitle = page;
+            return oreBar;
         }
 
         LinearLayout left = new LinearLayout(this);
