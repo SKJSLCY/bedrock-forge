@@ -210,11 +210,11 @@ final class AboutDialog {
         LinearLayout sponsor = MinecraftUi.panel(a, "支持作者");
         sponsor.addView(MinecraftUi.text(a,
                 "软件完全免费，赞助自愿，不影响使用与开源权利。\n"
-                        + "赞助方式尚未配置。",
+                        + "点击按钮前往爱发电赞助作者。",
                 8.5f, MinecraftUi.PANEL_MUTED, false));
-        Button sponsorBtn = new MinecraftUi.McButton(a, "赞助作者（未配置）");
+        Button sponsorBtn = new MinecraftUi.McButton(a, "赞助作者（爱发电）");
         sponsor.addView(sponsorBtn, btnLp(a, 8));
-        sponsorBtn.setOnClickListener(v -> toast(a, "赞助方式尚未配置"));
+        sponsorBtn.setOnClickListener(v -> openUrl(a, "https://afdian.com/a/SKJSLCY"));
         content.addView(sponsor, cardLp(a));
 
         // 兼容性
