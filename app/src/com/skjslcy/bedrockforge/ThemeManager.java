@@ -61,7 +61,7 @@ final class ThemeManager {
         boolean ore = isOre(a);
         MinecraftUi.applyTheme(minimal, ore, minimal && isDark(a));
         boolean dark = minimal && isDark(a);
-        int statusColor = ore ? 0xFFE8E8E8
+        int statusColor = ore ? 0xFFEDEDED
                 : (minimal ? (dark ? 0xFF000000 : 0xFFEEECE6) : 0xFF1A120B);
         int navColor = ore ? 0xFF383838
                 : (minimal ? (dark ? 0xFF000000 : 0xFFEEECE6) : 0xFF1A120B);
@@ -91,7 +91,7 @@ final class ThemeManager {
             case 0xFF9A9A9A:
             case 0xFF6A8A6A:
             case 0xFF79C0FF:
-            case 0xFFE8E8E8:
+            case 0xFFF0F0F0:
             case 0xFFD0D0D0:
             case 0xFFC0C0C0:
                 return MinecraftUi.PANEL_MUTED;

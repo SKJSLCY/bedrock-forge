@@ -25,7 +25,7 @@ public class SplashActivity extends Activity {
         super.onCreate(savedInstanceState);
         ThemeManager.apply(this);
         if (MinecraftUi.ORE) {
-            getWindow().setStatusBarColor(0xFFE8E8E8);
+            getWindow().setStatusBarColor(0xFFEDEDED);
             getWindow().setNavigationBarColor(0xFF383838);
         } else {
             getWindow().setStatusBarColor(MinecraftUi.MINIMAL
