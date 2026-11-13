@@ -27,6 +27,9 @@ import java.util.Map;
 /** 关于页面：版本、简介、入口、环境信息、诊断、FAQ、致谢、声明。 */
 final class AboutDialog {
 
+    private static final String QQ_GROUP_URL =
+            "https://qun.qq.com/universal-share/share?ac=1&authKey=aXbbDrFrIwkpxJWFhcclaTZyZFjQDRq%2FQDR0P3gUHSRNAbsG3aD9lb1CbRCc9yGq&busi_data=eyJncm91cENvZGUiOiIxMTI4OTM1NzE5IiwidG9rZW4iOiIveC9SQ3dvNXV1ZUFMNE5wbVFDYnJYSTkxenNoWjk0cy9VNGtxRUdhb3pFU2VZUEptRzJYWHZ3UGZPbGR1TWUvIiwidWluIjoiMTc5NDE5NjkxMCJ9&data=yGAGNaWN2jy6ZnJloDPda8gfQmSA1EsYMxjwmfDp3-KHEv5LlI0GSpgBilPvAARl0bzOz30CQcG-4XWs6yapRw&svctype=4&tempid=h5_group_info";
+
     private AboutDialog() {
     }
 
@@ -103,6 +106,10 @@ final class AboutDialog {
         links.addView(feedback, btnLp(a, 5));
         feedback.setOnClickListener(v -> openUrl(a,
                 "https://github.com/SKJSLCY/bedrock-forge/issues"));
+
+        Button qq = new MinecraftUi.McButton(a, "加入 QQ 交流群（1128935719）");
+        links.addView(qq, btnLp(a, 5));
+        qq.setOnClickListener(v -> openUrl(a, QQ_GROUP_URL));
 
         Button license = new MinecraftUi.McButton(a, "开源许可证（GPL-3.0）");
         links.addView(license, btnLp(a, 5));

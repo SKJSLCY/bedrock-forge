@@ -130,6 +130,7 @@
 16.4 联系方式：
     项目仓库：https://github.com/SKJSLCY/bedrock-forge
     反馈渠道：https://github.com/SKJSLCY/bedrock-forge/issues
+    QQ 交流群：1128935719
 
 附录 A：第三方组件与许可
 

@@ -8,6 +8,8 @@
 
 项目仓库：https://github.com/SKJSLCY/bedrock-forge
 反馈渠道：https://github.com/SKJSLCY/bedrock-forge/issues
+QQ 交流群：1128935719
+加群链接：https://qun.qq.com/universal-share/share?ac=1&authKey=aXbbDrFrIwkpxJWFhcclaTZyZFjQDRq%2FQDR0P3gUHSRNAbsG3aD9lb1CbRCc9yGq&busi_data=eyJncm91cENvZGUiOiIxMTI4OTM1NzE5IiwidG9rZW4iOiIveC9SQ3dvNXV1ZUFMNE5wbVFDYnJYSTkxenNoWjk0cy9VNGtxRUdhb3pFU2VZUEptRzJYWHZ3UGZPbGR1TWUvIiwidWluIjoiMTc5NDE5NjkxMCJ9&data=yGAGNaWN2jy6ZnJloDPda8gfQmSA1EsYMxjwmfDp3-KHEv5LlI0GSpgBilPvAARl0bzOz30CQcG-4XWs6yapRw&svctype=4&tempid=h5_group_info
 作者：SKJSLCY
 许可证：GPL-3.0-or-later
 
