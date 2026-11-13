@@ -719,7 +719,7 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
 
             TextView back = new TextView(this);
             back.setText("‹");
-            back.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 30);
+            back.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 26);
             back.setTextColor(0xFF1B1B1B);
             back.setGravity(Gravity.CENTER);
             back.setPadding(dp(8), 0, dp(14), 0);
@@ -739,7 +739,7 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
             oreBack = back;
 
             oreBar.addView(row, new LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+                    ViewGroup.LayoutParams.MATCH_PARENT, dp(44)));
             View lipTop = new View(this);
             lipTop.setBackgroundColor(0xFFDEDEDE);
             oreBar.addView(lipTop, new LinearLayout.LayoutParams(
@@ -2270,7 +2270,7 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
         settingsHost = new FrameLayout(this);
         LinearLayout.LayoutParams hlp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f);
-        hlp.topMargin = dp(8);
+        hlp.topMargin = MinecraftUi.ORE ? 0 : dp(8);
         page.addView(settingsHost, hlp);
         return page;
     }
