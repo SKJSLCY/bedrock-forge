@@ -9,6 +9,20 @@ Minecraft Bedrock Dedicated Server（BDS）。
 > 无隶属、授权或合作关系。
 
 > 本软件通过AI制作。
+> 📖 **新手先看：[使用说明](help.md)**（部署 → 开服 → 进阶 → AI → 个性化 → 反馈）
+
+<details>
+<summary>📚 <b>帮助文档目录</b>（点击展开，直达各章节）</summary>
+
+- [一、开始](help.md#一开始)：必要条件 · 本地部署 · 服务器配置与启动
+- [二、服务器管理功能介绍](help.md#二服务器管理功能介绍)：存档 / addons / 玩家 / 服务器设置 / 备份
+- [三、进阶](help.md#三进阶)：查看 · 编辑 · 导入玩家数据，控制台与终端
+- [四、AI 助手](help.md#四ai-助手)：用前配置 · 个性化 · 使用
+- [五、个性化](help.md#五个性化)：风格 · 高级风格 · 语言
+- [六、意见与反馈](help.md#六意见与反馈)：联系渠道 · 提交方式
+
+</details>
+
 
 ---
 
@@ -25,8 +39,9 @@ Minecraft Bedrock Dedicated Server（BDS）。
 
 ## 状态
 
-版本：0.1
+版本：0.2
 平台：Android 8.0+ / arm64
+语言：简体中文 / 繁體中文 / English
 许可证：GPL-3.0-or-later
 
 ## 重要说明
@@ -153,3 +168,14 @@ QQ 交流群：1128935719
 使用本软件部署、修改服务端产生的风险与后果由用户自行承担。
 
 Minecraft、Minecraft Bedrock Edition 及相关商标归其权利人所有。
+
+## 文档
+
+| 文档 | 内容 |
+|---|---|
+| [使用说明](help.md) | 从必要条件、本地部署到各功能与 AI 助手的完整上手指南 |
+| [项目结构](docs/project-structure.md) | 目录树、构建管线、运行时架构、分层与逐类职责、存储布局、关键流程、扩展点 |
+| [界面语言](docs/i18n.md) | 简体 / 繁體 / English 词表结构、用法与校验脚本 |
+| [UI 设计 v2](docs/ui-design-v2.md) | 三套界面方案的取舍 |
+| [方案 C 实装](docs/ui-c-implemented.md) | Minecraft GUI 方案的落地清单 |
+
