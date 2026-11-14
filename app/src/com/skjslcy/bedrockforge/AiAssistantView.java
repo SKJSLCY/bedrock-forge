@@ -62,7 +62,7 @@ final class AiAssistantView extends LinearLayout {
 
         sessions = AiConfig.sessions(activity);
         if (sessions.length() == 0) {
-            sessions.put(newSession("新对话"));
+            sessions.put(newSession(I18n.t("新对话")));
         }
         current = 0;
 
@@ -82,7 +82,8 @@ final class AiAssistantView extends LinearLayout {
         chatScroll.addView(messagesBox);
         addView(chatScroll, new LayoutParams(LayoutParams.MATCH_PARENT, 0, 1f));
 
-        status = MinecraftUi.text(activity, "", 9f, 0xFFE8E8E8, false);
+        status = MinecraftUi.text(activity, "", 9f, MinecraftUi.chatMetaColor(), false);
+        status.setTextColor(MinecraftUi.chatMetaColor());
         addView(status, new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT));
 
         LinearLayout tools = new LinearLayout(activity);
@@ -110,9 +111,9 @@ final class AiAssistantView extends LinearLayout {
         input = new EditText(activity);
         input.setSingleLine(true);
         input.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
-        input.setTextColor(0xFFB8FFB0);
-        input.setHintTextColor(0xFF6A8A6A);
-        input.setHint("输入消息…");
+        input.setTextColor(MinecraftUi.chatInputText());
+        input.setHintTextColor(MinecraftUi.chatInputHint());
+        input.setHint(I18n.t("输入消息…"));
         input.setTypeface(Typeface.MONOSPACE);
         input.setBackground(MinecraftUi.terminalDrawable(activity));
         input.setPadding(dp(9), dp(8), dp(9), dp(8));
@@ -179,7 +180,7 @@ final class AiAssistantView extends LinearLayout {
         for (int i = 0; i < sessions.length(); i++) {
             final int idx = i;
             JSONObject s = session(i);
-            String title = s == null ? "对话" : s.optString("title", "对话");
+            String title = s == null ? I18n.t("对话") : s.optString("title", "对话");
             LinearLayout tab = new LinearLayout(activity);
             tab.setGravity(Gravity.CENTER);
             tab.setPadding(dp(12), dp(8), dp(12), dp(8));
@@ -195,7 +196,10 @@ final class AiAssistantView extends LinearLayout {
                 tab.setBackground(i == current ? MinecraftUi.selectedDrawable(activity)
                         : MinecraftUi.slotDrawable(activity));
             } else if (MinecraftUi.MINIMAL) {
-                tab.setBackground(MinecraftUi.slotDrawable(activity));
+                tab.setBackground(i == current ? MinecraftUi.selectedDrawable(activity)
+                        : MinecraftUi.slotDrawable(activity));
+                label.setTextColor(i == current ? MinecraftUi.ON_ACCENT
+                        : MinecraftUi.PANEL_MUTED);
             } else {
                 tab.setBackground(new MinecraftUi.BevelDrawable(
                         i == current ? 0xFFC6C6C6 : 0xFFA8A8A8,
@@ -230,7 +234,7 @@ final class AiAssistantView extends LinearLayout {
         tabRow.addView(add, lp);
         add.setOnClickListener(v -> {
             if (busy) return;
-            sessions.put(newSession("新对话" + (sessions.length() + 1)));
+            sessions.put(newSession(I18n.t("新对话") + (sessions.length() + 1)));
             current = sessions.length() - 1;
             renderTabs();
             loadSession(current);
@@ -240,7 +244,7 @@ final class AiAssistantView extends LinearLayout {
 
     private void showSessionMenu(final int idx) {
         JSONObject s = session(idx);
-        String title = s == null ? "对话" : s.optString("title", "对话");
+        String title = s == null ? I18n.t("对话") : s.optString("title", "对话");
         final Dialog d = new Dialog(activity);
         d.requestWindowFeature(Window.FEATURE_NO_TITLE);
         LinearLayout wrap = new LinearLayout(activity);
@@ -287,9 +291,9 @@ final class AiAssistantView extends LinearLayout {
         JSONObject s = session(idx);
         e.setText(s == null ? "" : s.optString("title", ""));
         new AlertDialog.Builder(activity)
-                .setTitle("重命名会话")
+                .setTitle(I18n.t("重命名会话"))
                 .setView(e)
-                .setPositiveButton("保存", (d, w) -> {
+                .setPositiveButton(I18n.t("保存"), (d, w) -> {
                     try {
                         s.put("title", e.getText().toString().trim());
                     } catch (Throwable ignored) {
@@ -297,13 +301,13 @@ final class AiAssistantView extends LinearLayout {
                     renderTabs();
                     saveSessions();
                 })
-                .setNegativeButton("取消", null)
+                .setNegativeButton(I18n.t("取消"), null)
                 .show();
     }
 
     private void deleteSession(int idx) {
         if (sessions.length() <= 1) {
-            toast("至少保留一个会话");
+            toast(I18n.t("至少保留一个会话"));
             return;
         }
         sessions.remove(idx);
@@ -345,8 +349,8 @@ final class AiAssistantView extends LinearLayout {
             }
             if (!text.isEmpty() && !"tool".equals(role)) history.add(msg);
             if (!text.isEmpty() && !"tool".equals(role)) {
-                if ("user".equals(role)) addBubble("你", text, true);
-                else addBubble("AI 助手", text, false);
+                if ("user".equals(role)) addBubble(I18n.t("你"), text, true);
+                else addBubble(I18n.t("AI 助手"), text, false);
             }
         }
         updateStatus();
@@ -379,8 +383,10 @@ final class AiAssistantView extends LinearLayout {
     // ---------------------------------------------------------------- chat
 
     private void addBubble(String who, String text, boolean right) {
-        if ("你".equals(who)) who = AiConfig.userName(activity);
-        else if ("AI 助手".equals(who)) who = AiConfig.aiName(activity);
+        if ("你".equals(who) || I18n.t("你").equals(who)) who = AiConfig.userName(activity);
+        else if ("AI 助手".equals(who) || I18n.t("AI 助手").equals(who)) {
+            who = AiConfig.aiName(activity);
+        }
         LinearLayout block = new LinearLayout(activity);
         block.setOrientation(VERTICAL);
         block.setGravity(right ? Gravity.END : Gravity.START);
@@ -391,25 +397,19 @@ final class AiAssistantView extends LinearLayout {
         messagesBox.addView(block, blp);
 
         TextView label = MinecraftUi.text(activity, who, 9,
-                right ? 0xFFD8C7AE : 0xFFB8FFB0, true);
+                MinecraftUi.chatNameColor(right), true);
+        label.setTextColor(MinecraftUi.chatNameColor(right));
         label.setGravity(right ? Gravity.END : Gravity.START);
         label.setLayoutParams(new LayoutParams(LayoutParams.MATCH_PARENT,
                 LayoutParams.WRAP_CONTENT));
         block.addView(label);
 
         LinearLayout bubble = new LinearLayout(activity);
-        if (MinecraftUi.MINIMAL) {
-            bubble.setBackground(right ? MinecraftUi.selectedDrawable(activity)
-                    : MinecraftUi.slotDrawable(activity));
-        } else {
-            bubble.setBackground(new MinecraftUi.BevelDrawable(
-                    right ? 0xFF8FBF6A : 0xFFC6C6C6, 0xFF151515,
-                    right ? 0xFFCBE8B0 : 0xFFFFFFFF,
-                    right ? 0xFF5A7F3A : 0xFF5A5A5A, dp(2), dp(2)));
-        }
+        bubble.setBackground(MinecraftUi.chatBubbleDrawable(activity, right));
         bubble.setPadding(dp(10), dp(8), dp(10), dp(8));
-        TextView msg = MinecraftUi.text(activity, text, 12,
-                MinecraftUi.MINIMAL && right ? MinecraftUi.ON_ACCENT : 0xFF1B1B1B, false);
+        TextView msg = MinecraftUi.text(activity, text, 12, 0xFF1B1B1B, false);
+        // 直接落色：text() 会走 ThemeManager 映射，把白字改成深色，压在深色气泡上就看不清。
+        msg.setTextColor(MinecraftUi.chatBubbleText(right));
         msg.setMaxWidth(dp(280));
         bubble.addView(msg);
         LinearLayout.LayoutParams lp = new LayoutParams(
@@ -449,55 +449,55 @@ final class AiAssistantView extends LinearLayout {
             b.setAlpha(ready ? 1f : 0.5f);
         }
         if (pid.isEmpty()) {
-            status.setText("未配置服务商 · AI 助手不可用");
+            status.setText(I18n.t("未配置服务商 · AI 助手不可用"));
             return;
         }
         AiConfig.Provider p = AiConfig.provider(pid);
         if (!AiConfig.hasKey(activity, pid)) {
-            status.setText(p.name + " · 未配置 Key · AI 助手不可用");
+            status.setText(p.name + I18n.t(" · 未配置 Key · AI 助手不可用"));
             return;
         }
         String model = AiConfig.model(activity);
         if (model == null || model.trim().isEmpty()) {
-            status.setText(p.name + " · 未选择模型 · AI 助手不可用");
+            status.setText(p.name + I18n.t(" · 未选择模型 · AI 助手不可用"));
             return;
         }
         int used = history.size();
         int limit = Math.max(1, AiConfig.contextLimit(activity));
         int pct = Math.min(100, used * 100 / limit);
-        status.setText(p.name + " · " + model + " · 思考 " + reasoningLabel()
-                + " · 上下文 " + used + "/" + limit + "（" + pct + "%）"
-                + (pendingImages.isEmpty() ? "" : " · 图片 " + pendingImages.size() + " 张"));
+        status.setText(p.name + " · " + model + I18n.t(" · 思考 ") + reasoningLabel()
+                + I18n.t(" · 上下文 ") + used + "/" + limit + I18n.t("（") + pct + "%" + I18n.t("）")
+                + (pendingImages.isEmpty() ? "" : I18n.t(" · 图片 ") + pendingImages.size() + I18n.t(" 张")));
     }
 
     private String reasoningLabel() {
         switch (AiConfig.reasoning(activity)) {
-            case "off": return "关闭";
-            case "low": return "低";
-            case "high": return "高";
-            default: return "中";
+            case "off": return I18n.t("关闭");
+            case "low": return I18n.t("低");
+            case "high": return I18n.t("高");
+            default: return I18n.t("中");
         }
     }
 
     private void sendMessage() {
         if (busy) {
-            toast("AI 正在回复");
+            toast(I18n.t("AI 正在回复"));
             return;
         }
         String text = input.getText().toString().trim();
         if (text.isEmpty() && pendingImages.isEmpty()) return;
         if (!ready()) {
-            toast("请先在 设置 → AI 智能体 添加服务商、填写 Key 并选择模型");
+            toast(I18n.t("请先在 设置 → AI 智能体 添加服务商、填写 Key 并选择模型"));
             return;
         }
         input.setText("");
         AiHttp.Msg user = new AiHttp.Msg();
         user.role = "user";
-        user.text = text.isEmpty() ? "（图片）" : text;
+        user.text = text.isEmpty() ? I18n.t("（图片）") : text;
         user.images.addAll(pendingImages);
         pendingImages.clear();
         history.add(user);
-        addBubble("你", user.text, true);
+        addBubble(I18n.t("你"), user.text, true);
         persist();
         updateStatus();
         runAgent();
@@ -506,7 +506,7 @@ final class AiAssistantView extends LinearLayout {
     private void runAgent() {
         busy = true;
         send.setEnabled(false);
-        status.setText("AI 正在思考…");
+        status.setText(I18n.t("AI 正在思考…"));
         new Thread(() -> {
             String system = buildSystem();
             List<AiHttp.ToolDef> tools = AiTools.defs();
@@ -531,7 +531,7 @@ final class AiAssistantView extends LinearLayout {
                         as.calls.addAll(r.calls);
                         history.add(as);
                         final String out = r.text;
-                        activity.runOnUiThread(() -> addBubble("AI 助手", out, false));
+                        activity.runOnUiThread(() -> addBubble(I18n.t("AI 助手"), out, false));
                     } else if (!r.calls.isEmpty()) {
                         AiHttp.Msg as = new AiHttp.Msg();
                         as.role = "assistant";
@@ -559,9 +559,9 @@ final class AiAssistantView extends LinearLayout {
 
     private String buildSystem() {
         StringBuilder sb = new StringBuilder();
-        sb.append("你是「基岩工坊」的 AI 助手，可以调用工具查看服务端状态、日志、玩家，")
-                .append("并在用户确认后启停服务端或执行命令。回答使用中文，简洁准确。")
-                .append("需要操作服务端时必须调用工具，不要编造结果。");
+        sb.append(I18n.t("你是「基岩工坊」的 AI 助手，可以调用工具查看服务端状态、日志、玩家，"))
+                .append(I18n.t("并在用户确认后启停服务端或执行命令。回答使用中文，简洁准确。"))
+                .append(I18n.t("需要操作服务端时必须调用工具，不要编造结果。"));
         String extra = AiConfig.systemPrompt(activity);
         if (extra != null && !extra.trim().isEmpty()) sb.append("\n").append(extra);
         return sb.toString();
@@ -575,28 +575,28 @@ final class AiAssistantView extends LinearLayout {
         final CountDownLatch latch = new CountDownLatch(1);
         final String desc = AiTools.describe(call.name, call.args);
         activity.runOnUiThread(() -> new AlertDialog.Builder(activity)
-                .setTitle("AI 请求执行操作")
-                .setMessage(desc + "\n\n是否允许？")
-                .setPositiveButton("允许", (d, w) -> {
+                .setTitle(I18n.t("AI 请求执行操作"))
+                .setMessage(desc + I18n.t("\n\n是否允许？"))
+                .setPositiveButton(I18n.t("允许"), (d, w) -> {
                     allowed[0] = true;
                     latch.countDown();
                 })
-                .setNegativeButton("拒绝", (d, w) -> latch.countDown())
+                .setNegativeButton(I18n.t("拒绝"), (d, w) -> latch.countDown())
                 .setCancelable(false)
                 .show());
         try {
             latch.await();
         } catch (Throwable ignored) {
         }
-        if (!allowed[0]) return "用户拒绝执行";
+        if (!allowed[0]) return I18n.t("用户拒绝执行");
         if ("start_server".equals(call.name)) {
             runOnUiAndWait(() -> ((MainActivity) activity).aiStartServer());
-            return "已请求启动服务端，状态：" +
-                    (ServerManager.get().isRunning() ? "运行中" : "启动中/失败");
+            return I18n.t("已请求启动服务端，状态：") +
+                    (ServerManager.get().isRunning() ? I18n.t("运行中") : I18n.t("启动中/失败"));
         }
         if ("stop_server".equals(call.name)) {
             runOnUiAndWait(() -> ((MainActivity) activity).aiStopServer());
-            return "已请求停止服务端";
+            return I18n.t("已请求停止服务端");
         }
         return AiTools.execute(activity, call.name, call.args);
     }
@@ -627,8 +627,8 @@ final class AiAssistantView extends LinearLayout {
     private void finishWithError(String err) {
         busy = false;
         send.setEnabled(true);
-        addBubble("系统", "请求失败：" + err, false);
-        status.setText("请求失败");
+        addBubble(I18n.t("系统"), I18n.t("请求失败：") + err, false);
+        status.setText(I18n.t("请求失败"));
     }
 
     // --------------------------------------------------------------- tools
@@ -652,13 +652,13 @@ final class AiAssistantView extends LinearLayout {
     private void showModelDialog() {
         final String pid = AiConfig.providerId(activity);
         if (pid.isEmpty()) {
-            toast("请先在 设置 → AI 智能体 添加服务商");
+            toast(I18n.t("请先在 设置 → AI 智能体 添加服务商"));
             return;
         }
         final AiConfig.Provider p = AiConfig.provider(pid);
         final java.util.List<String> models = AiConfig.detectedModels(activity, pid);
         if (models.isEmpty()) {
-            toast("请先在 AI 智能体里检测可用模型");
+            toast(I18n.t("请先在 AI 智能体里检测可用模型"));
             return;
         }
         final Dialog d = new Dialog(activity);
@@ -666,7 +666,7 @@ final class AiAssistantView extends LinearLayout {
         LinearLayout wrap = new LinearLayout(activity);
         wrap.setOrientation(VERTICAL);
         wrap.setPadding(dp(12), dp(12), dp(12), dp(12));
-        LinearLayout panel = MinecraftUi.panel(activity, "选择模型 · " + p.name);
+        LinearLayout panel = MinecraftUi.panel(activity, I18n.t("选择模型 · ") + p.name);
         final LinearLayout list = new LinearLayout(activity);
         list.setOrientation(VERTICAL);
         final Runnable[] rebuild = new Runnable[1];
@@ -677,10 +677,8 @@ final class AiAssistantView extends LinearLayout {
                 Button b = new MinecraftUi.McButton(activity, (selected ? "✓ " : "") + m);
                 b.setTextSize(9);
                 if (selected) {
-                    b.setTextColor(0xFF1B1B1B);
-                    b.setBackground(new MinecraftUi.BevelDrawable(0xFFC6C6C6,
-                            MinecraftUi.GREEN_BRIGHT, 0xFFFFFFFF, 0xFF5A5A5A,
-                            dp(2), dp(2)));
+                    b.setBackground(MinecraftUi.selectedDrawable(activity));
+                    b.setTextColor(MinecraftUi.selectedTextColor());
                 }
                 LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
                         LayoutParams.MATCH_PARENT, dp(40));
@@ -788,18 +786,18 @@ final class AiAssistantView extends LinearLayout {
                 byte[] bytes = readAll(uri, 6 * 1024 * 1024);
                 pendingImages.add(Base64.encodeToString(bytes, Base64.NO_WRAP));
                 updateStatus();
-                toast("已添加图片，发送后随消息提交");
+                toast(I18n.t("已添加图片，发送后随消息提交"));
             } else if (requestCode == REQ_FILE) {
                 byte[] bytes = readAll(uri, 512 * 1024);
                 String text = new String(bytes, "UTF-8");
                 String name = displayName(uri);
                 String cur = input.getText().toString();
                 if (!cur.isEmpty()) cur += "\n";
-                input.setText(cur + "【文件 " + name + "】\n" + text);
-                toast("已载入文件内容");
+                input.setText(cur + I18n.t("【文件 ") + name + "】\n" + text);
+                toast(I18n.t("已载入文件内容"));
             }
         } catch (Throwable t) {
-            toast("读取失败：" + t.getMessage());
+            toast(I18n.t("读取失败：") + t.getMessage());
         }
     }
 
@@ -809,7 +807,7 @@ final class AiAssistantView extends LinearLayout {
         byte[] buf = new byte[8192];
         int n;
         while ((n = in.read(buf)) > 0) {
-            if (bos.size() + n > max) throw new Exception("文件过大");
+            if (bos.size() + n > max) throw new Exception(I18n.t("文件过大"));
             bos.write(buf, 0, n);
         }
         in.close();
@@ -825,6 +823,6 @@ final class AiAssistantView extends LinearLayout {
             }
         } catch (Throwable ignored) {
         }
-        return "文件";
+        return I18n.t("文件");
     }
 }

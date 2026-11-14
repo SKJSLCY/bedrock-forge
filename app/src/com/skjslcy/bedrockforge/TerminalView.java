@@ -39,11 +39,16 @@ public class TerminalView extends LinearLayout {
     private final ScrollView scroll;
     private boolean busy;
 
+    // 经典色常量保持原值，输出前统一经 ThemeManager.mapTextColor 映射到当前主题
     private static final int C_NORMAL = 0xFFD0D0D0;
     private static final int C_COMMAND = 0xFF79C0FF;
     private static final int C_SUCCESS = 0xFF7EE787;
     private static final int C_WARN = 0xFFFFD166;
     private static final int C_ERROR = 0xFFFF6B6B;
+
+    private static int themed(int color) {
+        return ThemeManager.mapTextColor(color);
+    }
 
     public TerminalView(Activity activity) {
         super(activity);
@@ -62,8 +67,8 @@ public class TerminalView extends LinearLayout {
         addView(scroll, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
 
-        appendColored("Ubuntu 终端 · 服务端停止时可用\n", C_SUCCESS);
-        appendColored("命令 蓝 · 输出 白 · 警告 黄 · 错误 红\n\n", C_NORMAL);
+        appendColored(I18n.t("Ubuntu 终端 · 服务端停止时可用\n"), C_SUCCESS);
+        appendColored(I18n.t("命令 蓝 · 输出 白 · 警告 黄 · 错误 红\n\n"), C_NORMAL);
         appendColored("$ ", C_COMMAND);
 
         TextView symbolLabel = MinecraftUi.text(activity, "快捷符号", 9, 0xFFD8C7AE, true);
@@ -103,7 +108,7 @@ public class TerminalView extends LinearLayout {
         input.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
         input.setTextColor(0xFFB8FFB0);
         input.setHintTextColor(0xFF6A8A6A);
-        input.setHint("输入 Ubuntu 命令，如 ls /");
+        input.setHint(I18n.t("输入 Ubuntu 命令，如 ls /"));
         input.setTypeface(Typeface.MONOSPACE);
         input.setBackground(MinecraftUi.terminalDrawable(activity));
         input.setPadding(dp(8), dp(7), dp(8), dp(7));
@@ -133,10 +138,10 @@ public class TerminalView extends LinearLayout {
         String cmd = input.getText().toString().trim();
         if (cmd.isEmpty()) return;
         if (ServerManager.get().isRunning()) {
-            Toast.makeText(activity, "请先停止服务端", Toast.LENGTH_SHORT).show();
+            Toast.makeText(activity, I18n.t("请先停止服务端"), Toast.LENGTH_SHORT).show();
             return;
         }
-        if (!ShizukuGate.ensure(activity, "Ubuntu 终端")) return;
+        if (!ShizukuGate.ensure(activity, I18n.t("Ubuntu 终端"))) return;
         input.setText("");
         hideKeyboard();
         appendColored(cmd + "\n", C_COMMAND);
@@ -152,7 +157,7 @@ public class TerminalView extends LinearLayout {
                     String bashCmd = "export PATH=/usr/local/sbin:/usr/local/bin:"
                             + "/usr/sbin:/usr/bin:/sbin:/bin; " + cmd;
                     if (!useBox64) {
-                        throw new IllegalStateException("Box64 运行环境未部署");
+                        throw new IllegalStateException(I18n.t("Box64 运行环境未部署"));
                     }
                     String[] cmdArr = new String[]{
                             PROOT, "--link2symlink", "-r", "/data/local/tmp/box64/rootfs",
@@ -173,7 +178,7 @@ public class TerminalView extends LinearLayout {
                     out = read(p.getInputStream()) + read(p.getErrorStream());
                     code = p.waitFor();
                 } catch (Throwable t) {
-                    out = "[错误] " + t.getMessage();
+                    out = I18n.t("[错误] ") + t.getMessage();
                 }
                 final String text = out;
                 final int exit = code;
@@ -218,7 +223,7 @@ public class TerminalView extends LinearLayout {
         if (line.startsWith("$ ")) return C_COMMAND;
         if (line.startsWith("[EXIT 0]")) return C_SUCCESS;
         if (line.startsWith("[EXIT ")) return C_ERROR;
-        if (u.contains("[错误]") || u.contains("ERROR") || u.contains("NOT FOUND")
+        if (u.contains(I18n.t("[错误]")) || u.contains("ERROR") || u.contains("NOT FOUND")
                 || u.contains("PERMISSION DENIED") || u.contains("NO SUCH FILE")
                 || u.contains("FAILED") || u.contains("CANNOT")) {
             return C_ERROR;
@@ -228,6 +233,7 @@ public class TerminalView extends LinearLayout {
     }
 
     private void appendColored(String s, int color) {
+        color = themed(color);
         int start = buffer.length();
         buffer.append(s);
         buffer.setSpan(new ForegroundColorSpan(color), start, buffer.length(),
