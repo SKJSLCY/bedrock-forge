@@ -162,6 +162,7 @@ Minecraft、Minecraft Bedrock Edition 及相关商标归其权利人所有。
 | 文档 | 内容 |
 |---|---|
 | [使用说明](help.md) | 从必要条件、本地部署到各功能与 AI 助手的完整上手指南 |
+| [更新日志](CHANGELOG.md) | 每个版本的用户可见变化（新增 / 改进 / 修复 / 兼容性） |
 | [项目结构](docs/project-structure.md) | 目录树、构建管线、运行时架构、分层与逐类职责、存储布局、关键流程、扩展点 |
 | [界面语言](docs/i18n.md) | 简体 / 繁體 / English 词表结构、用法与校验脚本 |
 | [UI 设计 v2](docs/ui-design-v2.md) | 三套界面方案的取舍 |

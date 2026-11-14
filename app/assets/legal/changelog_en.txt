@@ -1,0 +1,34 @@
+Bedrock Forge Changelog
+
+0.2 (2026-11-14)
+
+What's new:
+
+· Interface language: Settings → Language switches between Simplified Chinese, Traditional Chinese and English — the change applies immediately, no restart needed
+· The whole app follows the language you pick: home, server, console, players, worlds, backups, AI assistant, settings and about
+· Item names, enchantments, potion effects and attribute names in player data follow the language too
+· The user agreement and this changelog are available in all three languages
+· New Settings → Keep screen on, where you choose when the screen stays awake. The page warns that long screen-on time can cause burn-in and screen aging — use it as needed
+· The Ore theme was rebuilt to match the Bedrock interface: colours, buttons, switches and panels are closer to the game
+· Buttons now show three states: not selected, selected, and selected + pressed (in the Ore theme a pressed button sinks slightly)
+· In the server instance and world lists, the one in use is highlighted directly instead of adding "(Current)" after the name
+· "Liquid glass" was renamed to "Glass"
+· Fixed several display issues: Simplified characters inside the AI system prompt, unreadable chat bubbles in the Minimal theme, untranslated input hints, "1 players" style plurals in English, and wrong brackets on the About page
+· The About page no longer shows the "tested with BDS…" line, and Testing & feedback now credits SKJSLCY
+· Version bumped to 0.2.0
+
+0.1 (2026-11-13)
+
+Initial release:
+· Brand renamed: 基岩工坊 / Bedrock Forge
+· Package name migrated to com.skjslcy.bedrockforge
+· Added a dedicated splash screen (SplashActivity)
+· Added user agreement and first-launch consent flow
+· Added an About page: version, environment info, diagnostics, FAQ, acknowledgements
+· AI assistant: multiple sessions, non-streaming conversations, images/files, model and reasoning effort
+· AI agents: multiple providers, encrypted API keys, model detection, system prompt presets
+· Server: deploy, start, stop, restart, console, logs
+· Players: list, permissions, game mode, level, data view/edit/delete/backup
+· Worlds: create, switch, rename, delete, import, export, backup and rollback
+· Addons: import, detect, enable, disable, delete
+· Settings: theme placeholder, permission management, keep screen on, clear all data
