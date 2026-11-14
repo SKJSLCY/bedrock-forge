@@ -27,7 +27,7 @@ public class DeployKeepAliveService extends Service {
     public static void progress(Context c, int percent, String text) {
         try {
             NotificationManager nm = (NotificationManager) c.getSystemService(NOTIFICATION_SERVICE);
-            nm.notify(ID, build(c, "部署中 " + percent + "%", text, percent));
+            nm.notify(ID, build(c, I18n.t("部署中 ") + percent + "%", text, percent));
         } catch (Throwable ignored) {
         }
     }
@@ -43,7 +43,7 @@ public class DeployKeepAliveService extends Service {
     public void onCreate() {
         super.onCreate();
         if (Build.VERSION.SDK_INT >= 26) {
-            NotificationChannel ch = new NotificationChannel(CHANNEL, "部署进度",
+            NotificationChannel ch = new NotificationChannel(CHANNEL, I18n.t("部署进度"),
                     NotificationManager.IMPORTANCE_LOW);
             NotificationManager nm = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
             nm.createNotificationChannel(ch);
@@ -52,8 +52,8 @@ public class DeployKeepAliveService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        String label = intent == null ? "部署" : intent.getStringExtra("label");
-        startForeground(ID, build(this, "部署进行中", label == null ? "" : label, 0));
+        String label = intent == null ? I18n.t("部署") : intent.getStringExtra("label");
+        startForeground(ID, build(this, I18n.t("部署进行中"), label == null ? "" : label, 0));
         return START_NOT_STICKY;
     }
 

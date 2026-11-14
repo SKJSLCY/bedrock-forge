@@ -18,31 +18,31 @@ final class Lz4 {
             if (lit == 15) {
                 int b;
                 do {
-                    if (ip >= iend) throw new Exception("lz4 literal 长度越界");
+                    if (ip >= iend) throw new Exception(I18n.t("lz4 literal 长度越界"));
                     b = in[ip++] & 0xFF;
                     lit += b;
                 } while (b == 255);
             }
-            if (ip + lit > iend) throw new Exception("lz4 literal 越界");
-            if (op + lit > out.length) throw new Exception("lz4 输出越界");
+            if (ip + lit > iend) throw new Exception(I18n.t("lz4 literal 越界"));
+            if (op + lit > out.length) throw new Exception(I18n.t("lz4 输出越界"));
             System.arraycopy(in, ip, out, op, lit);
             ip += lit;
             op += lit;
             if (ip >= iend) break;
-            if (ip + 2 > iend) throw new Exception("lz4 offset 越界");
+            if (ip + 2 > iend) throw new Exception(I18n.t("lz4 offset 越界"));
             int offset = (in[ip] & 0xFF) | ((in[ip + 1] & 0xFF) << 8);
             ip += 2;
-            if (offset <= 0 || offset > op) throw new Exception("lz4 offset 非法");
+            if (offset <= 0 || offset > op) throw new Exception(I18n.t("lz4 offset 非法"));
             int match = (token & 0x0F) + 4;
             if ((token & 0x0F) == 15) {
                 int b;
                 do {
-                    if (ip >= iend) throw new Exception("lz4 match 长度越界");
+                    if (ip >= iend) throw new Exception(I18n.t("lz4 match 长度越界"));
                     b = in[ip++] & 0xFF;
                     match += b;
                 } while (b == 255);
             }
-            if (op + match > out.length) throw new Exception("lz4 输出越界(match)");
+            if (op + match > out.length) throw new Exception(I18n.t("lz4 输出越界(match)"));
             int src = op - offset;
             for (int i = 0; i < match; i++) out[op++] = out[src++];
         }

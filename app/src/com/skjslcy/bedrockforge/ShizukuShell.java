@@ -38,9 +38,9 @@ public final class ShizukuShell {
 
     /** 把 App 侧文件通过 stdin 写入 /data/local/tmp（绕过 SELinux 与 /sdcard 限制）。 */
     public static void copyIn(java.io.File local, String remote, CopyProgress cb) throws Exception {
-        if (!Shizuku.pingBinder()) throw new IOException("Shizuku 未运行");
+        if (!Shizuku.pingBinder()) throw new IOException(I18n.t("Shizuku 未运行"));
         if (Shizuku.checkSelfPermission() != PackageManager.PERMISSION_GRANTED) {
-            throw new IOException("Shizuku 未授权");
+            throw new IOException(I18n.t("Shizuku 未授权"));
         }
         Process p = ShizukuProcess.start(new String[]{"sh", "-c", "cat > " + quote(remote)},
                 env(), WORK_DIR);
@@ -63,14 +63,14 @@ public final class ShizukuShell {
         }
         String err = readAll(p.getErrorStream());
         int code = p.waitFor();
-        if (code != 0) throw new IOException(err.trim().isEmpty() ? ("退出码 " + code) : err.trim());
+        if (code != 0) throw new IOException(err.trim().isEmpty() ? (I18n.t("退出码 ") + code) : err.trim());
     }
 
     /** 从 shell 侧读取文件到 App 缓存。 */
     public static void copyOut(String remote, java.io.File local, CopyProgress cb) throws Exception {
-        if (!Shizuku.pingBinder()) throw new IOException("Shizuku 未运行");
+        if (!Shizuku.pingBinder()) throw new IOException(I18n.t("Shizuku 未运行"));
         if (Shizuku.checkSelfPermission() != PackageManager.PERMISSION_GRANTED) {
-            throw new IOException("Shizuku 未授权");
+            throw new IOException(I18n.t("Shizuku 未授权"));
         }
         Process p = ShizukuProcess.start(new String[]{"sh", "-c", "cat " + quote(remote)},
                 env(), WORK_DIR);
@@ -93,12 +93,12 @@ public final class ShizukuShell {
         }
         String err = readAll(p.getErrorStream());
         int code = p.waitFor();
-        if (code != 0) throw new IOException(err.trim().isEmpty() ? ("退出码 " + code) : err.trim());
+        if (code != 0) throw new IOException(err.trim().isEmpty() ? (I18n.t("退出码 ") + code) : err.trim());
     }
 
-    public static String exec(String[] cmd, String[] env, String dir, String stdin) throws Exception {        if (!Shizuku.pingBinder()) throw new IOException("Shizuku 未运行");
+    public static String exec(String[] cmd, String[] env, String dir, String stdin) throws Exception {        if (!Shizuku.pingBinder()) throw new IOException(I18n.t("Shizuku 未运行"));
         if (Shizuku.checkSelfPermission() != PackageManager.PERMISSION_GRANTED) {
-            throw new IOException("Shizuku 未授权");
+            throw new IOException(I18n.t("Shizuku 未授权"));
         }
         Process p = ShizukuProcess.start(cmd, env, dir);
         if (stdin != null) {
@@ -111,7 +111,7 @@ public final class ShizukuShell {
         String err = readAll(p.getErrorStream());
         int code = p.waitFor();
         if (code != 0) {
-            throw new IOException(err.trim().isEmpty() ? ("退出码 " + code) : err.trim());
+            throw new IOException(err.trim().isEmpty() ? (I18n.t("退出码 ") + code) : err.trim());
         }
         return out;
     }

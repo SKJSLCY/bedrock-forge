@@ -112,8 +112,8 @@ public final class DeployManager {
                 // 修复过程中旧环境已删除，不能继续显示旧版本。
                 s.installed = false;
                 s.name = "Box64 + Ubuntu ARM64";
-                s.version = "未部署";
-                s.note = "正在重建运行环境…";
+                s.version = I18n.t("未部署");
+                s.note = I18n.t("正在重建运行环境…");
                 return s;
             }
             boolean boxOs = exists(BOX64_ROOTFS + "/etc/os-release");
@@ -160,8 +160,8 @@ public final class DeployManager {
                 s.installed = false;
                 s.box64 = false;
                 s.name = "Box64 + Ubuntu ARM64";
-                s.version = "未部署";
-                s.note = "Box64 未编译或运行环境不完整，请点“修复运行环境”";
+                s.version = I18n.t("未部署");
+                s.note = I18n.t("Box64 未编译或运行环境不完整，请点“修复运行环境”");
                 return s;
             }
         }
@@ -192,7 +192,7 @@ public final class DeployManager {
         } catch (Throwable ignored) {
         }
         String saved = prefs(context).getString("server_version", "");
-        return saved == null || saved.isEmpty() ? "未知" : saved;
+        return saved == null || saved.isEmpty() ? I18n.t("未知") : saved;
     }
 
     private static String detectUbuntuName() {
@@ -264,14 +264,14 @@ public final class DeployManager {
 
     public static void switchServer(Context context, String version) throws Exception {
         if (ServerManager.get().isRunning()) {
-            throw new IOException("请先停止服务端，再切换实例");
+            throw new IOException(I18n.t("请先停止服务端，再切换实例"));
         }
         if (!exists(SERVERS_DIR + "/" + version + "/bedrock_server")) {
-            throw new IOException("版本目录不存在：" + version);
+            throw new IOException(I18n.t("版本目录不存在：") + version);
         }
         ShizukuShell.sh("rm -f " + q(SERVER_LINK) + "; ln -s " + q("servers/" + version)
                 + " " + q(SERVER_LINK));
-        AppLog.add("[实例] 切换到 " + version);
+        AppLog.add(I18n.t("[实例] 切换到 ") + version);
         SharedPreferences sp = prefs(context);
         String source = "";
         try {
@@ -316,15 +316,15 @@ public final class DeployManager {
 
     public static void backupInstance(Context context, String id, Progress p) throws Exception {
         if (!exists(SERVERS_DIR + "/" + id + "/bedrock_server")) {
-            throw new IOException("实例不存在：" + id);
+            throw new IOException(I18n.t("实例不存在：") + id);
         }
         ShizukuShell.sh("mkdir -p " + q(BACKUPS_DIR));
         long ts = System.currentTimeMillis();
         String name = "server-" + id + "-" + ts + ".tar.gz";
-        p.update(20, "打包实例备份…");
+        p.update(20, I18n.t("打包实例备份…"));
         ShizukuShell.sh("tar -czf " + q(BACKUPS_DIR + "/" + name) + " -C " + q(SERVERS_DIR)
                 + " " + q(id) + " 2>/dev/null || true");
-        if (!exists(BACKUPS_DIR + "/" + name)) throw new IOException("备份文件未生成");
+        if (!exists(BACKUPS_DIR + "/" + name)) throw new IOException(I18n.t("备份文件未生成"));
         String version = ShizukuShell.sh("cat " + q(SERVERS_DIR + "/" + id + "/.mcbds_version")
                 + " 2>/dev/null || true").trim();
         try {
@@ -337,13 +337,13 @@ public final class DeployManager {
             ShizukuShell.write(BACKUPS_DIR + "/" + name + ".json", meta.toString(2));
         } catch (Throwable ignored) {
         }
-        p.update(100, "实例备份完成");
-        AppLog.add("[备份] 实例 " + id);
+        p.update(100, I18n.t("实例备份完成"));
+        AppLog.add(I18n.t("[备份] 实例 ") + id);
     }
 
     public static void backupPart(Context context, String kind, Progress p) throws Exception {
         String active = activeVersion();
-        if (active.isEmpty()) throw new IOException("没有可备份的实例");
+        if (active.isEmpty()) throw new IOException(I18n.t("没有可备份的实例"));
         ShizukuShell.sh("mkdir -p " + q(BACKUPS_DIR));
         long ts = System.currentTimeMillis();
         String name;
@@ -374,11 +374,11 @@ public final class DeployManager {
             cmd = "tar -czf " + q(BACKUPS_DIR + "/" + name) + " -C " + q(SERVER_DIR)
                     + " players.json permissions.json allowlist.json 2>/dev/null || true";
         } else {
-            throw new IOException("未知备份类型");
+            throw new IOException(I18n.t("未知备份类型"));
         }
-        p.update(20, "打包 " + kind + " 备份…");
+        p.update(20, I18n.t("打包 ") + kind + I18n.t(" 备份…"));
         ShizukuShell.sh(cmd);
-        if (!exists(BACKUPS_DIR + "/" + name)) throw new IOException("备份文件未生成");
+        if (!exists(BACKUPS_DIR + "/" + name)) throw new IOException(I18n.t("备份文件未生成"));
         try {
             org.json.JSONObject meta = new org.json.JSONObject();
             meta.put("instanceId", active);
@@ -390,8 +390,8 @@ public final class DeployManager {
             ShizukuShell.write(BACKUPS_DIR + "/" + name + ".json", meta.toString(2));
         } catch (Throwable ignored) {
         }
-        p.update(100, kind + " 备份完成");
-        AppLog.add("[备份] " + kind + " " + active);
+        p.update(100, kind + I18n.t(" 备份完成"));
+        AppLog.add(I18n.t("[备份] ") + kind + " " + active);
     }
 
     public static File backup(Context context, int type, Progress p) throws Exception {
@@ -401,16 +401,16 @@ public final class DeployManager {
         String cmd;
         if (type == TYPE_SERVER) {
             String active = activeVersion();
-            if (active.isEmpty()) throw new IOException("没有可备份的服务端版本");
+            if (active.isEmpty()) throw new IOException(I18n.t("没有可备份的服务端版本"));
             name = "server-" + active + "-" + ts + ".tar.gz";
             cmd = "tar -czf " + q(BACKUPS_DIR + "/" + name) + " -C " + q(SERVERS_DIR)
                     + " " + q(active) + " 2>/dev/null || true";
         } else {
-            throw new IOException("不支持的备份类型");
+            throw new IOException(I18n.t("不支持的备份类型"));
         }
-        p.update(20, "打包备份…");
+        p.update(20, I18n.t("打包备份…"));
         ShizukuShell.sh(cmd);
-        if (!exists(BACKUPS_DIR + "/" + name)) throw new IOException("备份文件未生成");
+        if (!exists(BACKUPS_DIR + "/" + name)) throw new IOException(I18n.t("备份文件未生成"));
         try {
             if (type != TYPE_RUNTIME) {
                 String active = activeVersion();
@@ -424,7 +424,7 @@ public final class DeployManager {
             }
         } catch (Throwable ignored) {
         }
-        p.update(100, "备份完成：" + name);
+        p.update(100, I18n.t("备份完成：") + name);
         return new File(BACKUPS_DIR + "/" + name);
     }
 
@@ -465,46 +465,46 @@ public final class DeployManager {
     }
 
     public static void restorePart(Context context, String backupName, Progress p) throws Exception {
-        if (ServerManager.get().isRunning()) throw new IOException("请先停止服务端");
+        if (ServerManager.get().isRunning()) throw new IOException(I18n.t("请先停止服务端"));
         String backup = BACKUPS_DIR + "/" + backupName;
-        if (!exists(backup)) throw new IOException("备份不存在");
+        if (!exists(backup)) throw new IOException(I18n.t("备份不存在"));
         String kind = backupName.startsWith("world-") ? "world"
                 : (backupName.startsWith("plugins-") ? "plugins"
                 : (backupName.startsWith("addons-") ? "addons"
                 : (backupName.startsWith("players-") ? "players" : "")));
-        if (kind.isEmpty()) throw new IOException("不是分类备份");
+        if (kind.isEmpty()) throw new IOException(I18n.t("不是分类备份"));
         String stage = TMP + "/restore-part";
         ShizukuShell.sh("rm -rf " + q(stage) + "; mkdir -p " + q(stage));
-        p.update(20, "解包分类备份…");
+        p.update(20, I18n.t("解包分类备份…"));
         ShizukuShell.sh("tar -xzof " + q(backup) + " -C " + q(stage) + " 2>/dev/null || true");
         if ("world".equals(kind)) {
             String level = ShizukuShell.sh("find " + q(stage) + " -name level.dat -type f | head -n 1").trim();
-            if (level.isEmpty()) throw new IOException("备份里没有 level.dat");
+            if (level.isEmpty()) throw new IOException(I18n.t("备份里没有 level.dat"));
             String dir = level.substring(0, level.lastIndexOf('/'));
             String world = dir.substring(dir.lastIndexOf('/') + 1);
             String dest = SERVER_DIR + "/worlds/" + world;
-            p.update(70, "恢复存档 " + world + "…");
+            p.update(70, I18n.t("恢复存档 ") + world + "…");
             ShizukuShell.sh("mkdir -p " + q(SERVER_DIR + "/worlds") + "; rm -rf " + q(dest)
                     + "; cp -a " + q(dir) + " " + q(dest));
         } else {
-            p.update(70, "恢复 " + kind + "…");
+            p.update(70, I18n.t("恢复 ") + kind + "…");
             ShizukuShell.sh("cp -a " + q(stage) + "/. " + q(SERVER_DIR) + "/");
         }
         ShizukuShell.sh("rm -rf " + q(stage));
-        p.update(100, "分类备份恢复完成");
-        AppLog.add("[恢复] " + backupName);
+        p.update(100, I18n.t("分类备份恢复完成"));
+        AppLog.add(I18n.t("[恢复] ") + backupName);
     }
 
     /** 修复运行环境前清空：服务端实例与保存状态。 */
     public static void wipeServersAndState(Context context, Progress p) throws Exception {
         if (ServerManager.get().isRunning()) {
-            throw new IOException("请先停止服务端");
+            throw new IOException(I18n.t("请先停止服务端"));
         }
-        p.update(5, "删除服务端实例…");
+        p.update(5, I18n.t("删除服务端实例…"));
         ShizukuShell.sh("rm -rf " + q(SERVERS_DIR) + "/* 2>/dev/null || true");
         ShizukuShell.sh("rm -rf " + q(SERVERS_DIR + "/.*") + " 2>/dev/null || true");
         ShizukuShell.sh("rm -f " + q(SERVER_LINK));
-        p.update(15, "删除旧部署残留…");
+        p.update(15, I18n.t("删除旧部署残留…"));
         ShizukuShell.sh("rm -rf " + q(BASE + "/server12662") + " " + q(BASE + "/server"));
         try {
             prefs(context).edit()
@@ -512,19 +512,19 @@ public final class DeployManager {
                     .apply();
         } catch (Throwable ignored) {
         }
-        p.update(100, "旧数据已清空");
+        p.update(100, I18n.t("旧数据已清空"));
     }
 
     public static void restoreBackup(Context context, int type, String name, Progress p) throws Exception {
         String backup = BACKUPS_DIR + "/" + name;
-        if (!exists(backup)) throw new IOException("备份不存在");
-        p.update(10, "解包备份…");
+        if (!exists(backup)) throw new IOException(I18n.t("备份不存在"));
+        p.update(10, I18n.t("解包备份…"));
         if (type == TYPE_SERVER) {
             String stage = TMP + "/restore-server";
             ShizukuShell.sh("rm -rf " + q(stage) + "; mkdir -p " + q(stage));
             ShizukuShell.sh("tar -xzof " + q(backup) + " -C " + q(stage) + " 2>/dev/null || true");
             String b = ShizukuShell.sh("find " + q(stage) + " -name bedrock_server -type f | head -n 1 || true").trim();
-            if (b.isEmpty()) throw new IOException("备份里没有 bedrock_server");
+            if (b.isEmpty()) throw new IOException(I18n.t("备份里没有 bedrock_server"));
             String dir = b.substring(0, b.lastIndexOf('/'));
             String version = dir.substring(dir.lastIndexOf('/') + 1);
             String target = SERVERS_DIR + "/" + version;
@@ -533,9 +533,9 @@ public final class DeployManager {
                     + " " + q(SERVER_LINK));
             prefs(context).edit().putString("server_version", version).apply();
         } else {
-            throw new IOException("不支持的备份类型");
+            throw new IOException(I18n.t("不支持的备份类型"));
         }
-        p.update(100, "回滚完成");
+        p.update(100, I18n.t("回滚完成"));
     }
     public static String detectImportedVersion(String dir, String archiveName) {
         try {
@@ -576,30 +576,30 @@ public final class DeployManager {
                                      String sourceInstanceId, Progress p) throws Exception {
         boolean box64 = exists(BOX64_ROOTFS + "/etc/os-release") && exists(BOX64_BIN);
         if (!box64) {
-            throw new IOException("运行环境未安装，请先部署 Box64 运行环境");
+            throw new IOException(I18n.t("运行环境未安装，请先部署 Box64 运行环境"));
         }
         ensureLayout();
-        p.update(1, "上传部署包…");
+        p.update(1, I18n.t("上传部署包…"));
         String remote = copyArchive(archive, p);
-        p.update(12, "清理临时目录…");
+        p.update(12, I18n.t("清理临时目录…"));
         ShizukuShell.sh("rm -rf " + q(BASE + "/tmp/server-stage") + "; mkdir -p " + q(BASE + "/tmp/server-stage"));
 
-        p.update(15, "解压服务端包…");
+        p.update(15, I18n.t("解压服务端包…"));
         extract(remote, BASE + "/tmp/server-stage");
         String stage = BASE + "/tmp/server-stage";
 
-        p.update(55, "定位 bedrock_server…");
+        p.update(55, I18n.t("定位 bedrock_server…"));
         String b = ShizukuShell.sh("find " + q(stage) + " -name bedrock_server -type f 2>/dev/null | head -n 1 || true").trim();
-        if (b.isEmpty()) throw new IOException("压缩包内没有 bedrock_server");
+        if (b.isEmpty()) throw new IOException(I18n.t("压缩包内没有 bedrock_server"));
         String dir = b.substring(0, b.lastIndexOf('/'));
         if (!dir.equals(stage)) {
             ShizukuShell.sh("cp -a " + q(dir) + "/. " + q(stage) + "/");
         }
         if (!exists(stage + "/bedrock_server")) {
-            throw new IOException("解压后缺少 bedrock_server");
+            throw new IOException(I18n.t("解压后缺少 bedrock_server"));
         }
 
-        p.update(70, freshInstance ? "新建独立实例（不复制世界）…" : "保留世界与配置…");
+        p.update(70, freshInstance ? I18n.t("新建独立实例（不复制世界）…") : I18n.t("保留世界与配置…"));
         if (!freshInstance) {
             String sourceDir = SERVER_DIR;
             if (sourceInstanceId != null && !sourceInstanceId.isEmpty()) {
@@ -614,7 +614,7 @@ public final class DeployManager {
         }
         ShizukuShell.sh("chmod 755 " + q(stage + "/bedrock_server"));
 
-        p.update(85, "切换到新服务端版本…");
+        p.update(85, I18n.t("切换到新服务端版本…"));
         String id = version == null ? "" : version.trim();
         if (id.isEmpty()) id = "import-" + System.currentTimeMillis();
         id = id.replaceAll("[^A-Za-z0-9._-]", "_");
@@ -644,8 +644,8 @@ public final class DeployManager {
                 .putString("server_source_" + id, source)
                 .apply();
         String shown = detectServerVersion(context);
-        p.update(100, "服务端部署完成" + (shown.equals("未知") ? "" : "：" + shown)
-                + "（已保留旧版本）");
+        p.update(100, I18n.t("服务端部署完成") + (shown.equals("未知") || shown.equals(I18n.t("未知")) ? "" : "：" + shown)
+                + I18n.t("（已保留旧版本）"));
     }
 
     public static String currentServerVersion() {
@@ -669,7 +669,7 @@ public final class DeployManager {
                 int percent = total > 0 ? (int) (copied * 9 / total) : 0;
                 if (percent != last[0]) {
                     last[0] = percent;
-                    p.update(2 + percent, "上传部署包 " + percent + "%");
+                    p.update(2 + percent, I18n.t("上传部署包 ") + percent + "%");
                 }
             }
         });
@@ -685,12 +685,12 @@ public final class DeployManager {
             // tar 对 hardlink 条目会报错，但目标文件通常已解出，忽略后由调用方校验。
             ShizukuShell.sh("tar -xzof " + q(remote) + " -C " + q(dest) + " 2>/dev/null || true");
         } else {
-            throw new IOException("只支持 .zip / .tar.gz 文件");
+            throw new IOException(I18n.t("只支持 .zip / .tar.gz 文件"));
         }
     }
 
     public static File download(Context context, String url, String fileName, Progress p) throws Exception {
-        AppLog.add("[下载] " + url);
+        AppLog.add(I18n.t("[下载] ") + url);
         File out = new File(context.getCacheDir(), fileName);
         IOException last = null;
         for (int attempt = 0; attempt < 4; attempt++) {
@@ -738,16 +738,16 @@ public final class DeployManager {
                     int percent = total > 0 ? (int) (copied * 100 / total) : 0;
                     if (percent != lastPercent) {
                         lastPercent = percent;
-                        p.update(Math.min(70, percent * 70 / 100), "下载中 " + percent + "%");
+                        p.update(Math.min(70, percent * 70 / 100), I18n.t("下载中 ") + percent + "%");
                     }
                 }
-                if (total > 0 && copied < total) throw new IOException("连接提前结束");
-                p.update(72, "下载完成");
+                if (total > 0 && copied < total) throw new IOException(I18n.t("连接提前结束"));
+                p.update(72, I18n.t("下载完成"));
                 return out;
             } catch (IOException t) {
                 last = t;
                 if (attempt < 3) {
-                    p.update(2, "连接中断，正在重试 " + (attempt + 1) + "/4…");
+                    p.update(2, I18n.t("连接中断，正在重试 ") + (attempt + 1) + "/4…");
                     try { Thread.sleep(1500); } catch (InterruptedException ignored) { }
                 }
             } finally {
@@ -756,7 +756,7 @@ public final class DeployManager {
                 if (c != null) c.disconnect();
             }
         }
-        throw last == null ? new IOException("下载失败") : last;
+        throw last == null ? new IOException(I18n.t("下载失败")) : last;
     }
 
     public static List<String> serverVersions() throws Exception {
@@ -773,7 +773,7 @@ public final class DeployManager {
                 return compareVersion(b, a);
             }
         });
-        if (out.isEmpty()) throw new IOException("版本源没有返回可用版本");
+        if (out.isEmpty()) throw new IOException(I18n.t("版本源没有返回可用版本"));
         return out;
     }
 

@@ -128,13 +128,13 @@ public final class InstanceStore {
     /** 修改实例显示名；名称只允许字母和数字。 */
     public static void rename(String id, String name) throws Exception {
         if (name == null || !name.matches("[A-Za-z0-9]{1,32}")) {
-            throw new Exception("实例名只支持字母和数字，最长 32 个字符");
+            throw new Exception(I18n.t("实例名只支持字母和数字，最长 32 个字符"));
         }
         String path = DeployManager.SERVERS_DIR + "/" + id;
         String active = ShizukuShell.sh("readlink -f " + q(DeployManager.SERVER_LINK)
                 + " 2>/dev/null || true").trim();
         if (active.endsWith("/servers/" + id) && ServerManager.get().isRunning()) {
-            throw new Exception("服务端运行中，不能重命名当前实例");
+            throw new Exception(I18n.t("服务端运行中，不能重命名当前实例"));
         }
         JSONObject o = new JSONObject();
         try {
@@ -153,7 +153,7 @@ public final class InstanceStore {
     public static void switchTo(String id) throws Exception {
         String path = DeployManager.SERVERS_DIR + "/" + id;
         if (!ShizukuShell.sh("test -d " + q(path) + " && echo 1 || echo 0").trim().equals("1")) {
-            throw new Exception("实例不存在：" + id);
+            throw new Exception(I18n.t("实例不存在：") + id);
         }
         ShizukuShell.sh("rm -f " + q(DeployManager.SERVER_LINK)
                 + " && ln -s " + q("servers/" + id) + " " + q(DeployManager.SERVER_LINK));
@@ -161,12 +161,12 @@ public final class InstanceStore {
 
     public static void delete(String id) throws Exception {
         if (id == null || id.isEmpty() || id.contains("/") || id.contains("..")) {
-            throw new Exception("非法实例 ID");
+            throw new Exception(I18n.t("非法实例 ID"));
         }
         String path = DeployManager.SERVERS_DIR + "/" + id;
         String active = ShizukuShell.sh("readlink -f " + q(DeployManager.SERVER_LINK)
                 + " 2>/dev/null || true").trim();
-        if (active.endsWith("/servers/" + id)) throw new Exception("当前实例不能删除");
+        if (active.endsWith("/servers/" + id)) throw new Exception(I18n.t("当前实例不能删除"));
         ShizukuShell.sh("rm -rf " + q(path));
     }
 }

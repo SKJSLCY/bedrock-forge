@@ -64,7 +64,7 @@ final class LevelDbWriter {
 
     private static void writeRecord(File dbDir, byte[] data) throws Exception {
         java.io.File log = newestLog(dbDir);
-        if (log == null) throw new Exception("没有可追加的 WAL 日志（请先启动一次服务端）");
+        if (log == null) throw new Exception(I18n.t("没有可追加的 WAL 日志（请先启动一次服务端）"));
 
         java.io.ByteArrayOutputStream rec = new java.io.ByteArrayOutputStream();
         int type = 1; // FULL

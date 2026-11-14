@@ -23,6 +23,7 @@ public class SplashActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         setTheme(R.style.SplashTheme);
         super.onCreate(savedInstanceState);
+        I18n.init(this);
         ThemeManager.apply(this);
         if (MinecraftUi.ORE) {
             getWindow().setStatusBarColor(0xFFEDEDED);
@@ -45,7 +46,7 @@ public class SplashActivity extends Activity {
 
         if (MinecraftUi.MINIMAL || MinecraftUi.ORE) {
             TextView title = new TextView(this);
-            title.setText("基岩工坊");
+            title.setText(I18n.t("基岩工坊"));
             title.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 34);
             title.setTextColor(MinecraftUi.ORE ? 0xFFFFFFFF : MinecraftUi.PANEL_TEXT);
             title.setTypeface(android.graphics.Typeface.create("serif",

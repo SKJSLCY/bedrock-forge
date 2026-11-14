@@ -57,14 +57,14 @@ final class AiHttp {
                        String reasoning) {
         try {
             String pid = AiConfig.providerId(ctx);
-            if (pid.isEmpty()) return err("未配置服务商");
+            if (pid.isEmpty()) return err(I18n.t("未配置服务商"));
             AiConfig.Provider p = AiConfig.provider(pid);
             String key = AiConfig.key(ctx, pid);
-            if (key.isEmpty()) return err("未填写 API Key");
+            if (key.isEmpty()) return err(I18n.t("未填写 API Key"));
             String base = AiConfig.baseUrl(ctx, pid);
-            if (base.isEmpty()) return err("未填写 Base URL");
+            if (base.isEmpty()) return err(I18n.t("未填写 Base URL"));
             String model = AiConfig.model(ctx);
-            if (model.isEmpty()) return err("未选择模型");
+            if (model.isEmpty()) return err(I18n.t("未选择模型"));
             if ("gemini".equals(p.style)) return gemini(base, key, model, system, hist, tools, reasoning);
             if ("anthropic".equals(p.style)) return anthropic(base, key, model, system, hist, tools, reasoning);
             return openai(ctx, pid, base, key, model, system, hist, tools, reasoning);
@@ -89,18 +89,18 @@ final class AiHttp {
         ModelList out = new ModelList();
         try {
             if (pid == null || pid.isEmpty()) {
-                out.error = "未配置服务商";
+                out.error = I18n.t("未配置服务商");
                 return out;
             }
             AiConfig.Provider p = AiConfig.provider(pid);
             String key = AiConfig.key(ctx, pid);
             if (key.isEmpty()) {
-                out.error = "未填写 API Key";
+                out.error = I18n.t("未填写 API Key");
                 return out;
             }
             String base = AiConfig.baseUrl(ctx, pid);
             if (base.isEmpty()) {
-                out.error = "未填写 Base URL";
+                out.error = I18n.t("未填写 Base URL");
                 return out;
             }
             JSONObject resp;
@@ -142,7 +142,7 @@ final class AiHttp {
                     }
                 }
             }
-            if (out.models.isEmpty()) out.error = "接口未返回可用模型";
+            if (out.models.isEmpty()) out.error = I18n.t("接口未返回可用模型");
             else out.ok = true;
         } catch (Throwable t) {
             out.error = t.getMessage() == null ? t.toString() : t.getMessage();
@@ -324,7 +324,7 @@ final class AiHttp {
         JSONObject resp = post(url, null, null, null, body, null);
         Result r = new Result();
         JSONArray cands = resp.optJSONArray("candidates");
-        if (cands == null || cands.length() == 0) return err("Gemini 返回空结果");
+        if (cands == null || cands.length() == 0) return err(I18n.t("Gemini 返回空结果"));
         JSONArray parts = cands.getJSONObject(0).getJSONObject("content").getJSONArray("parts");
         StringBuilder text = new StringBuilder();
         for (int i = 0; i < parts.length(); i++) {

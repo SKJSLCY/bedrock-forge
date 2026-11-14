@@ -50,9 +50,9 @@ public final class ShizukuGate {
         if (!isAuthorized()) {
             try {
                 Shizuku.requestPermission(0);
-                Toast.makeText(activity, "请在 Shizuku 弹窗中允许本应用", Toast.LENGTH_SHORT).show();
+                Toast.makeText(activity, I18n.t("请在 Shizuku 弹窗中允许本应用"), Toast.LENGTH_SHORT).show();
             } catch (Throwable t) {
-                Toast.makeText(activity, "Shizuku 授权失败：" + t.getMessage(), Toast.LENGTH_SHORT).show();
+                Toast.makeText(activity, I18n.t("Shizuku 授权失败：") + t.getMessage(), Toast.LENGTH_SHORT).show();
             }
             return false;
         }
@@ -79,12 +79,12 @@ public final class ShizukuGate {
         wrap.addView(panel, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
-        String text = "“" + feature + "”需要 Shizuku 以 shell 身份执行。\n\n"
-                + "当前没有检测到 Shizuku 服务。请：\n"
-                + "1. 打开 Shizuku\n"
-                + "2. 开发者选项 → 无线调试 → 配对并启动服务\n"
-                + "3. 回到本应用点“重试”并允许授权\n\n"
-                + "Shizuku 只负责部署文件和启动 Box64，不需要 Root。";
+        String text = "“" + feature + I18n.t("”需要 Shizuku 以 shell 身份执行。\n\n")
+                + I18n.t("当前没有检测到 Shizuku 服务。请：\n")
+                + I18n.t("1. 打开 Shizuku\n")
+                + I18n.t("2. 开发者选项 → 无线调试 → 配对并启动服务\n")
+                + I18n.t("3. 回到本应用点“重试”并允许授权\n\n")
+                + I18n.t("Shizuku 只负责部署文件和启动 Box64，不需要 Root。");
         TextView body = MinecraftUi.text(activity, text, 10, MinecraftUi.PANEL_TEXT, false);
         body.setPadding(0, dp(activity, 2), 0, dp(activity, 8));
         panel.addView(body);
@@ -98,12 +98,12 @@ public final class ShizukuGate {
                     Intent i = activity.getPackageManager()
                             .getLaunchIntentForPackage("moe.shizuku.privileged.api");
                     if (i == null) {
-                        Toast.makeText(activity, "未安装 Shizuku，请先安装", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(activity, I18n.t("未安装 Shizuku，请先安装"), Toast.LENGTH_SHORT).show();
                     } else {
                         activity.startActivity(i);
                     }
                 } catch (Throwable t) {
-                    Toast.makeText(activity, "无法打开 Shizuku：" + t.getMessage(), Toast.LENGTH_SHORT).show();
+                    Toast.makeText(activity, I18n.t("无法打开 Shizuku：") + t.getMessage(), Toast.LENGTH_SHORT).show();
                 }
             }
         });
@@ -116,15 +116,15 @@ public final class ShizukuGate {
         retry.setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View v) {
                 if (!isRunning()) {
-                    Toast.makeText(activity, "仍未检测到 Shizuku 服务", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(activity, I18n.t("仍未检测到 Shizuku 服务"), Toast.LENGTH_SHORT).show();
                     return;
                 }
                 if (!isAuthorized()) {
                     try {
                         Shizuku.requestPermission(0);
-                        Toast.makeText(activity, "请在 Shizuku 弹窗中允许本应用", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(activity, I18n.t("请在 Shizuku 弹窗中允许本应用"), Toast.LENGTH_SHORT).show();
                     } catch (Throwable t) {
-                        Toast.makeText(activity, "授权失败：" + t.getMessage(), Toast.LENGTH_SHORT).show();
+                        Toast.makeText(activity, I18n.t("授权失败：") + t.getMessage(), Toast.LENGTH_SHORT).show();
                     }
                     return;
                 }

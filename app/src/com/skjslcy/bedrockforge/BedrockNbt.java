@@ -18,7 +18,7 @@ final class BedrockNbt {
     static Map<String, Object> parse(byte[] data) throws Exception {
         BedrockNbt r = new BedrockNbt(data);
         int type = r.u8();
-        if (type != 10) throw new Exception("根不是 Compound（type=" + type + "）");
+        if (type != 10) throw new Exception(I18n.t("根不是 Compound（type=") + type + I18n.t("）"));
         r.readStringU16(); // 根名字通常为空
         return r.readCompoundBody();
     }
@@ -26,7 +26,7 @@ final class BedrockNbt {
     // ------------------------------------------------------------ readers
 
     private int u8() throws Exception {
-        if (pos >= buf.length) throw new Exception("NBT 越界");
+        if (pos >= buf.length) throw new Exception(I18n.t("NBT 越界"));
         return buf[pos++] & 0xFF;
     }
 
@@ -47,7 +47,7 @@ final class BedrockNbt {
     }
 
     private void need(int n) throws Exception {
-        if (pos + n > buf.length) throw new Exception("NBT 越界");
+        if (pos + n > buf.length) throw new Exception(I18n.t("NBT 越界"));
     }
 
     private String readStringU16() throws Exception {
@@ -67,7 +67,7 @@ final class BedrockNbt {
             if (type == 0) break;
             String name = readStringU16();
             Object v = readPayload(type);
-            if (name.isEmpty()) name = "(空)";
+            if (name.isEmpty()) name = I18n.t("(空)");
             map.put(name, v);
         }
         return map;
@@ -102,7 +102,7 @@ final class BedrockNbt {
             }
             case 7: {
                 int n = i32();
-                if (n < 0 || n > (16 << 20)) throw new Exception("byte[] 长度异常");
+                if (n < 0 || n > (16 << 20)) throw new Exception(I18n.t("byte[] 长度异常"));
                 need(n);
                 byte[] a = new byte[n];
                 System.arraycopy(buf, pos, a, 0, n);
@@ -114,7 +114,7 @@ final class BedrockNbt {
             case 9: {
                 int elem = u8();
                 int n = i32();
-                if (n < 0 || n > 4000000) throw new Exception("list 长度异常");
+                if (n < 0 || n > 4000000) throw new Exception(I18n.t("list 长度异常"));
                 List<Object> list = new ArrayList<>(Math.min(n, 256));
                 for (int i = 0; i < n; i++) list.add(readPayload(elem));
                 return list;
@@ -123,20 +123,20 @@ final class BedrockNbt {
                 return readCompoundBody();
             case 11: {
                 int n = i32();
-                if (n < 0 || n > 4000000) throw new Exception("int[] 长度异常");
+                if (n < 0 || n > 4000000) throw new Exception(I18n.t("int[] 长度异常"));
                 int[] a = new int[n];
                 for (int i = 0; i < n; i++) a[i] = i32();
                 return a;
             }
             case 12: {
                 int n = i32();
-                if (n < 0 || n > 4000000) throw new Exception("long[] 长度异常");
+                if (n < 0 || n > 4000000) throw new Exception(I18n.t("long[] 长度异常"));
                 long[] a = new long[n];
                 for (int i = 0; i < n; i++) a[i] = i64();
                 return a;
             }
             default:
-                throw new Exception("未知 NBT 类型：" + type);
+                throw new Exception(I18n.t("未知 NBT 类型：") + type);
         }
     }
 

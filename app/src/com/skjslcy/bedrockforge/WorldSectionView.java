@@ -47,7 +47,7 @@ public class WorldSectionView extends ScrollView {
 
         LinearLayout head = MinecraftUi.panel(activity, "存档管理");
         head.addView(MinecraftUi.text(activity,
-                "只有停止服务端后才能切换或新建存档。新建的世界会在下次启动时生成。",
+                I18n.t("只有停止服务端后才能切换或新建存档。新建的世界会在下次启动时生成。"),
                 9, MinecraftUi.PANEL_MUTED, false));
         status = MinecraftUi.text(activity, "正在读取…", 8.5f, MinecraftUi.PANEL_MUTED, false);
         status.setPadding(0, dp(6), 0, 0);
@@ -97,20 +97,21 @@ public class WorldSectionView extends ScrollView {
 
     private void render(List<String> worlds, String active, String error) {
         while (col.getChildCount() > 1) col.removeViewAt(1);
-        if (error != null) status.setText("读取失败：" + error);
-        else status.setText("当前存档：" + (active.isEmpty() ? "未设置" : active));
+        if (error != null) status.setText(I18n.t("读取失败：") + error);
+        else status.setText(I18n.t("当前存档：") + (active.isEmpty() ? I18n.t("未设置") : active));
 
         LinearLayout panel = MinecraftUi.panel(activity, "世界列表");
         if (worlds.isEmpty()) {
-            panel.addView(MinecraftUi.text(activity, "还没有世界。请新建或导入。",
+            panel.addView(MinecraftUi.text(activity, I18n.t("还没有世界。请新建或导入。"),
                     9, MinecraftUi.PANEL_MUTED, false));
         }
         for (String w : worlds) {
             LinearLayout row = MinecraftUi.slot(activity);
             row.setOrientation(LinearLayout.VERTICAL);
             row.setPadding(dp(9), dp(7), dp(9), dp(7));
-            TextView name = MinecraftUi.text(activity, w + (w.equals(active) ? "（当前）" : ""),
+            TextView name = MinecraftUi.text(activity, w,
                     10, MinecraftUi.PANEL_TEXT, true);
+            name.setSelected(w.equals(active));
             row.addView(name);
             row.addView(MinecraftUi.text(activity, meta(w), 8.5f,
                     MinecraftUi.PANEL_MUTED, false));
@@ -165,15 +166,15 @@ public class WorldSectionView extends ScrollView {
                     + " 2>/dev/null || true").trim();
             long kb = 0;
             try { kb = Long.parseLong(size); } catch (Throwable ignored) {}
-            String t = "时间未知";
+            String t = I18n.t("时间未知");
             try {
                 long sec = Long.parseLong(ts);
                 t = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", java.util.Locale.CHINA)
                         .format(new java.util.Date(sec * 1000));
             } catch (Throwable ignored) {}
-            return "大小：" + (kb >= 1024 ? (kb / 1024) + " MB" : kb + " KB") + " · 修改：" + t;
+            return I18n.t("大小：") + (kb >= 1024 ? (kb / 1024) + " MB" : kb + " KB") + I18n.t(" · 修改：") + t;
         } catch (Throwable t) {
-            return "大小未知";
+            return I18n.t("大小未知");
         }
     }
 
@@ -210,10 +211,10 @@ public class WorldSectionView extends ScrollView {
                 ShizukuShell.sh("mkdir -p /sdcard/Download/MCBDS");
                 ShizukuShell.copyIn(zip, "/sdcard/Download/MCBDS/" + name + ".mcworld", null);
                 ShizukuShell.sh("rm -f " + q(tar));
-                AppLog.add("[存档] 导出 " + name);
-                handler.post(() -> toast("已导出到 Download/MCBDS/" + name + ".mcworld"));
+                AppLog.add(I18n.t("[存档] 导出 ") + name);
+                handler.post(() -> toast(I18n.t("已导出到 Download/MCBDS/") + name + ".mcworld"));
             } catch (Throwable e) {
-                handler.post(() -> toast("导出失败：" + e.getMessage()));
+                handler.post(() -> toast(I18n.t("导出失败：") + e.getMessage()));
             }
         }, "world-export").start();
     }
@@ -264,10 +265,10 @@ public class WorldSectionView extends ScrollView {
 
     private void renameWorld(final String name) {
         if (!ensureStopped()) return;
-        showInputDialog("重命名世界", "只支持字母、数字、下划线、横线。", name, null, "重命名", nn -> {
+        showInputDialog(I18n.t("重命名世界"), I18n.t("只支持字母、数字、下划线、横线。"), name, null, I18n.t("重命名"), nn -> {
             final String n2 = nn.trim();
             if (!n2.matches("[A-Za-z0-9_-]{1,32}")) {
-                toast("名称不合法");
+                toast(I18n.t("名称不合法"));
                 return;
             }
             if (n2.equals(name)) return;
@@ -275,20 +276,20 @@ public class WorldSectionView extends ScrollView {
                 try {
                     String base = DeployManager.SERVER_DIR + "/worlds/";
                     if (ShizukuShell.sh("test -e " + q(base + n2) + " && echo 1 || echo 0").trim().equals("1")) {
-                        handler.post(() -> toast("目标世界已存在"));
+                        handler.post(() -> toast(I18n.t("目标世界已存在")));
                         return;
                     }
                     ShizukuShell.sh("mv " + q(base + name) + " " + q(base + n2));
                     String props = ShizukuShell.read(DeployManager.SERVER_DIR + "/server.properties");
                     boolean active = props.contains("level-name=" + name);
                     if (active) setLevelName(n2);
-                    AppLog.add("[存档] 重命名 " + name + " -> " + n2);
+                    AppLog.add(I18n.t("[存档] 重命名 ") + name + " -> " + n2);
                     handler.post(() -> {
-                        toast("已重命名为 " + n2);
+                        toast(I18n.t("已重命名为 ") + n2);
                         refresh();
                     });
                 } catch (Throwable e) {
-                    handler.post(() -> toast("重命名失败：" + e.getMessage()));
+                    handler.post(() -> toast(I18n.t("重命名失败：") + e.getMessage()));
                 }
             }, "world-rename").start();
         });
@@ -297,30 +298,30 @@ public class WorldSectionView extends ScrollView {
     private void deleteWorld(final String name, String active) {
         if (!ensureStopped()) return;
         if (name.equals(active)) {
-            toast("当前存档不能删除，请先切换到其他存档");
+            toast(I18n.t("当前存档不能删除，请先切换到其他存档"));
             return;
         }
-        showConfirmDialog("删除世界", "永久删除 world/" + name + "？", "删除", true, () ->
+        showConfirmDialog(I18n.t("删除世界"), I18n.t("永久删除 world/") + name + "？", I18n.t("删除"), true, () ->
                 new Thread(() -> {
                     try {
                         ShizukuShell.sh("rm -rf " + q(DeployManager.SERVER_DIR + "/worlds/" + name));
                         handler.post(() -> {
-                            AppLog.add("[存档] 删除 " + name);
-                            toast("已删除 " + name);
+                            AppLog.add(I18n.t("[存档] 删除 ") + name);
+                            toast(I18n.t("已删除 ") + name);
                             refresh();
                         });
                     } catch (Throwable e) {
-                        handler.post(() -> toast("删除失败：" + e.getMessage()));
+                        handler.post(() -> toast(I18n.t("删除失败：") + e.getMessage()));
                     }
                 }, "world-delete").start());
     }
 
     private void newWorld() {
         if (!ensureStopped()) return;
-        showInputDialog("新建世界", "只支持字母、数字、下划线和横线。", "", "例如 World2", "创建", name -> {
+        showInputDialog(I18n.t("新建世界"), I18n.t("只支持字母、数字、下划线和横线。"), "", I18n.t("例如 World2"), I18n.t("创建"), name -> {
             final String n = name.trim();
             if (!n.matches("[A-Za-z0-9_-]{1,32}")) {
-                toast("世界名只支持字母、数字、下划线、横线");
+                toast(I18n.t("世界名只支持字母、数字、下划线、横线"));
                 return;
             }
             createWorld(n);
@@ -333,29 +334,29 @@ public class WorldSectionView extends ScrollView {
                 ShizukuShell.sh("mkdir -p " + q(DeployManager.SERVER_DIR + "/worlds/" + name));
                 setLevelName(name);
                 handler.post(() -> {
-                    AppLog.add("[存档] 新建 " + name);
-                toast("已创建世界 " + name + "，下次启动生成");
+                    AppLog.add(I18n.t("[存档] 新建 ") + name);
+                toast(I18n.t("已创建世界 ") + name + I18n.t("，下次启动生成"));
                     refresh();
                 });
             } catch (Throwable e) {
-                handler.post(() -> toast("创建失败：" + e.getMessage()));
+                handler.post(() -> toast(I18n.t("创建失败：") + e.getMessage()));
             }
         }, "world-create").start();
     }
 
     private void switchWorld(final String name) {
         if (!ensureStopped()) return;
-        showConfirmDialog("切换存档", "下次启动使用世界 " + name + "？", "切换", false, () ->
+        showConfirmDialog(I18n.t("切换存档"), I18n.t("下次启动使用世界 ") + name + "？", I18n.t("切换"), false, () ->
                 new Thread(() -> {
                     try {
                         setLevelName(name);
                         handler.post(() -> {
-                            AppLog.add("[存档] 切换到 " + name);
-                            toast("已切换到 " + name);
+                            AppLog.add(I18n.t("[存档] 切换到 ") + name);
+                            toast(I18n.t("已切换到 ") + name);
                             refresh();
                         });
                     } catch (Throwable e) {
-                        handler.post(() -> toast("切换失败：" + e.getMessage()));
+                        handler.post(() -> toast(I18n.t("切换失败：") + e.getMessage()));
                     }
                 }, "world-switch").start());
     }
@@ -463,7 +464,7 @@ public class WorldSectionView extends ScrollView {
             }
 
             @Override public void onCancel() {
-                toast("已取消导入");
+                toast(I18n.t("已取消导入"));
             }
         });
     }
@@ -476,7 +477,7 @@ public class WorldSectionView extends ScrollView {
         wrap.setPadding(dp(14), dp(14), dp(14), dp(14));
         LinearLayout panel = MinecraftUi.panel(activity, "覆盖存档");
         panel.addView(MinecraftUi.text(activity,
-                "世界 " + world + " 已存在。\n继续导入会覆盖现有存档，是否继续？",
+                I18n.t("世界 ") + world + I18n.t(" 已存在。\n继续导入会覆盖现有存档，是否继续？"),
                 9.5f, MinecraftUi.PANEL_TEXT, false));
         Button ok = new MinecraftUi.McButton(activity, "覆盖导入");
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
@@ -513,19 +514,19 @@ public class WorldSectionView extends ScrollView {
                 ShizukuShell.sh("rm -rf " + q(stage) + "; mkdir -p " + q(stage)
                         + "; unzip -q -o " + q(remote) + " -d " + q(stage));
                 String find = ShizukuShell.sh("find " + q(stage) + " -name level.dat -type f | head -n 1").trim();
-                if (find.isEmpty()) throw new Exception("压缩包里没有 level.dat");
+                if (find.isEmpty()) throw new Exception(I18n.t("压缩包里没有 level.dat"));
                 String root = find.substring(0, find.lastIndexOf('/'));
                 String dest = DeployManager.SERVER_DIR + "/worlds/" + world;
                 ShizukuShell.sh("rm -rf " + q(dest) + "; mkdir -p " + q(dest)
                         + "; cp -a " + q(root) + "/. " + q(dest) + "/");
                 ShizukuShell.sh("rm -f " + q(remote) + "; rm -rf " + q(stage));
-                AppLog.add("[存档] 导入 " + world);
+                AppLog.add(I18n.t("[存档] 导入 ") + world);
                 handler.post(() -> {
-                    toast("已导入存档 " + world + "，可在列表里切换");
+                    toast(I18n.t("已导入存档 ") + world + I18n.t("，可在列表里切换"));
                     refresh();
                 });
             } catch (Throwable e) {
-                handler.post(() -> toast("导入失败：" + e.getMessage()));
+                handler.post(() -> toast(I18n.t("导入失败：") + e.getMessage()));
             }
         }, "world-import").start();
     }
@@ -549,7 +550,7 @@ public class WorldSectionView extends ScrollView {
 
     private boolean ensureStopped() {
         if (ServerManager.get().isRunning()) {
-            toast("请先停止服务端");
+            toast(I18n.t("请先停止服务端"));
             return false;
         }
         return true;

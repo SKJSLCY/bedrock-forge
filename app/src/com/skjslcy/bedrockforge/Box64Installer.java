@@ -22,7 +22,7 @@ public final class Box64Installer {
 
     public static void install(Context ctx, DeployManager.Progress p, int threads) throws Exception {
         if (!ShizukuGate.isRunning() || !ShizukuGate.isAuthorized()) {
-            throw new IOException("需要 Shizuku 权限");
+            throw new IOException(I18n.t("需要 Shizuku 权限"));
         }
         int jobs = Math.max(1, Math.min(4, threads));
         String base = DeployManager.BOX64_BASE;
@@ -32,7 +32,7 @@ public final class Box64Installer {
                 + "; rm -f " + q(DeployManager.BOX64_READY));
         installProot(ctx, p);
 
-        p.update(3, "解压内置 Ubuntu 工具链…");
+        p.update(3, I18n.t("解压内置 Ubuntu 工具链…"));
         ShizukuShell.sh("rm -rf " + q(rootfs) + "; mkdir -p " + q(rootfs));
         copyAsset(ctx, "toolchain-rootfs.tar.gz", base + "/toolchain.tar.gz", false);
         ShizukuShell.sh("tar -xzf " + q(base + "/toolchain.tar.gz") + " -C " + q(rootfs)
@@ -40,16 +40,16 @@ public final class Box64Installer {
         if (!"1".equals(ShizukuShell.sh("test -e " + q(rootfs + "/usr/bin/gcc")
                 + " && test -e " + q(rootfs + "/usr/bin/cmake")
                 + " && echo 1 || echo 0").trim())) {
-            throw new IOException("内置工具链解压失败");
+            throw new IOException(I18n.t("内置工具链解压失败"));
         }
         ShizukuShell.sh("rm -f " + q(base + "/toolchain.tar.gz")
                 + "; mkdir -p " + q(rootfs + "/dev") + " " + q(rootfs + "/proc")
                 + " " + q(rootfs + "/sys") + " " + q(rootfs + "/tmp"));
 
-        p.update(15, "准备 Box64 源码…");
+        p.update(15, I18n.t("准备 Box64 源码…"));
         copyAsset(ctx, "box64-main.tar.gz", rootfs + "/root/box64-main.tar.gz", false);
 
-        p.update(22, "编译 Box64（-j" + jobs + "）…");
+        p.update(22, I18n.t("编译 Box64（-j") + jobs + "）…");
         String compile = "export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin; "
                 + "cd /root && rm -rf box64-main && tar -xzf box64-main.tar.gz "
                 + "&& cd box64-main && mkdir -p build && cd build "
@@ -59,14 +59,14 @@ public final class Box64Installer {
         try {
             runProotStreaming(base, rootfs, compile, p);
         } catch (Exception streamError) {
-            p.update(22, "流式编译失败，改用兼容模式重试…");
+            p.update(22, I18n.t("流式编译失败，改用兼容模式重试…"));
             runProot(base, rootfs, compile);
         }
 
-        p.update(96, "校验 Box64…");
+        p.update(96, I18n.t("校验 Box64…"));
         String v = runProot(base, rootfs,
                 "/usr/local/bin/box64 --version 2>&1 | grep '^Box64' | head -n 1");
-        if (v == null || v.trim().isEmpty()) throw new IOException("Box64 安装后无法运行");
+        if (v == null || v.trim().isEmpty()) throw new IOException(I18n.t("Box64 安装后无法运行"));
         ShizukuShell.sh("rm -f " + q(rootfs + "/root/box64-main.tar.gz")
                 + "; echo ok > " + q(DeployManager.BOX64_READY)
                 + "; chmod 644 " + q(DeployManager.BOX64_READY));
@@ -74,7 +74,7 @@ public final class Box64Installer {
     }
 
     private static void installProot(Context ctx, DeployManager.Progress p) throws Exception {
-        p.update(1, "准备 proot…");
+        p.update(1, I18n.t("准备 proot…"));
         String base = DeployManager.BASE + "/proot";
         ShizukuShell.sh("mkdir -p " + q(base) + " " + q(base + "/lib") + " " + q(base + "/libexec"));
         copyAsset(ctx, "proot/proot", base + "/proot", true);
@@ -157,7 +157,7 @@ public final class Box64Installer {
                     lastPercent = percent;
                     String msg = line.trim();
                     if (msg.length() > 80) msg = msg.substring(0, 80);
-                    p.update(percent, "编译：" + (msg.isEmpty() ? "…" : msg));
+                    p.update(percent, I18n.t("编译：") + (msg.isEmpty() ? "…" : msg));
                 }
             }
         } finally {
@@ -167,11 +167,11 @@ public final class Box64Installer {
                 String e;
                 synchronized (err) { e = err.toString().trim(); }
                 if (e.length() > 1200) e = e.substring(e.length() - 1200);
-                throw new IOException("Box64 编译失败（退出码 " + code + "）"
+                throw new IOException(I18n.t("Box64 编译失败（退出码 ") + code + I18n.t("）")
                         + (e.isEmpty() ? "" : "：\n" + e));
             }
         }
-        p.update(90, "编译完成，安装 Box64…");
+        p.update(90, I18n.t("编译完成，安装 Box64…"));
     }
 
     private static String runProot(String base, String rootfs, String command) throws Exception {

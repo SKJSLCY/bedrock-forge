@@ -16,9 +16,9 @@ final class Snappy {
             ulen |= ((long) (b & 0x7F)) << shift;
             if ((b & 0x80) == 0) break;
             shift += 7;
-            if (shift > 35) throw new Exception("snappy 长度非法");
+            if (shift > 35) throw new Exception(I18n.t("snappy 长度非法"));
         }
-        if (ulen <= 0 || ulen > (64L << 20)) throw new Exception("snappy 长度异常：" + ulen);
+        if (ulen <= 0 || ulen > (64L << 20)) throw new Exception(I18n.t("snappy 长度异常：") + ulen);
         byte[] out = new byte[(int) ulen];
         int op = 0;
         while (p < end) {
@@ -32,7 +32,7 @@ final class Snappy {
                     for (int i = 0; i < extra; i++) v |= (in[p++] & 0xFF) << (8 * i);
                     n = v + 1;
                 }
-                if (p + n > end || op + n > out.length) throw new Exception("snappy literal 越界");
+                if (p + n > end || op + n > out.length) throw new Exception(I18n.t("snappy literal 越界"));
                 System.arraycopy(in, p, out, op, n);
                 p += n;
                 op += n;
@@ -51,12 +51,12 @@ final class Snappy {
                     offset = (in[p++] & 0xFF) | ((in[p++] & 0xFF) << 8)
                             | ((in[p++] & 0xFF) << 16) | ((in[p++] & 0xFF) << 24);
                 }
-                if (offset <= 0 || offset > op || op + n > out.length) throw new Exception("snappy copy 越界");
+                if (offset <= 0 || offset > op || op + n > out.length) throw new Exception(I18n.t("snappy copy 越界"));
                 int src = op - offset;
                 for (int i = 0; i < n; i++) out[op++] = out[src++];
             }
         }
-        if (op != out.length) throw new Exception("snappy 解压不完整");
+        if (op != out.length) throw new Exception(I18n.t("snappy 解压不完整"));
         return out;
     }
 

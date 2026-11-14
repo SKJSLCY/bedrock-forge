@@ -25,7 +25,7 @@ final class PlayerDataView {
 
     static void show(final Activity activity, final PlayerTracker.Player p, final Runnable back) {
         if (ServerManager.get().isRunning()) {
-            Toast.makeText(activity, "请先停止服务端再查看存档数据", Toast.LENGTH_SHORT).show();
+            Toast.makeText(activity, I18n.t("请先停止服务端再查看存档数据"), Toast.LENGTH_SHORT).show();
             return;
         }
         final Dialog dialog = new Dialog(activity);
@@ -34,8 +34,8 @@ final class PlayerDataView {
         content.setOrientation(LinearLayout.VERTICAL);
         content.setPadding(dp(activity, 12), dp(activity, 12), dp(activity, 12), dp(activity, 12));
 
-        final LinearLayout panel = MinecraftUi.panel(activity, "玩家数据 · " + p.name);
-        panel.addView(MinecraftUi.text(activity, "正在读取世界存档…",
+        final LinearLayout panel = MinecraftUi.panel(activity, I18n.t("玩家数据 · ") + p.name);
+        panel.addView(MinecraftUi.text(activity, I18n.t("正在读取世界存档…"),
                 9.5f, MinecraftUi.PANEL_MUTED, false));
         content.addView(panel);
 
@@ -142,14 +142,14 @@ final class PlayerDataView {
         deleteBtn.setVisibility(android.view.View.GONE);
         panel.removeAllViews();
         if (s.error != null) {
-            panel.addView(MinecraftUi.text(activity, "读取失败：" + s.error,
+            panel.addView(MinecraftUi.text(activity, I18n.t("读取失败：") + s.error,
                     9.5f, MinecraftUi.RED, false));
             return;
         }
         panel.addView(MinecraftUi.text(activity,
-                "世界：" + s.world, 9f, MinecraftUi.PANEL_MUTED, false));
+                I18n.t("世界：") + s.world, 9f, MinecraftUi.PANEL_MUTED, false));
         panel.addView(MinecraftUi.text(activity,
-                "共 " + s.records.size() + " 条玩家记录，存档只保存账号 ID，按记录查看。",
+                I18n.t("共 ") + s.records.size() + I18n.t(" 条玩家记录，存档只保存账号 ID，按记录查看。"),
                 8.5f, MinecraftUi.PANEL_MUTED, false));
         for (final OfflinePlayerData.Record r : s.records) {
             Button b = new MinecraftUi.McButton(activity, r.label());
@@ -170,30 +170,30 @@ final class PlayerDataView {
                                    boolean fromList, Button editBottom,
                                    Button backupBtn, Button deleteBtn) {
         // 头部信息
-        card(activity, panel, "基本信息", new OfflinePlayerData.Row[]{
+        card(activity, panel, I18n.t("基本信息"), new OfflinePlayerData.Row[]{
                 new OfflinePlayerData.Row("世界", s.world),
                 new OfflinePlayerData.Row("账号", r.msaId.isEmpty() ? "未知" : r.msaId),
                 new OfflinePlayerData.Row("ServerId", r.serverId)
         });
 
-        if (!r.basic.isEmpty()) card(activity, panel, "基础属性", r.basic.toArray(new OfflinePlayerData.Row[0]));
+        if (!r.basic.isEmpty()) card(activity, panel, I18n.t("基础属性"), r.basic.toArray(new OfflinePlayerData.Row[0]));
 
         if (r.inventory.isEmpty()) {
-            card(activity, panel, "背包 / 装备", new OfflinePlayerData.Row[]{
+            card(activity, panel, I18n.t("背包 / 装备"), new OfflinePlayerData.Row[]{
                     new OfflinePlayerData.Row("背包", "空")});
         } else {
-            card(activity, panel, "背包 / 装备", r.inventory.toArray(new OfflinePlayerData.Row[0]));
+            card(activity, panel, I18n.t("背包 / 装备"), r.inventory.toArray(new OfflinePlayerData.Row[0]));
         }
 
         if (r.ender.isEmpty()) {
-            card(activity, panel, "末影箱", new OfflinePlayerData.Row[]{
+            card(activity, panel, I18n.t("末影箱"), new OfflinePlayerData.Row[]{
                     new OfflinePlayerData.Row("末影箱", "空")});
         } else {
-            card(activity, panel, "末影箱", r.ender.toArray(new OfflinePlayerData.Row[0]));
+            card(activity, panel, I18n.t("末影箱"), r.ender.toArray(new OfflinePlayerData.Row[0]));
         }
 
         if (!r.effects.isEmpty()) {
-            card(activity, panel, "药水效果", r.effects.toArray(new OfflinePlayerData.Row[0]));
+            card(activity, panel, I18n.t("药水效果"), r.effects.toArray(new OfflinePlayerData.Row[0]));
         }
 
         for (String group : r.groups.keySet()) {
@@ -203,13 +203,13 @@ final class PlayerDataView {
         }
 
         boolean running = ServerManager.get().isRunning();
-        editBottom.setText(running ? "编辑数据（请先停止服务端）" : "编辑数据");
+        editBottom.setText(running ? I18n.t("编辑数据（请先停止服务端）") : I18n.t("编辑数据"));
         editBottom.setEnabled(!running);
         editBottom.setAlpha(running ? 0.55f : 1f);
         editBottom.setVisibility(running ? android.view.View.GONE : android.view.View.VISIBLE);
         editBottom.setOnClickListener(v -> {
             if (ServerManager.get().isRunning()) {
-                Toast.makeText(activity, "请先停止服务端再编辑", Toast.LENGTH_SHORT).show();
+                Toast.makeText(activity, I18n.t("请先停止服务端再编辑"), Toast.LENGTH_SHORT).show();
                 return;
             }
             PlayerDataEditor.start(activity, r, () -> { });
@@ -231,12 +231,12 @@ final class PlayerDataView {
                             r.msaId, r.serverId, ver);
                     activity.runOnUiThread(() -> {
                         backupBtn.setEnabled(true);
-                        Toast.makeText(activity, "已备份到 " + path, Toast.LENGTH_LONG).show();
+                        Toast.makeText(activity, I18n.t("已备份到 ") + path, Toast.LENGTH_LONG).show();
                     });
                 } catch (Throwable e) {
                     activity.runOnUiThread(() -> {
                         backupBtn.setEnabled(true);
-                        Toast.makeText(activity, "备份失败：" + e.getMessage(), Toast.LENGTH_LONG).show();
+                        Toast.makeText(activity, I18n.t("备份失败：") + e.getMessage(), Toast.LENGTH_LONG).show();
                     });
                 }
             }, "player-backup").start();
@@ -244,7 +244,7 @@ final class PlayerDataView {
         deleteBtn.setOnClickListener(v -> confirmDelete(activity, s, r, deleteBtn, backupBtn, editBottom));
 
         Button more = new MinecraftUi.McButton(activity,
-                r.unknown.isEmpty() ? "更多数据" : "更多数据（" + r.unknown.size() + " 项未识别）");
+                r.unknown.isEmpty() ? "更多数据" : I18n.t("更多数据（") + r.unknown.size() + I18n.t(" 项未识别）"));
         LinearLayout.LayoutParams mlp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, dp(activity, 44));
         mlp.topMargin = dp(activity, 10);
@@ -319,13 +319,13 @@ final class PlayerDataView {
         wrap.setPadding(dp(activity, 12), dp(activity, 12), dp(activity, 12), dp(activity, 12));
         LinearLayout panel = MinecraftUi.panel(activity, "删除玩家数据");
         panel.addView(MinecraftUi.text(activity,
-                "世界：" + s.world + "\n"
-                        + "玩家：" + (r.boundName == null || r.boundName.isEmpty()
+                I18n.t("世界：") + s.world + "\n"
+                        + I18n.t("玩家：") + (r.boundName == null || r.boundName.isEmpty()
                         ? r.label() : r.boundName) + "\n"
-                        + "账号：" + r.msaId + "\n\n"
-                        + "将删除该世界中的这个玩家数据，其他玩家不受影响。\n"
-                        + "背包、等级、位置、末影箱都会清空，再次进服将重新生成。\n"
-                        + "此操作不可撤销（应用会先自动备份数据库）。",
+                        + I18n.t("账号：") + r.msaId + "\n\n"
+                        + I18n.t("将删除该世界中的这个玩家数据，其他玩家不受影响。\n")
+                        + I18n.t("背包、等级、位置、末影箱都会清空，再次进服将重新生成。\n")
+                        + I18n.t("此操作不可撤销（应用会先自动备份数据库）。"),
                 8.5f, MinecraftUi.PANEL_TEXT, false));
         Button ok = new MinecraftUi.McButton(activity, "确认删除");
         if (ok instanceof MinecraftUi.McButton) ((MinecraftUi.McButton) ok).setDangerStyle();
@@ -339,12 +339,12 @@ final class PlayerDataView {
             deleteBtn.setEnabled(false);
             new Thread(() -> {
                 try {
-                    String backup = "已自动备份数据库";
+                    String backup = I18n.t("已自动备份数据库");
                     OfflinePlayerData.deletePlayerData(activity, r.msaId, r.serverId);
                     String verify = OfflinePlayerData.verifyDeleted(activity, r.msaId, r.serverId);
-                    if (!"ok".equals(verify)) throw new Exception("删除校验失败");
+                    if (!"ok".equals(verify)) throw new Exception(I18n.t("删除校验失败"));
                     activity.runOnUiThread(() -> {
-                        Toast.makeText(activity, "已删除，启动服务端后生效", Toast.LENGTH_LONG).show();
+                        Toast.makeText(activity, I18n.t("已删除，启动服务端后生效"), Toast.LENGTH_LONG).show();
                         deleteBtn.setVisibility(android.view.View.GONE);
                         backupBtn.setVisibility(android.view.View.GONE);
                         editBottom.setVisibility(android.view.View.GONE);
@@ -352,7 +352,7 @@ final class PlayerDataView {
                 } catch (Throwable e) {
                     activity.runOnUiThread(() -> {
                         deleteBtn.setEnabled(true);
-                        Toast.makeText(activity, "删除失败：" + e.getMessage(), Toast.LENGTH_LONG).show();
+                        Toast.makeText(activity, I18n.t("删除失败：") + e.getMessage(), Toast.LENGTH_LONG).show();
                     });
                 }
             }, "player-delete").start();
@@ -385,13 +385,13 @@ final class PlayerDataView {
         String id = BedrockNbt.str(im.get("Name"));
         panel.addView(MinecraftUi.text(activity, ItemNames.display(id), 11, MinecraftUi.PANEL_TEXT, true));
         addDetail(panel, "ID", id);
-        addDetail(panel, "数量", BedrockNbt.str(im.get("Count")));
-        addDetail(panel, "槽位", BedrockNbt.str(im.get("Slot")));
-        addDetail(panel, "耐久损耗", BedrockNbt.str(im.get("Damage")));
+        addDetail(panel, I18n.t("数量"), BedrockNbt.str(im.get("Count")));
+        addDetail(panel, I18n.t("槽位"), BedrockNbt.str(im.get("Slot")));
+        addDetail(panel, I18n.t("耐久损耗"), BedrockNbt.str(im.get("Damage")));
         Map<String, Object> tag = BedrockNbt.asMap(im.get("tag"));
         if (tag != null) {
             Object unb = tag.get("Unbreakable");
-            if (unb != null) addDetail(panel, "无限耐久", String.valueOf(unb));
+            if (unb != null) addDetail(panel, I18n.t("无限耐久"), String.valueOf(unb));
             List<Object> ench = BedrockNbt.asList(tag.get("ench"));
             if (ench != null && !ench.isEmpty()) {
                 StringBuilder sb = new StringBuilder();
@@ -400,14 +400,14 @@ final class PlayerDataView {
                     if (em == null) continue;
                     if (sb.length() > 0) sb.append("、");
                     sb.append(Translations.enchant(em.get("id")))
-                            .append(" ").append(BedrockNbt.str(em.get("lvl"))).append(" 级");
+                            .append(" ").append(BedrockNbt.str(em.get("lvl"))).append(I18n.t(" 级"));
                 }
-                addDetail(panel, "附魔", sb.toString());
+                addDetail(panel, I18n.t("附魔"), sb.toString());
             }
             Map<String, Object> display = BedrockNbt.asMap(tag.get("display"));
             if (display != null) {
                 String cn = BedrockNbt.str(display.get("Name"));
-                if (!cn.isEmpty()) addDetail(panel, "自定义名称", cn);
+                if (!cn.isEmpty()) addDetail(panel, I18n.t("自定义名称"), cn);
                 List<Object> lore = BedrockNbt.asList(display.get("Lore"));
                 if (lore != null && !lore.isEmpty()) {
                     StringBuilder sb = new StringBuilder();
@@ -415,12 +415,12 @@ final class PlayerDataView {
                         if (sb.length() > 0) sb.append("\n");
                         sb.append(o);
                     }
-                    addDetail(panel, "描述", sb.toString());
+                    addDetail(panel, I18n.t("描述"), sb.toString());
                 }
             }
             Object rc = tag.get("RepairCost");
-            if (rc != null) addDetail(panel, "修复成本", String.valueOf(rc));
-            addDetail(panel, "原始 tag", compact(tag));
+            if (rc != null) addDetail(panel, I18n.t("修复成本"), String.valueOf(rc));
+            addDetail(panel, I18n.t("原始 tag"), compact(tag));
         }
         Button close = new MinecraftUi.McButton(activity, "关闭");
         LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(
@@ -454,7 +454,7 @@ final class PlayerDataView {
             Object v = e.getValue();
             if (v instanceof Map) sb.append(e.getKey()).append("={...}");
             else if (v instanceof java.util.List) sb.append(e.getKey()).append("=[")
-                    .append(((java.util.List<?>) v).size()).append(" 项]");
+                    .append(((java.util.List<?>) v).size()).append(I18n.t(" 项]"));
             else sb.append(e.getKey()).append('=').append(v);
         }
         return sb.toString();
@@ -470,16 +470,16 @@ final class PlayerDataView {
         wrap.setPadding(dp(activity, 12), dp(activity, 12), dp(activity, 12), dp(activity, 12));
         LinearLayout panel = MinecraftUi.panel(activity, "更多数据");
 
-        panel.addView(MinecraftUi.text(activity, "未识别字段", 9f,
+        panel.addView(MinecraftUi.text(activity, I18n.t("未识别字段"), 9f,
                 MinecraftUi.PANEL_TEXT, true));
-        String unknownText = unknown.isEmpty() ? "无" : joinLines(unknown);
+        String unknownText = unknown.isEmpty() ? I18n.t("无") : joinLines(unknown);
         TextView ut = MinecraftUi.text(activity, unknownText, 8.5f,
                 unknown.isEmpty() ? MinecraftUi.PANEL_MUTED : MinecraftUi.RED, false);
         ut.setPadding(0, dp(activity, 3), 0, dp(activity, 8));
         ut.setTypeface(Typeface.MONOSPACE);
         panel.addView(ut);
 
-        panel.addView(MinecraftUi.text(activity, "原始字段", 9f,
+        panel.addView(MinecraftUi.text(activity, I18n.t("原始字段"), 9f,
                 MinecraftUi.PANEL_TEXT, true));
         TextView rt = MinecraftUi.text(activity, joinLines(raw), 8.5f,
                 MinecraftUi.PANEL_MUTED, false);

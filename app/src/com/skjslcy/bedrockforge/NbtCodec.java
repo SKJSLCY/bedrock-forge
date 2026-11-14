@@ -93,7 +93,7 @@ final class NbtCodec {
                 return new Tag(LONG_ARRAY, arr);
             }
             default:
-                throw new Exception("未知 NBT 类型 " + type);
+                throw new Exception(I18n.t("未知 NBT 类型 ") + type);
         }
     }
 
@@ -158,7 +158,7 @@ final class NbtCodec {
                 break;
             }
             default:
-                throw new Exception("无法写入类型 " + t.type);
+                throw new Exception(I18n.t("无法写入类型 ") + t.type);
         }
     }
 

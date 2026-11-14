@@ -1,0 +1,22 @@
+{
+ "minecraft:absorption": "傷害吸收",
+ "minecraft:armor": "護甲",
+ "minecraft:attack_damage": "攻擊力",
+ "minecraft:exhaustion": "疲勞度",
+ "minecraft:follow_range": "跟隨範圍",
+ "minecraft:health": "生命值",
+ "minecraft:hunger": "饑餓值",
+ "minecraft:jump_strength": "跳躍強度",
+ "minecraft:knockback_resistance": "擊退抗性",
+ "minecraft:lava_movement": "岩漿移動速度",
+ "minecraft:luck": "幸運",
+ "minecraft:movement": "移動速度",
+ "minecraft:player.exhaustion": "疲勞度",
+ "minecraft:player.experience": "經驗值",
+ "minecraft:player.health": "生命值",
+ "minecraft:player.hunger": "饑餓值",
+ "minecraft:player.level": "經驗等級",
+ "minecraft:player.saturation": "飽和度",
+ "minecraft:saturation": "飽和度",
+ "minecraft:underwater_movement": "水下移動速度"
+}

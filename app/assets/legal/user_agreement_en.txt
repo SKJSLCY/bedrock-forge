@@ -1,0 +1,150 @@
+Bedrock Forge User Agreement
+
+Version: 1.2
+Effective Date: November 13, 2026
+Applicable Software: Bedrock Forge (package name com.skjslcy.bedrockforge)
+
+I. Definitions
+
+1.1 "This Software" refers to the Bedrock Forge Android application and its accompanying installation packages, resource files, built-in components, and subsequent updates.
+1.2 "Developer" refers to the copyright holder and maintainer of This Software.
+1.3 "User" refers to the natural person who installs, launches, or uses This Software.
+1.4 "Server" refers to the Minecraft Bedrock Dedicated Server (BDS) deployed by the User and its runtime environment.
+1.5 "Third-Party Components" refers to software, binaries, or resources built into or accompanying This Software that are developed by third parties and subject to their own licenses.
+1.6 "Open Source License" refers to the license applicable to the source code of This Software, currently planned as GPL-3.0-or-later, as set out in the LICENSE file in the project repository.
+1.7 "AI Provider" refers to the third-party artificial intelligence service provider independently selected and configured by the User.
+
+II. Acceptance and Amendment of This Agreement
+
+2.1 Before installing, launching, or using This Software, you shall read this Agreement in full.
+2.2 By installing, launching, or continuing to use This Software, you are deemed to have understood and agreed to all contents of this Agreement.
+2.3 If you do not agree with any content of this Agreement, please stop installing and using This Software and uninstall it.
+2.4 The Developer may adjust this Agreement in line with version updates, and the updated Agreement will be released with the new version.
+2.5 Your continued use of an updated version is deemed acceptance of the updated Agreement; if you do not accept it, you shall stop using This Software.
+2.6 Where this Agreement is inconsistent with the Open Source License or third-party licenses, the respective license shall prevail.
+
+III. Nature of This Software and Scope of Functions
+
+3.1 This Software is a Minecraft Bedrock Edition server management tool running on Android devices.
+3.2 This Software provides functions such as runtime environment deployment, server start and stop, log viewing, server settings, whitelist and permission management, player data management, world management, backup and restore, addons management, and AI assistance.
+3.3 This Software is free software and no usage fee is charged.
+3.4 This Software is an unofficial tool and has no affiliation, authorization, or cooperation relationship with Mojang Studios, Microsoft, or their affiliates.
+3.5 This Software does not include the Minecraft client, the official server, or official art assets; BDS shall be obtained by the User from official channels and used in compliance with its terms of use.
+3.6 This Software is made by AI.
+
+IV. Open Source Licensing and Third-Party Components
+
+4.1 The source code of This Software is released under GPL-3.0-or-later, and the full license text is set out in the LICENSE file of the project repository,
+    or in This Software under "About → Open Source Licenses". Project repository:
+    https://github.com/SKJSLCY/bedrock-forge
+4.2 Your rights to copy, modify, distribute, and use commercially under the Open Source License are not restricted by this Agreement.
+4.3 This Software contains or is accompanied by Third-Party Components, including but not limited to: Box64 (MIT), proot (GPL), Ubuntu Base rootfs (containing various packages, each subject to its own license), and Shizuku (Apache-2.0).
+4.4 Third-Party Components remain subject to their respective licenses; this Agreement does not change, replace, or restrict those licenses.
+4.5 The list of Third-Party Components, copyright notices, and methods for obtaining source code are set out in This Software under "About → Third-Party Components and Licenses", as well as in the THIRD_PARTY_NOTICES and SOURCES documents in the project repository.
+4.6 You shall not remove the copyright, license, and third-party notices in This Software.
+
+V. Conditions of Use
+
+5.1 You shall have the civil capacity appropriate to the use of This Software.
+5.2 Deploying and running a Server with This Software may require an Android device with sufficient storage space, Shizuku and its authorization, a network connection, and a BDS installation package prepared by you.
+5.3 You shall confirm on your own that your device, system version, permissions, and runtime environment meet the requirements.
+5.4 The Developer bears no liability for functions that are unavailable due to device incompatibility, insufficient permissions, Shizuku not running, insufficient storage space, or network anomalies.
+
+VI. User Obligations and Prohibited Conduct
+
+6.1 You shall comply with the laws and regulations of the People's Republic of China and with the laws applicable in your location.
+6.2 You shall not use This Software to engage in illegal or criminal activities, shall not infringe the intellectual property rights, privacy rights, rights of reputation, or other lawful rights and interests of others, shall not attack, intrude into, or control the devices, servers, or networks of others, shall not disseminate malicious programs, cheats, pirated content, or illegal information, shall not impersonate official entities, the Developer, or others, shall not falsify or remove copyright and license notices, shall not bypass or undermine the security mechanisms of This Software, and shall not in any way imply that This Software is officially endorsed by Mojang or Microsoft.
+6.3 You are responsible for all operations you perform through This Software, including starting, stopping, and restarting the Server, executing console commands, modifying server configuration, editing or deleting player data, rolling back or overwriting worlds, and importing third-party addons.
+6.4 The restrictions above do not apply to rights expressly granted to you by the Open Source License.
+
+VII. Server and Data Risks
+
+7.1 This Software provides only a local management tool and does not provide server hosting, network access, player accounts, or payment services.
+7.2 The operation and configuration of the Server, world data, whitelist, permissions, addons, player data, and the like are your sole responsibility.
+7.3 You understand and agree that: modifying server configuration or player data may cause data corruption, failure to load a world, or inability of players to join the server; operations such as deleting player data, rolling back backups, and overwriting worlds may be irreversible; you should stop the Server and make your own backup before editing data; cross-version imports, cross-world imports, and the use of third-party addons may cause compatibility issues; and public servers may be subject to scanning, attacks, malicious connections, or player disputes.
+7.4 You shall bear on your own any data loss, service interruption, or other loss caused by your own operations, device environment, Third-Party Components, network conditions, or force majeure.
+7.5 The automatic backup feature provided by the Developer is an auxiliary measure only and does not constitute any guarantee of data safety; you should keep important backups on your own.
+
+VIII. Sponsorship
+
+8.1 You may voluntarily sponsor the Developer in order to support the Developer.
+8.2 Sponsorship does not constitute a purchase, subscription, license, or service contract, and carries no additional rights.
+8.3 Sponsorship does not affect any rights you enjoy under the Open Source License.
+8.4 Sponsorship is voluntary and, unless otherwise provided by law, is in principle non-refundable.
+8.5 The Developer will not provide custom development, priority support, or additional warranties in return for sponsorship, unless otherwise agreed in writing by both parties.
+IX. AI Features
+
+9.1 The AI features of This Software require you to independently select and configure a third-party AI Provider and API Key.
+9.2 The API Key is stored only locally on your device and is encrypted using the Android Keystore; the Developer does not collect or upload your API Key.
+9.3 Requests, fees, data usage, and privacy policies between you and the AI Provider shall be separately agreed between you and that provider.
+9.4 AI services may incur fees, which you shall bear on your own; you shall independently confirm the billing method of the provider.
+9.5 AI output is for reference only and does not constitute professional advice; you shall judge its accuracy on your own and are responsible for operations you perform based on AI output.
+9.6 You shall not submit through the AI features any content that is illegal, infringing, harmful to the safety of others, or in violation of the provider's policies.
+9.7 The AI Provider may change models, restrict access, or discontinue services, and the Developer makes no guarantee as to their availability.
+
+X. Privacy and Data
+
+10.1 This Software does not actively collect or upload your personal data.
+10.2 The following data is stored only locally on your device: application settings, themes, keep-screen-on configuration, AI Provider configuration, the encrypted API Key, conversation records, player name and account mappings, logs, backups, and deployment status.
+10.3 This Software may access the network, solely for AI requests you actively initiate, downloads of servers, components, or updates that you actively trigger, and opening external links you click.
+10.4 Uninstalling This Software or clearing application data will delete local configuration; whether the Server and backups under /data/local/tmp are retained depends on whether you actively clean them up.
+10.5 You shall properly safeguard your device, accounts, API Key, and Server access permissions on your own.
+
+XI. Intellectual Property and Trademarks
+
+11.1 The name, icon, interface design, and original code of This Software belong to the Developer; open source portions are licensed under the Open Source License.
+11.2 Names and trademarks such as "Minecraft", "我的世界", and "Minecraft Bedrock Edition" belong to their respective rights holders.
+11.3 This Software does not use official Mojang interface assets; interface textures are programmatically generated or self-made.
+11.4 You shall not remove the copyright, license, and third-party notices in This Software.
+
+XII. Disclaimer of Warranties
+
+12.1 This Software is provided "as is", and the Developer makes no warranty as to its fitness, stability, freedom from errors, or uninterrupted operation.
+12.2 To the maximum extent permitted by applicable law, the Developer shall not be liable for data loss, world corruption, player data corruption, failure of the Server to start, inability to connect, being attacked, erroneous AI output, interruption of the AI Provider, fee disputes, indirect losses, loss of profits, or loss of goodwill.
+12.3 This clause does not exclude liability that cannot be excluded under law.
+
+XIII. Limitation of Liability
+
+13.1 To the extent permitted by applicable law, the Developer's aggregate liability in respect of This Software shall not exceed the fees you actually paid to use This Software.
+13.2 This Software is free software, and you understand and agree that the Developer does not bear liability beyond what is mandatorily required by law merely because it is provided free of charge.
+13.3 You shall bear on your own any liability arising from your breach of this Agreement or infringement of third-party rights and interests; if this causes losses to the Developer, you shall compensate for them.
+
+XIV. Amendment and Termination of This Agreement
+
+14.1 The Developer may adjust this Agreement in line with version updates.
+14.2 If you breach this Agreement, the Developer may require you to stop using This Software.
+14.3 Termination of this Agreement does not affect rights you have already acquired under the Open Source License.
+14.4 After termination of this Agreement, the clauses concerning intellectual property, disclaimer, limitation of liability, and dispute resolution remain effective.
+
+XV. Governing Law and Dispute Resolution
+
+15.1 This Agreement is governed by the laws of the People's Republic of China.
+15.2 Disputes arising from this Agreement shall be settled through friendly negotiation between the parties; if negotiation fails, either party may bring a lawsuit before a people's court with jurisdiction.
+
+XVI. Miscellaneous
+
+16.1 If any provision of this Agreement is invalid, the validity of the other provisions shall not be affected.
+16.2 Where this Agreement is inconsistent with the Open Source License or third-party licenses, the respective license shall prevail.
+16.3 This Agreement constitutes the entire agreement between the parties concerning the use of This Software and supersedes prior related statements.
+16.4 Contact Information:
+    Project Repository: https://github.com/SKJSLCY/bedrock-forge
+    Feedback Channel: https://github.com/SKJSLCY/bedrock-forge/issues
+    QQ Group: 1128935719
+
+Appendix A: Third-Party Components and Licenses
+
+Box64: MIT, retain the copyright and license notices.
+proot: GPL, distribution with the package requires providing the corresponding source code or the means to obtain it.
+Ubuntu Base rootfs: each package is subject to its own license, retain /usr/share/doc/*/copyright, and provide the means to obtain the source code.
+Shizuku: Apache-2.0, retain the NOTICE.
+MCAPKS: provides a historical version list interface, with data sourced from https://mcapks.net and subject to its terms of use.
+Tsinghua University TUNA Mirror: provides Ubuntu Base rootfs downloads and is subject to its mirror usage instructions.
+
+Appendix B: Data Inventory
+
+Application settings: local SharedPreferences, not uploaded.
+API Key: encrypted locally with Keystore, not uploaded.
+Conversation records: stored locally, sent only to the AI Provider you configure.
+Player name mappings: local, not uploaded.
+Server and worlds: /data/local/tmp, not uploaded.
+Backups: /data/local/tmp/mcbds/backups, not uploaded.

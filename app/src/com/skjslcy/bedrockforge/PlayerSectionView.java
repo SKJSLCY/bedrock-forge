@@ -53,7 +53,7 @@ public class PlayerSectionView extends ScrollView {
 
         LinearLayout head = MinecraftUi.panel(activity, "玩家管理");
         head.addView(MinecraftUi.text(activity,
-                "从服务端启动后开始记录。总在线时间按实际连接时长累计。",
+                I18n.t("从服务端启动后开始记录。总在线时间按实际连接时长累计。"),
                 9, MinecraftUi.PANEL_MUTED, false));
         status = MinecraftUi.text(activity, "正在读取…", 8.5f, MinecraftUi.PANEL_MUTED, false);
         status.setPadding(0, dp(6), 0, 0);
@@ -70,7 +70,7 @@ public class PlayerSectionView extends ScrollView {
         head.addView(backfill, blp);
         backfill.setOnClickListener(v -> {
             PlayerTracker.backfill(ServerManager.get().getLogs());
-            toast("已从当前控制台日志补录");
+            toast(I18n.t("已从当前控制台日志补录"));
             refresh();
         });
         Button logBackfill = new MinecraftUi.McButton(activity, "从日志文件补录");
@@ -83,17 +83,17 @@ public class PlayerSectionView extends ScrollView {
         logState.setPadding(0, dp(5), 0, 0);
         head.addView(logState);
         logBackfill.setOnClickListener(v -> {
-            logState.setText("日志：正在补录…");
+            logState.setText(I18n.t("日志：正在补录…"));
             new Thread(() -> {
                 final ServerLogTail.Result r = ServerLogTail.tail(activity);
                 handler.post(() -> {
                     if (r.error != null) {
-                        logState.setText("日志：" + r.error);
-                        toast("日志补录失败：" + r.error);
+                        logState.setText(I18n.t("日志：") + r.error);
+                        toast(I18n.t("日志补录失败：") + r.error);
                     } else {
-                        logState.setText("日志：" + r.file + " · 已读 "
+                        logState.setText(I18n.t("日志：") + r.file + I18n.t(" · 已读 ")
                                 + r.newOffset + " / " + r.fileSize + " B");
-                        toast("日志补录完成：进服 " + r.joins + " 次，离服 " + r.leaves + " 次");
+                        toast(I18n.t("日志补录完成：进服 ") + r.joins + I18n.t(" 次，离服 ") + r.leaves + I18n.t(" 次"));
                     }
                     refresh();
                 });
@@ -101,7 +101,7 @@ public class PlayerSectionView extends ScrollView {
         });
         new Thread(() -> {
             final String d = ServerLogTail.describe(activity);
-            handler.post(() -> logState.setText("日志：" + d));
+            handler.post(() -> logState.setText(I18n.t("日志：") + d));
         }, "log-state").start();
         handler.postDelayed(new Runnable() {
             @Override public void run() {
@@ -129,7 +129,7 @@ public class PlayerSectionView extends ScrollView {
     private LinearLayout buildWhitelistPanel() {
         LinearLayout panel = MinecraftUi.panel(activity, "添加白名单");
         panel.addView(MinecraftUi.text(activity,
-                "白名单拦截的玩家不会出现在列表里，可在这里按名字直接添加。",
+                I18n.t("白名单拦截的玩家不会出现在列表里，可在这里按名字直接添加。"),
                 8.5f, MinecraftUi.PANEL_MUTED, false));
         final EditText input = MinecraftUi.terminalInput(activity, "玩家名，例如 Steve");
         LinearLayout.LayoutParams ilp = new LinearLayout.LayoutParams(
@@ -144,12 +144,12 @@ public class PlayerSectionView extends ScrollView {
         add.setOnClickListener(v -> {
             String name = input.getText().toString().trim();
             if (!name.matches("[A-Za-z0-9_]{1,32}")) {
-                toast("请输入正确的玩家名（字母、数字、下划线）");
+                toast(I18n.t("请输入正确的玩家名（字母、数字、下划线）"));
                 return;
             }
             if (command("allowlist add \"" + name + "\"")) {
                 input.setText("");
-                toast("已发送白名单添加：" + name);
+                toast(I18n.t("已发送白名单添加：") + name);
             }
         });
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
@@ -171,11 +171,12 @@ public class PlayerSectionView extends ScrollView {
             if (col.getChildAt(i) == whitelistPanel) continue;
             col.removeViewAt(i);
         }
-        status.setText("共 " + list.size() + " 名玩家");
+        status.setText(I18n.t("共 ") + list.size()
+                + I18n.n(list.size(), " 名玩家（单数）", " 名玩家"));
         LinearLayout panel = MinecraftUi.panel(activity, "玩家列表");
         if (list.isEmpty()) {
             panel.addView(MinecraftUi.text(activity,
-                    "还没有玩家记录。启动服务端并有玩家进服后会自动记录。",
+                    I18n.t("还没有玩家记录。启动服务端并有玩家进服后会自动记录。"),
                     9, MinecraftUi.PANEL_MUTED, false));
         }
         for (PlayerTracker.Player p : list) {
@@ -183,12 +184,12 @@ public class PlayerSectionView extends ScrollView {
             row.setOrientation(LinearLayout.VERTICAL);
             row.setPadding(dp(9), dp(7), dp(9), dp(7));
             boolean allowOn = isAllowListEnabled();
-            String base = p.name + (p.online ? "  ● 在线" : "  ○ 离线");
+            String base = p.name + (p.online ? I18n.t("  ● 在线") : I18n.t("  ○ 离线"));
             String wlText = "";
             int wlColor = 0;
             if (allowOn) {
                 boolean wl = isWhitelisted(p.name);
-                wlText = wl ? "  白名单" : "  非白名单";
+                wlText = wl ? I18n.t("  白名单") : I18n.t("  非白名单");
                 wlColor = wl ? 0xFF7FD67F : 0xFFFF6B6B;
             }
             SpannableString ss = new SpannableString(base + wlText);
@@ -200,11 +201,12 @@ public class PlayerSectionView extends ScrollView {
                     p.online ? MinecraftUi.GREEN : MinecraftUi.PANEL_TEXT, true);
             name.setText(ss);
             row.addView(name);
-            String info = "XUID：" + (p.xuid == null || p.xuid.isEmpty() ? "未知" : p.xuid) + "\n"
-                    + "首次：" + time(p.firstSeen) + "\n"
-                    + "上次：" + time(p.lastSeen) + "（" + PlayerTracker.ago(p.lastSeen) + "）" + "\n"
-                    + "本次在线：" + dur(PlayerTracker.sessionMs(p))
-                    + "　总在线：" + dur(p.totalMs);
+            String info = I18n.t("XUID：") + (p.xuid == null || p.xuid.isEmpty() ? I18n.t("未知") : p.xuid) + "\n"
+                    + I18n.t("首次：") + time(p.firstSeen) + "\n"
+                    + I18n.t("上次：") + time(p.lastSeen) + I18n.t("（") + PlayerTracker.ago(p.lastSeen)
+                    + I18n.t("）") + "\n"
+                    + I18n.t("本次在线：") + dur(PlayerTracker.sessionMs(p))
+                    + I18n.t("　总在线：") + dur(p.totalMs);
             row.addView(MinecraftUi.text(activity, info, 8.5f, MinecraftUi.PANEL_MUTED, false));
             Button manage = new MinecraftUi.McButton(activity, "管理该玩家");
             LinearLayout.LayoutParams mlp = new LinearLayout.LayoutParams(
@@ -241,7 +243,7 @@ public class PlayerSectionView extends ScrollView {
         try {
             version = DeployManager.detect(activity, DeployManager.TYPE_SERVER).version;
         } catch (Throwable t) {
-            toast("读取服务端版本失败");
+            toast(I18n.t("读取服务端版本失败"));
             return;
         }
         final boolean supportsInput = compareVersion(version, "1.21.50") >= 0;
@@ -254,21 +256,21 @@ public class PlayerSectionView extends ScrollView {
         LinearLayout wrap = new LinearLayout(activity);
         wrap.setOrientation(LinearLayout.VERTICAL);
         wrap.setPadding(dp(14), dp(14), dp(14), dp(14));
-        LinearLayout panel = MinecraftUi.panel(activity, "权限 · " + p.name);
+        LinearLayout panel = MinecraftUi.panel(activity, I18n.t("权限 · ") + p.name);
         wrap.addView(panel, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
-        addSwitchRow(panel, p, "管理员权限", "op", "deop", true);
+        addSwitchRow(panel, p, I18n.t("管理员权限"), "op", "deop", true);
 
         if (supportsInput) {
-            panel.addView(MinecraftUi.text(activity, "输入权限（BDS " + version + "）",
+            panel.addView(MinecraftUi.text(activity, I18n.t("输入权限（BDS ") + version + I18n.t("）"),
                     8.5f, MinecraftUi.PANEL_MUTED, false));
             for (String[] row : INPUT_PERMS) {
                 addSwitchRow(panel, p, row[0], row[1], null, false);
             }
         } else {
             panel.addView(MinecraftUi.text(activity,
-                    "当前服务端版本 " + version + " 低于 1.21.50，不显示输入权限。",
+                    I18n.t("当前服务端版本 ") + version + I18n.t(" 低于 1.21.50，不显示输入权限。"),
                     8.5f, MinecraftUi.PANEL_MUTED, false));
         }
 
@@ -473,12 +475,13 @@ public class PlayerSectionView extends ScrollView {
         LinearLayout wrap = new LinearLayout(activity);
         wrap.setOrientation(LinearLayout.VERTICAL);
         wrap.setPadding(dp(14), dp(14), dp(14), dp(14));
-        LinearLayout panel = MinecraftUi.panel(activity, "玩家 · " + p.name);
+        LinearLayout panel = MinecraftUi.panel(activity, I18n.t("玩家 · ") + p.name);
         panel.addView(MinecraftUi.text(activity,
-                "XUID：" + (p.xuid == null || p.xuid.isEmpty() ? "未知" : p.xuid)
-                        + "\n首次：" + time(p.firstSeen) + "\n上次：" + time(p.lastSeen) + "（" + PlayerTracker.ago(p.lastSeen) + "）"
-                        + "\n本次在线：" + dur(PlayerTracker.sessionMs(p))
-                        + "　总在线：" + dur(p.totalMs),
+                I18n.t("XUID：") + (p.xuid == null || p.xuid.isEmpty() ? I18n.t("未知") : p.xuid)
+                        + I18n.t("\n首次：") + time(p.firstSeen) + I18n.t("\n上次：") + time(p.lastSeen) + I18n.t("（") + PlayerTracker.ago(p.lastSeen)
+                        + I18n.t("）")
+                        + I18n.t("\n本次在线：") + dur(PlayerTracker.sessionMs(p))
+                        + I18n.t("　总在线：") + dur(p.totalMs),
                 8.5f, MinecraftUi.PANEL_MUTED, false));
 
         final Runnable back = () -> showManageDialog(p);
@@ -571,7 +574,7 @@ public class PlayerSectionView extends ScrollView {
         LinearLayout wrap = new LinearLayout(activity);
         wrap.setOrientation(LinearLayout.VERTICAL);
         wrap.setPadding(dp(14), dp(14), dp(14), dp(14));
-        LinearLayout panel = MinecraftUi.panel(activity, "游戏模式 · " + p.name);
+        LinearLayout panel = MinecraftUi.panel(activity, I18n.t("游戏模式 · ") + p.name);
         String[] modes = {"survival 生存", "creative 创造", "adventure 冒险", "spectator 旁观"};
         for (int i = 0; i < modes.length; i++) {
             final String mode = modes[i].split(" ")[0];
@@ -614,7 +617,7 @@ public class PlayerSectionView extends ScrollView {
         LinearLayout wrap = new LinearLayout(activity);
         wrap.setOrientation(LinearLayout.VERTICAL);
         wrap.setPadding(dp(14), dp(14), dp(14), dp(14));
-        LinearLayout panel = MinecraftUi.panel(activity, "设置等级 · " + p.name);
+        LinearLayout panel = MinecraftUi.panel(activity, I18n.t("设置等级 · ") + p.name);
         final EditText input = MinecraftUi.terminalInput(activity, "输入等级，例如 30");
         LinearLayout.LayoutParams ilp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, dp(44));
@@ -628,7 +631,7 @@ public class PlayerSectionView extends ScrollView {
         ok.setOnClickListener(v -> {
             String n = input.getText().toString().trim();
             if (!n.matches("\\d{1,5}")) {
-                toast("请输入数字等级");
+                toast(I18n.t("请输入数字等级"));
                 return;
             }
             d.dismiss();
@@ -667,12 +670,12 @@ public class PlayerSectionView extends ScrollView {
 
     private boolean command(String cmd) {
         boolean ok = ServerManager.get().send(cmd);
-        toast(ok ? "已发送：" + cmd : "服务端未运行，发送失败");
+        toast(ok ? I18n.t("已发送：") + cmd : I18n.t("服务端未运行，发送失败"));
         return ok;
     }
 
     private String time(long ms) {
-        if (ms <= 0) return "未知";
+        if (ms <= 0) return I18n.t("未知");
         return new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.CHINA)
                 .format(new Date(ms));
     }
@@ -682,9 +685,9 @@ public class PlayerSectionView extends ScrollView {
         long h = s / 3600;
         long m = (s % 3600) / 60;
         long sec = s % 60;
-        if (h > 0) return h + "小时" + m + "分钟";
-        if (m > 0) return m + "分钟" + sec + "秒";
-        return sec + "秒";
+        if (h > 0) return h + I18n.t("小时") + m + I18n.t("分钟");
+        if (m > 0) return m + I18n.t("分钟") + sec + I18n.t("秒");
+        return sec + I18n.t("秒");
     }
 
     private void toast(String s) {

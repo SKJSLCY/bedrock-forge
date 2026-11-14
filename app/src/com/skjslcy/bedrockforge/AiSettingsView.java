@@ -35,25 +35,25 @@ final class AiSettingsView extends LinearLayout {
         removeAllViews();
         LinearLayout panel = MinecraftUi.panel(activity, "AI 智能体");
         panel.addView(MinecraftUi.text(activity,
-                "先添加服务商并填入 API Key，检测到可用模型后选择模型。\n"
-                        + "Key 使用 Android Keystore 加密保存在本机。",
+                I18n.t("先添加服务商并填入 API Key，检测到可用模型后选择模型。\n")
+                        + I18n.t("Key 使用 Android Keystore 加密保存在本机。"),
                 8.5f, MinecraftUi.PANEL_MUTED, false));
 
         List<String> added = AiConfig.added(activity);
         String pid = AiConfig.providerId(activity);
         if (added.isEmpty()) {
             panel.addView(MinecraftUi.text(activity,
-                    "尚未添加服务商，AI 助手不可用。", 9.5f, 0xFFFF6B6B, true));
+                    I18n.t("尚未添加服务商，AI 助手不可用。"), 9.5f, 0xFFFF6B6B, true));
         } else {
             AiConfig.Provider p = AiConfig.provider(pid);
             String m = AiConfig.model(activity);
             panel.addView(MinecraftUi.text(activity,
-                    "当前：" + (pid.isEmpty() ? "未选择" : p.name
-                            + " · " + (m.isEmpty() ? "未选择模型" : m)),
+                    I18n.t("当前：") + (pid.isEmpty() ? I18n.t("未选择") : p.name
+                            + " · " + (m.isEmpty() ? I18n.t("未选择模型") : m)),
                     9.5f, MinecraftUi.PANEL_TEXT, true));
         }
 
-        panel.addView(MinecraftUi.text(activity, "已添加的服务商", 9f,
+        panel.addView(MinecraftUi.text(activity, I18n.t("已添加的服务商"), 9f,
                 MinecraftUi.PANEL_MUTED, true));
         for (final String id : added) {
             AiConfig.Provider p = AiConfig.provider(id);
@@ -62,10 +62,10 @@ final class AiSettingsView extends LinearLayout {
             row.setBackground(MinecraftUi.slotDrawable(activity));
             row.setPadding(dp(8), dp(6), dp(8), dp(6));
             String model = AiConfig.model(activity);
-            String status = (AiConfig.hasKey(activity, id) ? "已配置 Key" : "未配置 Key")
+            String status = (AiConfig.hasKey(activity, id) ? I18n.t("已配置 Key") : I18n.t("未配置 Key"))
                     + (id.equals(pid) && model != null && !model.isEmpty() ? " · " + model : "");
             TextView label = MinecraftUi.text(activity,
-                    p.name + (id.equals(pid) ? "（当前）" : "") + "\n" + status,
+                    p.name + (id.equals(pid) ? I18n.sp() + I18n.t("（当前）") : "") + "\n" + status,
                     8.5f, id.equals(pid) ? MinecraftUi.PANEL_TEXT : MinecraftUi.PANEL_MUTED,
                     id.equals(pid));
             row.addView(label, new LinearLayout.LayoutParams(0,
@@ -86,19 +86,19 @@ final class AiSettingsView extends LinearLayout {
         panel.addView(add, alp);
         add.setOnClickListener(v -> showAddProvider());
 
-        panel.addView(MinecraftUi.text(activity, "助手设置", 9f,
+        panel.addView(MinecraftUi.text(activity, I18n.t("助手设置"), 9f,
                 MinecraftUi.PANEL_MUTED, true));
         final EditText aiName = MinecraftUi.terminalInput(activity, "默认：AI 助手");
         aiName.setText(AiConfig.aiName(activity));
-        panel.addView(label("AI 助手名称"));
+        panel.addView(label(I18n.t("AI 助手名称")));
         panel.addView(aiName, height(44));
         final EditText userName = MinecraftUi.terminalInput(activity, "默认：你");
         userName.setText(AiConfig.userName(activity));
-        panel.addView(label("用户名称"));
+        panel.addView(label(I18n.t("用户名称")));
         panel.addView(userName, height(44));
         final EditText ctx = MinecraftUi.terminalInput(activity, "默认 20 条");
         ctx.setText(String.valueOf(AiConfig.contextLimit(activity)));
-        panel.addView(label("上下文长度（消息条数，默认 20）"));
+        panel.addView(label(I18n.t("上下文长度（消息条数，默认 20）")));
         panel.addView(ctx, height(44));
         Button saveChat = new MinecraftUi.McButton(activity, "保存助手设置");
         panel.addView(saveChat, heightMargin(42, 6));
@@ -108,15 +108,15 @@ final class AiSettingsView extends LinearLayout {
             try {
                 int n = Integer.parseInt(ctx.getText().toString().trim());
                 AiConfig.setContextLimit(activity, Math.max(2, Math.min(200, n)));
-                toast("已保存（上下文 " + AiConfig.contextLimit(activity) + " 条）");
+                toast(I18n.t("已保存（上下文 ") + AiConfig.contextLimit(activity) + I18n.t(" 条）"));
             } catch (Throwable e) {
                 AiConfig.setContextLimit(activity, 20);
-                toast("上下文长度无效，已使用默认 20 条");
+                toast(I18n.t("上下文长度无效，已使用默认 20 条"));
             }
             refresh();
         });
 
-        panel.addView(MinecraftUi.text(activity, "系统提示词", 9f,
+        panel.addView(MinecraftUi.text(activity, I18n.t("系统提示词"), 9f,
                 MinecraftUi.PANEL_MUTED, true));
         android.widget.HorizontalScrollView presetScroll =
                 new android.widget.HorizontalScrollView(activity);
@@ -181,7 +181,7 @@ final class AiSettingsView extends LinearLayout {
                 AiConfig.setCustomPrompt(activity, text);
                 AiConfig.setPreset(activity, "custom");
             }
-            toast("已保存系统提示词");
+            toast(I18n.t("已保存系统提示词"));
             refresh();
         });
 
@@ -196,7 +196,7 @@ final class AiSettingsView extends LinearLayout {
             if (!AiConfig.added(activity).contains(p.id)) candidates.add(p);
         }
         if (candidates.isEmpty()) {
-            toast("已添加全部服务商");
+            toast(I18n.t("已添加全部服务商"));
             return;
         }
         final Dialog d = new Dialog(activity);
@@ -249,7 +249,7 @@ final class AiSettingsView extends LinearLayout {
         LinearLayout wrap = new LinearLayout(activity);
         wrap.setOrientation(VERTICAL);
         wrap.setPadding(dp(12), dp(12), dp(12), dp(12));
-        LinearLayout panel = MinecraftUi.panel(activity, "配置 · " + p.name);
+        LinearLayout panel = MinecraftUi.panel(activity, I18n.t("配置 · ") + p.name);
 
         final EditText base = MinecraftUi.terminalInput(activity, "Base URL");
         base.setText(AiConfig.baseUrl(activity, pid));
@@ -262,7 +262,7 @@ final class AiSettingsView extends LinearLayout {
         panel.addView(key, height(44));
 
         final TextView modelLabel = MinecraftUi.text(activity,
-                "模型：" + (AiConfig.model(activity) == null || AiConfig.model(activity).isEmpty()
+                I18n.t("模型：") + (AiConfig.model(activity) == null || AiConfig.model(activity).isEmpty()
                         ? "未选择" : AiConfig.model(activity)),
                 9.5f, MinecraftUi.PANEL_TEXT, true);
         modelLabel.setPadding(0, dp(8), 0, dp(2));
@@ -297,20 +297,20 @@ final class AiSettingsView extends LinearLayout {
         detect.setOnClickListener(v -> {
             saveKeyAndBase(pid, base, key);
             detect.setEnabled(false);
-            detect.setText("检测中…");
-            toast("正在检测模型…");
+            detect.setText(I18n.t("检测中…"));
+            toast(I18n.t("正在检测模型…"));
             new Thread(() -> {
                 AiHttp.ModelList ml = AiHttp.listModels(activity, pid);
                 activity.runOnUiThread(() -> {
                     detect.setEnabled(true);
-                    detect.setText("检测可用模型");
+                    detect.setText(I18n.t("检测可用模型"));
                     if (!ml.ok) {
-                        toast("检测失败：" + ml.error);
+                        toast(I18n.t("检测失败：") + ml.error);
                         return;
                     }
                     AiConfig.setDetectedModels(activity, pid, ml.models);
                     fillModels(modelList, pid, modelLabel);
-                    toast("检测到 " + ml.models.size() + " 个模型，请选择");
+                    toast(I18n.t("检测到 ") + ml.models.size() + I18n.t(" 个模型，请选择"));
                 });
             }, "ai-models").start();
         });
@@ -322,7 +322,7 @@ final class AiSettingsView extends LinearLayout {
         use.setOnClickListener(v -> {
             AiConfig.setProvider(activity, pid);
             use.setEnabled(false);
-            use.setText("当前使用中");
+            use.setText(I18n.t("当前使用中"));
             refresh();
         });
 
@@ -366,7 +366,7 @@ final class AiSettingsView extends LinearLayout {
         List<String> models = AiConfig.detectedModels(activity, pid);
         if (models.isEmpty()) {
             modelList.addView(MinecraftUi.text(activity,
-                    "尚未检测模型，请填写 Key 后点击检测。", 8.5f, MinecraftUi.PANEL_MUTED, false));
+                    I18n.t("尚未检测模型，请填写 Key 后点击检测。"), 8.5f, MinecraftUi.PANEL_MUTED, false));
             return;
         }
         for (final String m : models) {
@@ -385,7 +385,7 @@ final class AiSettingsView extends LinearLayout {
             b.setOnClickListener(v -> {
                 AiConfig.setModel(activity, pid, m);
                 AiConfig.setProvider(activity, pid);
-                modelLabel.setText("模型：" + m);
+                modelLabel.setText(I18n.t("模型：") + m);
                 fillModels(modelList, pid, modelLabel);
                 refresh();
             });

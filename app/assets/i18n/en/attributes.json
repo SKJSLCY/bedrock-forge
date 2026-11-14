@@ -1,0 +1,22 @@
+{
+ "minecraft:absorption": "Absorption",
+ "minecraft:armor": "Armor",
+ "minecraft:attack_damage": "Attack Damage",
+ "minecraft:exhaustion": "Exhaustion",
+ "minecraft:follow_range": "Follow Range",
+ "minecraft:health": "Health",
+ "minecraft:hunger": "Hunger",
+ "minecraft:jump_strength": "Jump Strength",
+ "minecraft:knockback_resistance": "Knockback Resistance",
+ "minecraft:lava_movement": "Lava Movement Speed",
+ "minecraft:luck": "Luck",
+ "minecraft:movement": "Movement Speed",
+ "minecraft:player.exhaustion": "Exhaustion",
+ "minecraft:player.experience": "Experience",
+ "minecraft:player.health": "Health",
+ "minecraft:player.hunger": "Hunger",
+ "minecraft:player.level": "XP Level",
+ "minecraft:player.saturation": "Saturation",
+ "minecraft:saturation": "Saturation",
+ "minecraft:underwater_movement": "Underwater Movement Speed"
+}

@@ -72,7 +72,7 @@ public final class EnvManager {
 
     public static void writeProperties(Context ctx, Map<String, String> updates) throws IOException {
         File f = new File(serverDir(ctx), "server.properties");
-        if (!f.isFile()) throw new IOException("server.properties 不存在");
+        if (!f.isFile()) throw new IOException(I18n.t("server.properties 不存在"));
         List<String> lines = new ArrayList<String>();
         BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(f), "UTF-8"));
         try {
@@ -115,7 +115,7 @@ public final class EnvManager {
         if (!tmp.renameTo(f)) {
             //noinspection ResultOfMethodCallIgnored
             f.delete();
-            if (!tmp.renameTo(f)) throw new IOException("无法写入 server.properties");
+            if (!tmp.renameTo(f)) throw new IOException(I18n.t("无法写入 server.properties"));
         }
     }
 

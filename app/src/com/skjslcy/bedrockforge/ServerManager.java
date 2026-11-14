@@ -47,21 +47,21 @@ public final class ServerManager {
 
         if (Shizuku.pingBinder()) {
             if (Shizuku.checkSelfPermission() != PackageManager.PERMISSION_GRANTED) {
-                lastError = "需要授予 Shizuku 权限";
-                addLog("[Shizuku] 未授权，请允许 Shizuku 权限后重试");
+                lastError = I18n.t("需要授予 Shizuku 权限");
+                addLog(I18n.t("[Shizuku] 未授权，请允许 Shizuku 权限后重试"));
                 return false;
             }
             try {
                 return startViaShizuku();
             } catch (Throwable t) {
-                lastError = "Shizuku 启动失败：" + t.getMessage();
+                lastError = I18n.t("Shizuku 启动失败：") + t.getMessage();
                 addLog("[Shizuku] " + lastError);
                 return false;
             }
         }
 
-        lastError = "需要 Shizuku 才能启动服务端";
-        addLog("[错误] " + lastError);
+        lastError = I18n.t("需要 Shizuku 才能启动服务端");
+        addLog(I18n.t("[错误] ") + lastError);
         return false;
     }
 
@@ -103,9 +103,9 @@ public final class ServerManager {
                     "TERM=xterm",
                     "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
             };
-            addLog("[启动] Box64 + Ubuntu ARM64: " + hostServer);
+            addLog(I18n.t("[启动] Box64 + Ubuntu ARM64: ") + hostServer);
             Process p = ShizukuProcess.start(cmd, env, "/data/local/tmp");
-            if (p == null) throw new IllegalStateException("newProcess 返回 null");
+            if (p == null) throw new IllegalStateException(I18n.t("newProcess 返回 null"));
             process = p;
             stdin = new BufferedWriter(new OutputStreamWriter(p.getOutputStream(), "UTF-8"));
             running = true;
@@ -123,8 +123,8 @@ public final class ServerManager {
             return true;
         }
 
-        lastError = "未部署 Box64 运行环境";
-        addLog("[错误] " + lastError);
+        lastError = I18n.t("未部署 Box64 运行环境");
+        addLog(I18n.t("[错误] ") + lastError);
         return false;
     }
 
@@ -156,20 +156,20 @@ public final class ServerManager {
         running = false;
         stopping = false;
         PlayerTracker.markServerStopped();
-        addLog("[进程结束] exit code " + code);
+        addLog(I18n.t("[进程结束] exit code ") + code);
     }
 
     public synchronized void stop() {
         if (!running || stopping) return;
         stopping = true;
-        addLog("[停止] 正在发送 stop ...");
+        addLog(I18n.t("[停止] 正在发送 stop ..."));
         try {
             if (stdin != null) {
                 stdin.write("stop\n");
                 stdin.flush();
             }
         } catch (Throwable t) {
-            addLog("[停止] 写入失败：" + t.getMessage());
+            addLog(I18n.t("[停止] 写入失败：") + t.getMessage());
         }
         final Process p = process;
         Thread killer = new Thread(new Runnable() {
@@ -178,7 +178,7 @@ public final class ServerManager {
                 try {
                     Thread.sleep(12000);
                     if (running && p != null) {
-                        addLog("[停止] 12 秒未退出，强制结束");
+                        addLog(I18n.t("[停止] 12 秒未退出，强制结束"));
                         p.destroy();
                     }
                 } catch (InterruptedException ignored) {
@@ -198,7 +198,7 @@ public final class ServerManager {
             addLog("> " + command);
             return true;
         } catch (Throwable t) {
-            addLog("[控制台] 发送失败：" + t.getMessage());
+            addLog(I18n.t("[控制台] 发送失败：") + t.getMessage());
             return false;
         }
     }

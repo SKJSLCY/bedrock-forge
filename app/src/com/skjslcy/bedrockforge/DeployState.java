@@ -40,7 +40,7 @@ public final class DeployState {
         type = t;
         percent = 0;
         label = l == null ? "" : l;
-        message = "准备中…";
+        message = I18n.t("准备中…");
         success = true;
     }
 

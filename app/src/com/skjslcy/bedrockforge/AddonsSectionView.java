@@ -63,8 +63,8 @@ public class AddonsSectionView extends ScrollView {
 
         LinearLayout head = MinecraftUi.panel(activity, "addons 管理");
         head.addView(MinecraftUi.text(activity,
-                "行为包、资源包；脚本包（Script API）会单独标记。\n"
-                        + "启用/禁用会写入当前世界的 world_behavior_packs.json / world_resource_packs.json。",
+                I18n.t("行为包、资源包；脚本包（Script API）会单独标记。\n")
+                        + I18n.t("启用/禁用会写入当前世界的 world_behavior_packs.json / world_resource_packs.json。"),
                 9, MinecraftUi.PANEL_MUTED, false));
         status = MinecraftUi.text(activity, "正在读取…", 8.5f, MinecraftUi.PANEL_MUTED, false);
         status.setPadding(0, dp(6), 0, 0);
@@ -108,7 +108,7 @@ public class AddonsSectionView extends ScrollView {
     private void refresh() {
         if (busy) return;
         busy = true;
-        status.setText("正在读取 addons…");
+        status.setText(I18n.t("正在读取 addons…"));
         new Thread(() -> {
             try {
                 final String world = levelName();
@@ -120,7 +120,7 @@ public class AddonsSectionView extends ScrollView {
             } catch (Throwable e) {
                 handler.post(() -> {
                     busy = false;
-                    status.setText("读取失败：" + e.getMessage());
+                    status.setText(I18n.t("读取失败：") + e.getMessage());
                 });
             }
         }, "addons-scan").start();
@@ -232,11 +232,11 @@ public class AddonsSectionView extends ScrollView {
 
     private void render(String world, List<Pack> packs) {
         col.removeViews(1, Math.max(0, col.getChildCount() - 1));
-        status.setText("世界：" + world + "　共 " + packs.size() + " 个 addon");
+        status.setText(I18n.t("世界：") + world + I18n.t("　共 ") + packs.size() + I18n.n(packs.size(), " 个 addon（单数）", " 个 addon"));
         if (packs.isEmpty()) {
             LinearLayout panel = MinecraftUi.panel(activity, "addon 列表");
             panel.addView(MinecraftUi.text(activity,
-                    "还没有导入任何行为包或资源包。\n点上方按钮导入 .mcpack / .zip。",
+                    I18n.t("还没有导入任何行为包或资源包。\n点上方按钮导入 .mcpack / .zip。"),
                     9, MinecraftUi.PANEL_MUTED, false));
             col.addView(panel);
             return;
@@ -248,14 +248,14 @@ public class AddonsSectionView extends ScrollView {
             box.setBackground(MinecraftUi.slotDrawable(activity));
             box.setPadding(dp(9), dp(7), dp(9), dp(7));
 
-            String title = p.name + (p.resource ? "（资源包）" : "（行为包）")
-                    + (p.script ? " · 脚本" : "");
+            String title = p.name + (p.resource ? I18n.t("（资源包）") : I18n.t("（行为包）"))
+                    + (p.script ? I18n.t(" · 脚本") : "");
             TextView t = MinecraftUi.text(activity, title, 11, MinecraftUi.PANEL_TEXT, true);
             box.addView(t);
-            String info = "ID：" + (p.uuid.isEmpty() ? "未知" : p.uuid)
-                    + "\n版本：" + (p.version.isEmpty() ? "未知" : p.version)
-                    + "\n状态：" + (p.enabled ? "已启用" : "未启用")
-                    + "\n目录：" + p.dir.substring(p.dir.lastIndexOf('/') + 1);
+            String info = "ID：" + (p.uuid.isEmpty() ? I18n.t("未知") : p.uuid)
+                    + I18n.t("\n版本：") + (p.version.isEmpty() ? I18n.t("未知") : p.version)
+                    + I18n.t("\n状态：") + (p.enabled ? I18n.t("已启用") : I18n.t("未启用"))
+                    + I18n.t("\n目录：") + p.dir.substring(p.dir.lastIndexOf('/') + 1);
             box.addView(MinecraftUi.text(activity, info, 8.5f,
                     p.enabled ? 0xFFB8FFB0 : MinecraftUi.PANEL_MUTED, false));
 
@@ -289,11 +289,11 @@ public class AddonsSectionView extends ScrollView {
     private void togglePack(final Pack p) {
         if (busy) return;
         if (ServerManager.get().isRunning()) {
-            toast("请先停止服务端再修改 addons");
+            toast(I18n.t("请先停止服务端再修改 addons"));
             return;
         }
         busy = true;
-        status.setText("正在写入世界配置…");
+        status.setText(I18n.t("正在写入世界配置…"));
         new Thread(() -> {
             try {
                 String world = levelName();
@@ -339,13 +339,13 @@ public class AddonsSectionView extends ScrollView {
                 ShizukuShell.write(path, next.toString(2));
                 handler.post(() -> {
                     busy = false;
-                    toast(wasRemoved ? "已禁用 " + p.name : "已启用 " + p.name);
+                    toast(wasRemoved ? I18n.t("已禁用 ") + p.name : I18n.t("已启用 ") + p.name);
                     refresh();
                 });
             } catch (Throwable e) {
                 handler.post(() -> {
                     busy = false;
-                    status.setText("写入失败：" + e.getMessage());
+                    status.setText(I18n.t("写入失败：") + e.getMessage());
                 });
             }
         }, "addons-toggle").start();
@@ -359,7 +359,7 @@ public class AddonsSectionView extends ScrollView {
         wrap.setPadding(dp(14), dp(14), dp(14), dp(14));
         LinearLayout panel = MinecraftUi.panel(activity, "删除 addon");
         panel.addView(MinecraftUi.text(activity,
-                "删除 " + p.name + "？\n会从实例目录移除该包，不影响世界存档。",
+                I18n.t("删除 ") + p.name + I18n.t("？\n会从实例目录移除该包，不影响世界存档。"),
                 9.5f, MinecraftUi.PANEL_TEXT, false));
         Button ok = new MinecraftUi.McButton(activity, "删除");
         if (ok instanceof MinecraftUi.McButton) ((MinecraftUi.McButton) ok).setDangerStyle();
@@ -375,7 +375,7 @@ public class AddonsSectionView extends ScrollView {
                 } catch (Throwable ignored) {
                 }
                 handler.post(() -> {
-                    toast("已删除 " + p.name);
+                    toast(I18n.t("已删除 ") + p.name);
                     refresh();
                 });
             }, "addons-delete").start();
@@ -400,7 +400,7 @@ public class AddonsSectionView extends ScrollView {
     private void importAddon() {
         if (busy) return;
         if (ServerManager.get().isRunning()) {
-            toast("请先停止服务端再导入 addons");
+            toast(I18n.t("请先停止服务端再导入 addons"));
             return;
         }
         host.pickFile(new DeploySectionView.PickCallback() {
@@ -416,7 +416,7 @@ public class AddonsSectionView extends ScrollView {
     private void doImport(final File file) {
         if (busy) return;
         busy = true;
-        status.setText("正在导入 " + file.getName() + " …");
+        status.setText(I18n.t("正在导入 ") + file.getName() + " …");
         new Thread(() -> {
             try {
                 String remote = "/data/local/tmp/mcbds/addon-import.zip";
@@ -426,7 +426,7 @@ public class AddonsSectionView extends ScrollView {
                         + "; unzip -q -o " + q(remote) + " -d " + q(stage));
                 String find = ShizukuShell.sh("find " + q(stage) + " -maxdepth 3 -name manifest.json"
                         + " | head -n 1").trim();
-                if (find.isEmpty()) throw new Exception("压缩包里没有 manifest.json");
+                if (find.isEmpty()) throw new Exception(I18n.t("压缩包里没有 manifest.json"));
                 String root = find.substring(0, find.lastIndexOf('/'));
                 String manifest = ShizukuShell.read(find);
                 JSONObject m = new JSONObject(manifest);
@@ -458,10 +458,10 @@ public class AddonsSectionView extends ScrollView {
                 ShizukuShell.sh("rm -rf " + q(dest) + "; mkdir -p " + q(dest)
                         + "; cp -a " + q(root) + "/. " + q(dest) + "/");
                 ShizukuShell.sh("rm -f " + q(remote) + "; rm -rf " + q(stage));
-                final String msg = "已导入 " + packName
-                        + (resource ? "（资源包）" : (script ? "（脚本行为包）" : "（行为包）"))
+                final String msg = I18n.t("已导入 ") + packName
+                        + (resource ? I18n.t("（资源包）") : (script ? I18n.t("（脚本行为包）") : I18n.t("（行为包）")))
                         + "\nUUID：" + uuid;
-                AppLog.add("[addons] 导入 " + packName + " -> " + targetBase);
+                AppLog.add(I18n.t("[addons] 导入 ") + packName + " -> " + targetBase);
                 handler.post(() -> {
                     busy = false;
                     toast(msg);
@@ -470,7 +470,7 @@ public class AddonsSectionView extends ScrollView {
             } catch (Throwable e) {
                 handler.post(() -> {
                     busy = false;
-                    status.setText("导入失败：" + e.getMessage());
+                    status.setText(I18n.t("导入失败：") + e.getMessage());
                 });
             }
         }, "addons-import").start();

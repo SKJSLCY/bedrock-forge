@@ -192,7 +192,7 @@ final class LevelDbReader {
     static Result get(File dbDir, byte[] key) throws Exception {
         Result best = new Result();
         File[] files = dbDir.listFiles();
-        if (files == null) throw new Exception("无法读取数据库目录");
+        if (files == null) throw new Exception(I18n.t("无法读取数据库目录"));
         Arrays.sort(files, (a, b) -> a.getName().compareTo(b.getName()));
 
         for (File f : files) {
@@ -338,7 +338,7 @@ final class LevelDbReader {
 
     static byte[] readBlock(RandomAccessFile raf, long off, long size, long fileLen)
             throws Exception {
-        if (off < 0 || size <= 0 || off + size > fileLen) throw new Exception("块越界");
+        if (off < 0 || size <= 0 || off + size > fileLen) throw new Exception(I18n.t("块越界"));
         byte[] data = new byte[(int) size];
         raf.seek(off);
         raf.readFully(data);
@@ -366,10 +366,10 @@ final class LevelDbReader {
                     if (inf.needsInput() || inf.needsDictionary()) break;
                 } else {
                     bos.write(buf, 0, n);
-                    if (bos.size() > (64 << 20)) throw new Exception("块解压过大");
+                    if (bos.size() > (64 << 20)) throw new Exception(I18n.t("块解压过大"));
                 }
             }
-            if (bos.size() == 0) throw new Exception("块解压为空");
+            if (bos.size() == 0) throw new Exception(I18n.t("块解压为空"));
             return bos.toByteArray();
         } finally {
             inf.end();

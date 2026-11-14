@@ -46,7 +46,7 @@ public class TerminalTabsView extends LinearLayout {
         for (int i = 0; i < terminals.size(); i++) {
             final int idx = i;
             Button b = new MinecraftUi.McButton(activity,
-                    (i == current ? "▶ " : "") + "终端" + (i + 1));
+                    (i == current ? "▶ " : "") + I18n.t("终端") + (i + 1));
             b.setTextSize(10);
             if (i == current) b.setTextColor(MinecraftUi.GREEN_BRIGHT);
             LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(dp(82), dp(38));

@@ -15,7 +15,7 @@ public class AppLogView extends ScrollView {
         @Override public void run() {
             String s = AppLog.text();
             if (!s.equals(text.getText().toString())) {
-                text.setText(s.isEmpty() ? "暂无 App 操作日志。\n" : s);
+                text.setText(s.isEmpty() ? I18n.t("暂无 App 操作日志。\n") : s);
                 fullScroll(FOCUS_DOWN);
             }
             handler.postDelayed(this, 1000);

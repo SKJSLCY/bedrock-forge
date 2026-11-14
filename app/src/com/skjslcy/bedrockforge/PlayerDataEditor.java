@@ -80,17 +80,17 @@ final class PlayerDataEditor {
         LinearLayout panel = MinecraftUi.panel(activity, "风险提示");
 
         panel.addView(MinecraftUi.text(activity,
-                "你即将直接修改世界存档中的玩家数据。", 9.5f, MinecraftUi.PANEL_TEXT, true));
+                I18n.t("你即将直接修改世界存档中的玩家数据。"), 9.5f, MinecraftUi.PANEL_TEXT, true));
 
-        panel.addView(MinecraftUi.text(activity, "可能的风险", 9f, 0xFFFF6B6B, true));
+        panel.addView(MinecraftUi.text(activity, I18n.t("可能的风险"), 9f, 0xFFFF6B6B, true));
         panel.addView(MinecraftUi.text(activity,
-                "· 写错类型或字段可能导致该玩家数据损坏\n"
-                        + "· 服务端启动可能报错或无法进服\n"
-                        + "· 修改不可撤销（应用会自动备份数据库，可回滚）",
+                I18n.t("· 写错类型或字段可能导致该玩家数据损坏\n")
+                        + I18n.t("· 服务端启动可能报错或无法进服\n")
+                        + I18n.t("· 修改不可撤销（应用会自动备份数据库，可回滚）"),
                 8.5f, MinecraftUi.PANEL_MUTED, false));
 
         panel.addView(MinecraftUi.text(activity,
-                "请确认服务端已停止。", 8.5f, MinecraftUi.PANEL_MUTED, false));
+                I18n.t("请确认服务端已停止。"), 8.5f, MinecraftUi.PANEL_MUTED, false));
 
         Button ok = new MinecraftUi.McButton(activity, "我已了解，继续");
         if (ok instanceof MinecraftUi.McButton) ((MinecraftUi.McButton) ok).setDangerStyle();
@@ -129,11 +129,11 @@ final class PlayerDataEditor {
         wrap.setPadding(dp(12), dp(12), dp(12), dp(12));
         LinearLayout panel = MinecraftUi.panel(activity, "确认保存");
         panel.addView(MinecraftUi.text(activity,
-                "即将写入世界存档，写入后无法撤销。\n\n"
-                        + "可能的风险：\n"
-                        + "· 该玩家数据损坏\n"
-                        + "· 服务端启动报错或无法进服\n\n"
-                        + "确定要保存吗？",
+                I18n.t("即将写入世界存档，写入后无法撤销。\n\n")
+                        + I18n.t("可能的风险：\n")
+                        + I18n.t("· 该玩家数据损坏\n")
+                        + I18n.t("· 服务端启动报错或无法进服\n\n")
+                        + I18n.t("确定要保存吗？"),
                 9f, MinecraftUi.PANEL_TEXT, false));
         Button ok = new MinecraftUi.McButton(activity, "确认保存");
         if (ok instanceof MinecraftUi.McButton) ((MinecraftUi.McButton) ok).setDangerStyle();
@@ -168,16 +168,16 @@ final class PlayerDataEditor {
         new Thread(() -> {
             try {
                 byte[] data = OfflinePlayerData.readServerData(activity, record.serverId);
-                if (data == null) throw new Exception("找不到玩家数据");
+                if (data == null) throw new Exception(I18n.t("找不到玩家数据"));
                 root = NbtCodec.parse(data);
                 rootMap = NbtCodec.map(root);
-                if (rootMap == null) throw new Exception("玩家数据格式异常");
+                if (rootMap == null) throw new Exception(I18n.t("玩家数据格式异常"));
                 String ver = DeployManager.detect(activity, DeployManager.TYPE_SERVER).version;
                 versionSupportsUnbreakable = atLeast112(ver);
                 buildItems();
                 handler.post(this::showEditor);
             } catch (Throwable e) {
-                handler.post(() -> toast("读取失败：" + e.getMessage()));
+                handler.post(() -> toast(I18n.t("读取失败：") + e.getMessage()));
             }
         }, "editor-read").start();
     }
@@ -195,10 +195,10 @@ final class PlayerDataEditor {
 
     private void buildItems() {
         items.clear();
-        collectItems("Inventory", "背包");
-        collectItems("Armor", "装备");
-        collectItems("Offhand", "副手");
-        collectItems("EnderChestInventory", "末影箱");
+        collectItems("Inventory", I18n.t("背包"));
+        collectItems("Armor", I18n.t("装备"));
+        collectItems("Offhand", I18n.t("副手"));
+        collectItems("EnderChestInventory", I18n.t("末影箱"));
     }
 
     private void collectItems(String key, String prefix) {
@@ -212,7 +212,7 @@ final class PlayerDataEditor {
             if (name.isEmpty()) continue;
             String slot = str(im.get("Slot"));
             ItemRef ref = new ItemRef();
-            ref.label = prefix + " · 槽位 " + slot + " · " + (name.isEmpty() ? "?" : name);
+            ref.label = prefix + I18n.t(" · 槽位 ") + slot + " · " + (name.isEmpty() ? "?" : name);
             ref.tag = e;
             items.add(ref);
         }
@@ -228,24 +228,24 @@ final class PlayerDataEditor {
         LinearLayout content = new LinearLayout(activity);
         content.setOrientation(LinearLayout.VERTICAL);
         content.addView(MinecraftUi.text(activity,
-                "直接修改存档，保存后需启动服务端才生效。", 8.5f, 0xFFFF6B6B, false));
+                I18n.t("直接修改存档，保存后需启动服务端才生效。"), 8.5f, 0xFFFF6B6B, false));
 
-        LinearLayout base = card("基础数值");
-        health = addField(base, "生命", numOf(rootMap.get("Health")));
-        air = addField(base, "氧气", numOf(rootMap.get("Air")));
-        level = addField(base, "经验等级", numOf(rootMap.get("PlayerLevel")));
-        progress = addField(base, "经验进度", numOf(rootMap.get("PlayerLevelProgress")));
-        mode = addField(base, "游戏模式（0-6）", numOf(rootMap.get("PlayerGameMode")));
+        LinearLayout base = card(I18n.t("基础数值"));
+        health = addField(base, I18n.t("生命"), numOf(rootMap.get("Health")));
+        air = addField(base, I18n.t("氧气"), numOf(rootMap.get("Air")));
+        level = addField(base, I18n.t("经验等级"), numOf(rootMap.get("PlayerLevel")));
+        progress = addField(base, I18n.t("经验进度"), numOf(rootMap.get("PlayerLevelProgress")));
+        mode = addField(base, I18n.t("游戏模式（0-6）"), numOf(rootMap.get("PlayerGameMode")));
         NbtCodec.Tag pos = rootMap.get("Pos");
         List<NbtCodec.Tag> pl = NbtCodec.list(pos);
-        posX = addField(base, "坐标 X", pl != null && pl.size() > 0 ? numOf(pl.get(0)) : "");
-        posY = addField(base, "坐标 Y", pl != null && pl.size() > 1 ? numOf(pl.get(1)) : "");
-        posZ = addField(base, "坐标 Z", pl != null && pl.size() > 2 ? numOf(pl.get(2)) : "");
+        posX = addField(base, I18n.t("坐标 X"), pl != null && pl.size() > 0 ? numOf(pl.get(0)) : "");
+        posY = addField(base, I18n.t("坐标 Y"), pl != null && pl.size() > 1 ? numOf(pl.get(1)) : "");
+        posZ = addField(base, I18n.t("坐标 Z"), pl != null && pl.size() > 2 ? numOf(pl.get(2)) : "");
         addCard(content, base);
 
-        LinearLayout inv = card("背包物品");
+        LinearLayout inv = card(I18n.t("背包物品"));
         if (items.isEmpty()) {
-            inv.addView(MinecraftUi.text(activity, "（没有可编辑的物品）", 8.5f,
+            inv.addView(MinecraftUi.text(activity, I18n.t("（没有可编辑的物品）"), 8.5f,
                     MinecraftUi.PANEL_MUTED, false));
         } else {
             for (final ItemRef ref : items) {
@@ -355,23 +355,23 @@ final class PlayerDataEditor {
 
     private void saveAsync() {
         if (ServerManager.get().isRunning()) {
-            toast("请先停止服务端");
+            toast(I18n.t("请先停止服务端"));
             return;
         }
         new Thread(() -> {
             try {
                 applyBasic();
                 byte[] out = NbtCodec.write(root);
-                if (out.length > 65000) throw new Exception("数据过大，写回被拒绝");
+                if (out.length > 65000) throw new Exception(I18n.t("数据过大，写回被拒绝"));
                 String world = OfflinePlayerData.currentWorldForEdit(activity);
                 String key = "player_server_" + record.serverId;
                 String backup = backupDb(world);
                 try {
                     long seq = OfflinePlayerData.writeBack(activity, key, out);
                     String verify = OfflinePlayerData.verifyWritten(activity, key);
-                    if (!"ok".equals(verify)) throw new Exception("写入校验失败");
+                    if (!"ok".equals(verify)) throw new Exception(I18n.t("写入校验失败"));
                     handler.post(() -> {
-                        toast("已写入（sequence " + seq + "），启动服务端后生效");
+                        toast(I18n.t("已写入（sequence ") + seq + I18n.t("），启动服务端后生效"));
                         if (onDone != null) onDone.run();
                     });
                 } catch (Throwable e) {
@@ -381,7 +381,7 @@ final class PlayerDataEditor {
                 }
             } catch (Throwable e) {
                 android.util.Log.e("MCBDS", "editor save failed", e);
-                handler.post(() -> toast("保存失败：" + e.getMessage()));
+                handler.post(() -> toast(I18n.t("保存失败：") + e.getMessage()));
             }
         }, "editor-save").start();
     }
@@ -398,7 +398,7 @@ final class PlayerDataEditor {
             try {
                 setScalar(t, v);
             } catch (Throwable e) {
-                throw new Exception("字段 " + k + " 的值无效");
+                throw new Exception(I18n.t("字段 ") + k + I18n.t(" 的值无效"));
             }
         }
     }
@@ -478,28 +478,28 @@ final class PlayerDataEditor {
         panel.addView(MinecraftUi.text(activity, ItemNames.display(id), 11,
                 MinecraftUi.PANEL_TEXT, true));
         panel.addView(MinecraftUi.text(activity,
-                id + " · 槽位 " + str(im.get("Slot")), 8f, MinecraftUi.PANEL_MUTED, false));
+                id + I18n.t(" · 槽位 ") + str(im.get("Slot")), 8f, MinecraftUi.PANEL_MUTED, false));
 
-        panel.addView(MinecraftUi.text(activity, "基础属性", 9f,
+        panel.addView(MinecraftUi.text(activity, I18n.t("基础属性"), 9f,
                 MinecraftUi.PANEL_MUTED, true));
-        final EditText count = addField(panel, "数量", numOf(im.get("Count")));
+        final EditText count = addField(panel, I18n.t("数量"), numOf(im.get("Count")));
         final boolean durable = isDurable(im);
-        final EditText damage = durable ? addField(panel, "耐久损耗", numOf(im.get("Damage"))) : null;
+        final EditText damage = durable ? addField(panel, I18n.t("耐久损耗"), numOf(im.get("Damage"))) : null;
 
-        panel.addView(MinecraftUi.text(activity, "附魔", 9f,
+        panel.addView(MinecraftUi.text(activity, I18n.t("附魔"), 9f,
                 MinecraftUi.PANEL_MUTED, true));
         panel.addView(MinecraftUi.text(activity,
-                "格式：id:等级，多个用逗号分隔，如 9:5,17:3", 8f,
+                I18n.t("格式：id:等级，多个用逗号分隔，如 9:5,17:3"), 8f,
                 MinecraftUi.PANEL_MUTED, false));
-        final EditText ench = addField(panel, "附魔列表", enchantText(im));
+        final EditText ench = addField(panel, I18n.t("附魔列表"), enchantText(im));
 
-        panel.addView(MinecraftUi.text(activity, "显示名称与描述", 9f,
+        panel.addView(MinecraftUi.text(activity, I18n.t("显示名称与描述"), 9f,
                 MinecraftUi.PANEL_MUTED, true));
         panel.addView(MinecraftUi.text(activity,
-                "支持 § 颜色/格式代码；描述支持换行。", 8f,
+                I18n.t("支持 § 颜色/格式代码；描述支持换行。"), 8f,
                 MinecraftUi.PANEL_MUTED, false));
-        final EditText nameField = addField(panel, "自定义名称", displayName(im));
-        final EditText loreField = addMultiline(panel, "描述", displayLore(im));
+        final EditText nameField = addField(panel, I18n.t("自定义名称"), displayName(im));
+        final EditText loreField = addMultiline(panel, I18n.t("描述"), displayLore(im));
         addColorRow(panel, nameField, loreField);
 
         final boolean[] unbState = {isUnbreakable(im)};
@@ -518,7 +518,7 @@ final class PlayerDataEditor {
             toggle.setTextSize(8.5f);
             toggle.setOnClickListener(v -> {
                 unbState[0] = !unbState[0];
-                toggle.setText(unbState[0] ? "已开启" : "已关闭");
+                toggle.setText(unbState[0] ? I18n.t("已开启") : I18n.t("已关闭"));
             });
             row.addView(toggle, new LinearLayout.LayoutParams(dp(86), dp(32)));
             LinearLayout.LayoutParams rlp = new LinearLayout.LayoutParams(
@@ -543,7 +543,7 @@ final class PlayerDataEditor {
                 if (showUnb) applyUnbreakable(im, unbState[0]);
                 d.dismiss();
             } catch (Throwable e) {
-                toast("物品参数无效：" + e.getMessage());
+                toast(I18n.t("物品参数无效：") + e.getMessage());
             }
         });
         Button cancel = new MinecraftUi.McButton(activity, "取消");
@@ -603,39 +603,39 @@ final class PlayerDataEditor {
         loreField.setOnFocusChangeListener(focus);
         android.widget.HorizontalScrollView hs = new android.widget.HorizontalScrollView(activity);
         LinearLayout row = new LinearLayout(activity);
-        addColorButton(row, target, "§0", "黑", 0xFF000000);
-        addColorButton(row, target, "§1", "深蓝", 0xFF0000AA);
-        addColorButton(row, target, "§2", "深绿", 0xFF00AA00);
-        addColorButton(row, target, "§3", "深青", 0xFF00AAAA);
-        addColorButton(row, target, "§4", "深红", 0xFFAA0000);
-        addColorButton(row, target, "§5", "深紫", 0xFFAA00AA);
-        addColorButton(row, target, "§6", "金", 0xFFFFAA00);
-        addColorButton(row, target, "§7", "灰", 0xFFAAAAAA);
-        addColorButton(row, target, "§8", "深灰", 0xFF555555);
-        addColorButton(row, target, "§9", "亮蓝", 0xFF5555FF);
-        addColorButton(row, target, "§a", "亮绿", 0xFF55FF55);
-        addColorButton(row, target, "§b", "亮青", 0xFF55FFFF);
-        addColorButton(row, target, "§c", "亮红", 0xFFFF5555);
-        addColorButton(row, target, "§d", "亮紫", 0xFFFF55FF);
-        addColorButton(row, target, "§e", "亮黄", 0xFFFFFF55);
-        addColorButton(row, target, "§f", "白", 0xFFFFFFFF);
-        addColorButton(row, target, "§g", "金锭", 0xFFDDD605);
-        addColorButton(row, target, "§h", "石英", 0xFFE3D4D1);
-        addColorButton(row, target, "§i", "铁", 0xFFCECACA);
-        addColorButton(row, target, "§j", "合金", 0xFF443A3B);
-        addColorButton(row, target, "§m", "红石", 0xFF971607);
-        addColorButton(row, target, "§n", "铜", 0xFFB4684D);
-        addColorButton(row, target, "§p", "金", 0xFFDEB12D);
-        addColorButton(row, target, "§q", "绿宝石", 0xFF47A036);
-        addColorButton(row, target, "§s", "钻石", 0xFF2CBAA8);
-        addColorButton(row, target, "§t", "青金石", 0xFF21497B);
-        addColorButton(row, target, "§u", "紫水晶", 0xFF9A5CC6);
-        addFormatButton(row, target, "§r", "重置", 0xFFFFFFFF);
-        addFormatButton(row, target, "§l", "加粗", 0xFFFFFFFF);
-        addFormatButton(row, target, "§o", "斜体", 0xFFFFFFFF);
-        addFormatButton(row, target, "§n", "下划线", 0xFFFFFFFF);
-        addFormatButton(row, target, "§m", "删除线", 0xFFFFFFFF);
-        addFormatButton(row, target, "§k", "随机", 0xFFFFFFFF);
+        addColorButton(row, target, "§0", I18n.t("黑"), 0xFF000000);
+        addColorButton(row, target, "§1", I18n.t("深蓝"), 0xFF0000AA);
+        addColorButton(row, target, "§2", I18n.t("深绿"), 0xFF00AA00);
+        addColorButton(row, target, "§3", I18n.t("深青"), 0xFF00AAAA);
+        addColorButton(row, target, "§4", I18n.t("深红"), 0xFFAA0000);
+        addColorButton(row, target, "§5", I18n.t("深紫"), 0xFFAA00AA);
+        addColorButton(row, target, "§6", I18n.t("金"), 0xFFFFAA00);
+        addColorButton(row, target, "§7", I18n.t("灰"), 0xFFAAAAAA);
+        addColorButton(row, target, "§8", I18n.t("深灰"), 0xFF555555);
+        addColorButton(row, target, "§9", I18n.t("亮蓝"), 0xFF5555FF);
+        addColorButton(row, target, "§a", I18n.t("亮绿"), 0xFF55FF55);
+        addColorButton(row, target, "§b", I18n.t("亮青"), 0xFF55FFFF);
+        addColorButton(row, target, "§c", I18n.t("亮红"), 0xFFFF5555);
+        addColorButton(row, target, "§d", I18n.t("亮紫"), 0xFFFF55FF);
+        addColorButton(row, target, "§e", I18n.t("亮黄"), 0xFFFFFF55);
+        addColorButton(row, target, "§f", I18n.t("白"), 0xFFFFFFFF);
+        addColorButton(row, target, "§g", I18n.t("金锭"), 0xFFDDD605);
+        addColorButton(row, target, "§h", I18n.t("石英"), 0xFFE3D4D1);
+        addColorButton(row, target, "§i", I18n.t("铁"), 0xFFCECACA);
+        addColorButton(row, target, "§j", I18n.t("合金"), 0xFF443A3B);
+        addColorButton(row, target, "§m", I18n.t("红石"), 0xFF971607);
+        addColorButton(row, target, "§n", I18n.t("铜"), 0xFFB4684D);
+        addColorButton(row, target, "§p", I18n.t("金"), 0xFFDEB12D);
+        addColorButton(row, target, "§q", I18n.t("绿宝石"), 0xFF47A036);
+        addColorButton(row, target, "§s", I18n.t("钻石"), 0xFF2CBAA8);
+        addColorButton(row, target, "§t", I18n.t("青金石"), 0xFF21497B);
+        addColorButton(row, target, "§u", I18n.t("紫水晶"), 0xFF9A5CC6);
+        addFormatButton(row, target, "§r", I18n.t("重置"), 0xFFFFFFFF);
+        addFormatButton(row, target, "§l", I18n.t("加粗"), 0xFFFFFFFF);
+        addFormatButton(row, target, "§o", I18n.t("斜体"), 0xFFFFFFFF);
+        addFormatButton(row, target, "§n", I18n.t("下划线"), 0xFFFFFFFF);
+        addFormatButton(row, target, "§m", I18n.t("删除线"), 0xFFFFFFFF);
+        addFormatButton(row, target, "§k", I18n.t("随机"), 0xFFFFFFFF);
         hs.addView(row);
         LinearLayout.LayoutParams hlp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
@@ -716,7 +716,7 @@ final class PlayerDataEditor {
                 String p = part.trim();
                 if (p.isEmpty()) continue;
                 String[] kv = p.split(":");
-                if (kv.length != 2) throw new Exception("附魔格式应为 id:等级");
+                if (kv.length != 2) throw new Exception(I18n.t("附魔格式应为 id:等级"));
                 int id = Integer.parseInt(kv[0].trim());
                 int lvl = Integer.parseInt(kv[1].trim());
                 Map<String, NbtCodec.Tag> em = new java.util.LinkedHashMap<>();
@@ -807,7 +807,7 @@ final class PlayerDataEditor {
                 + "; tar -czf " + q(path) + " -C " + q(DeployManager.SERVER_DIR + "/worlds")
                 + " " + q(world) + " 2>/dev/null || true");
         if (!"1".equals(ShizukuShell.sh("test -f " + q(path) + " && echo 1 || echo 0").trim())) {
-            throw new Exception("自动备份失败，已取消写入");
+            throw new Exception(I18n.t("自动备份失败，已取消写入"));
         }
         return path;
     }

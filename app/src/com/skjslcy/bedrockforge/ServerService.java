@@ -44,14 +44,14 @@ public class ServerService extends Service {
         }
 
         // default: START
-        startForegroundCompat(buildNotification("正在启动服务端…"));
+        startForegroundCompat(buildNotification(I18n.t("正在启动服务端…")));
         boolean ok = ServerManager.get().start(this);
         if (!ok) {
-            updateNotification("启动失败：" + ServerManager.get().getLastError());
+            updateNotification(I18n.t("启动失败：") + ServerManager.get().getLastError());
             stopForeground(true);
             stopSelf();
         } else {
-            updateNotification("服务端运行中");
+            updateNotification(I18n.t("服务端运行中"));
         }
         return START_NOT_STICKY;
     }
@@ -92,7 +92,7 @@ public class ServerService extends Service {
                 .setOngoing(true)
                 .setOnlyAlertOnce(true)
                 .addAction(new Notification.Action.Builder(
-                        android.R.drawable.ic_menu_close_clear_cancel, "停止", stopPi).build());
+                        android.R.drawable.ic_menu_close_clear_cancel, I18n.t("停止"), stopPi).build());
         return b.build();
     }
 
@@ -100,9 +100,9 @@ public class ServerService extends Service {
         if (Build.VERSION.SDK_INT >= 26) {
             NotificationManager nm = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
             if (nm != null && nm.getNotificationChannel(CHANNEL_ID) == null) {
-                NotificationChannel ch = new NotificationChannel(CHANNEL_ID, "服务器状态",
+                NotificationChannel ch = new NotificationChannel(CHANNEL_ID, I18n.t("服务器状态"),
                         NotificationManager.IMPORTANCE_LOW);
-                ch.setDescription("Minecraft Bedrock 服务端运行状态");
+                ch.setDescription(I18n.t("Minecraft Bedrock 服务端运行状态"));
                 ch.setShowBadge(false);
                 nm.createNotificationChannel(ch);
             }

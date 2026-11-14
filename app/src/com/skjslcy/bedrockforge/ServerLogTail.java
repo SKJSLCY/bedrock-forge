@@ -62,10 +62,10 @@ final class ServerLogTail {
         Result r = new Result();
         try {
             if (ServerManager.get().isRunning()) {
-                throw new Exception("服务端运行中，请停止后再补录（运行中日志被缓冲）");
+                throw new Exception(I18n.t("服务端运行中，请停止后再补录（运行中日志被缓冲）"));
             }
             String path = logPath();
-            if (path.isEmpty()) throw new Exception("实例目录里没有 Dedicated_Server.txt");
+            if (path.isEmpty()) throw new Exception(I18n.t("实例目录里没有 Dedicated_Server.txt"));
             r.file = path.substring(path.lastIndexOf('/') + 1);
             long size = sizeOf(path);
             r.fileSize = size;
@@ -152,15 +152,15 @@ final class ServerLogTail {
     static String describe(Context ctx) {
         try {
             String path = logPath();
-            if (path.isEmpty()) return "未找到日志文件";
+            if (path.isEmpty()) return I18n.t("未找到日志文件");
             String name = path.substring(path.lastIndexOf('/') + 1);
             long size = sizeOf(path);
             long offset = prefs(ctx).getLong(
                     "serverlog_" + DeployManager.activeVersion() + "_offset", 0);
             if (offset > size) offset = 0;
-            return name + " · 已读 " + kb(offset) + " / " + kb(size);
+            return name + I18n.t(" · 已读 ") + kb(offset) + " / " + kb(size);
         } catch (Throwable t) {
-            return "日志状态未知";
+            return I18n.t("日志状态未知");
         }
     }
 

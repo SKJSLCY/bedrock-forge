@@ -250,17 +250,17 @@ public final class PlayerTracker {
 
     /** 把时间戳变成「多久以前」。 */
     public static String ago(long atMs) {
-        if (atMs <= 0) return "未知";
+        if (atMs <= 0) return I18n.t("未知");
         long d = System.currentTimeMillis() - atMs;
         if (d < 0) d = 0;
         long min = d / 60000;
-        if (min < 1) return "刚刚";
-        if (min < 60) return min + " 分钟前";
+        if (min < 1) return I18n.t("刚刚");
+        if (min < 60) return min + I18n.n((int) min, " 分钟前（单数）", " 分钟前");
         long hour = min / 60;
-        if (hour < 24) return hour + " 小时前";
+        if (hour < 24) return hour + I18n.n((int) hour, " 小时前（单数）", " 小时前");
         long day = hour / 24;
-        if (day < 30) return day + " 天前";
-        return (day / 30) + " 个月前";
+        if (day < 30) return day + I18n.n((int) day, " 天前（单数）", " 天前");
+        return (day / 30) + I18n.n((int) (day / 30), " 个月前（单数）", " 个月前");
     }
 
     private static void save() {

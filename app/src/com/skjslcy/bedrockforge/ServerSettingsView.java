@@ -112,76 +112,76 @@ public class ServerSettingsView extends LinearLayout {
     }
 
     private void buildSpecs() {
-        add("server-name", "服务器名称", "显示在局域网世界列表中的名字", TEXT, "基础", "Phone12662B", null, null);
-        add("gamemode", "游戏模式", "新玩家的默认游戏模式", ENUM, "基础", "survival",
+        add("server-name", I18n.t("服务器名称"), I18n.t("显示在局域网世界列表中的名字"), TEXT, I18n.t("基础"), "Phone12662B", null, null);
+        add("gamemode", I18n.t("游戏模式"), I18n.t("新玩家的默认游戏模式"), ENUM, I18n.t("基础"), "survival",
                 new String[]{"survival", "creative", "adventure", "spectator"},
                 new String[]{"生存", "创造", "冒险", "旁观"});
-        add("difficulty", "难度", "世界难度", ENUM, "基础", "easy",
+        add("difficulty", I18n.t("难度"), I18n.t("世界难度"), ENUM, I18n.t("基础"), "easy",
                 new String[]{"peaceful", "easy", "normal", "hard"},
                 new String[]{"和平", "简单", "普通", "困难"});
-        add("max-players", "最大玩家数", "允许同时在线的玩家数量", NUMBER, "基础", "10", null, null);
-        add("level-name", "世界名称", "存档目录名称，修改后使用另一个世界", TEXT, "基础", "Nether62", null, null);
-        add("level-seed", "世界种子", "仅新建世界时生效", TEXT, "基础", "", null, null);
-        add("server-port", "服务器端口", "TCP 信令端口，修改后需要重启", NUMBER, "基础", "19134", null, null);
-        add("server-portv6", "IPv6 端口", "IPv6 信令端口", NUMBER, "基础", "19135", null, null);
+        add("max-players", I18n.t("最大玩家数"), I18n.t("允许同时在线的玩家数量"), NUMBER, I18n.t("基础"), "10", null, null);
+        add("level-name", I18n.t("世界名称"), I18n.t("存档目录名称，修改后使用另一个世界"), TEXT, I18n.t("基础"), "Nether62", null, null);
+        add("level-seed", I18n.t("世界种子"), I18n.t("仅新建世界时生效"), TEXT, I18n.t("基础"), "", null, null);
+        add("server-port", I18n.t("服务器端口"), I18n.t("TCP 信令端口，修改后需要重启"), NUMBER, I18n.t("基础"), "19134", null, null);
+        add("server-portv6", I18n.t("IPv6 端口"), I18n.t("IPv6 信令端口"), NUMBER, I18n.t("基础"), "19135", null, null);
 
-        add("allow-cheats", "允许作弊", "开启后玩家可以使用作弊命令", BOOL, "玩家", "false", null, null);
-        add("allow-list", "白名单", "只允许白名单中的玩家进入（离线模式可能不生效）", BOOL, "玩家", "false", null, null);
-        add("default-player-permission-level", "默认权限", "新玩家的默认权限等级", ENUM, "玩家", "member",
+        add("allow-cheats", I18n.t("允许作弊"), I18n.t("开启后玩家可以使用作弊命令"), BOOL, I18n.t("玩家"), "false", null, null);
+        add("allow-list", I18n.t("白名单"), I18n.t("只允许白名单中的玩家进入（离线模式可能不生效）"), BOOL, I18n.t("玩家"), "false", null, null);
+        add("default-player-permission-level", I18n.t("默认权限"), I18n.t("新玩家的默认权限等级"), ENUM, I18n.t("玩家"), "member",
                 new String[]{"visitor", "member", "operator"},
                 new String[]{"访客", "成员", "管理员"});
-        add("force-gamemode", "强制游戏模式", "玩家加入时强制切换到默认模式", BOOL, "玩家", "false", null, null);
-        add("player-idle-timeout", "挂机踢出（分钟）", "玩家无操作多久后被踢出，0 为不踢", NUMBER, "玩家", "30", null, null);
-        add("chat-restriction", "聊天限制", "限制玩家聊天", ENUM, "玩家", "None",
+        add("force-gamemode", I18n.t("强制游戏模式"), I18n.t("玩家加入时强制切换到默认模式"), BOOL, I18n.t("玩家"), "false", null, null);
+        add("player-idle-timeout", I18n.t("挂机踢出（分钟）"), I18n.t("玩家无操作多久后被踢出，0 为不踢"), NUMBER, I18n.t("玩家"), "30", null, null);
+        add("chat-restriction", I18n.t("聊天限制"), I18n.t("限制玩家聊天"), ENUM, I18n.t("玩家"), "None",
                 new String[]{"None", "Disabled"},
                 new String[]{"无限制", "禁用聊天"});
-        add("disable-player-interaction", "禁用玩家交互", "禁止玩家之间互相交互", BOOL, "玩家", "false", null, null);
-        add("disable-custom-skins", "禁用自定义皮肤", "不允许客户端使用自定义皮肤", BOOL, "玩家", "false", null, null);
-        add("disable-persona", "禁用 Persona", "禁用角色外观与表情", BOOL, "玩家", "false", null, null);
-        add("texturepack-required", "强制纹理包", "要求客户端使用服务器纹理包", BOOL, "玩家", "false", null, null);
+        add("disable-player-interaction", I18n.t("禁用玩家交互"), I18n.t("禁止玩家之间互相交互"), BOOL, I18n.t("玩家"), "false", null, null);
+        add("disable-custom-skins", I18n.t("禁用自定义皮肤"), I18n.t("不允许客户端使用自定义皮肤"), BOOL, I18n.t("玩家"), "false", null, null);
+        add("disable-persona", I18n.t("禁用 Persona"), I18n.t("禁用角色外观与表情"), BOOL, I18n.t("玩家"), "false", null, null);
+        add("texturepack-required", I18n.t("强制纹理包"), I18n.t("要求客户端使用服务器纹理包"), BOOL, I18n.t("玩家"), "false", null, null);
 
-        add("view-distance", "视距", "服务器发送给客户端的区块距离", NUMBER, "世界", "32", null, null);
-        add("tick-distance", "模拟距离", "实体和方块更新的距离", NUMBER, "世界", "4", null, null);
-        add("enable-lan-visibility", "局域网可见", "允许同一 Wi-Fi 下的客户端发现服务器", BOOL, "世界", "true", null, null);
-        add("client-side-chunk-generation-enabled", "客户端区块生成", "允许客户端本地生成部分区块", BOOL, "世界", "true", null, null);
-        add("server-build-radius-ratio", "服务器建造半径比例", "限制玩家建造范围，Disabled 为不限制", TEXT, "世界", "Disabled", null, null);
-        add("player-position-acceptance-threshold", "玩家位置接受阈值", "服务器接受玩家位置的最大偏差", DECIMAL, "世界", "0.5", null, null);
-        add("player-movement-action-direction-threshold", "移动方向阈值", "玩家移动方向判定的阈值", DECIMAL, "世界", "0.85", null, null);
+        add("view-distance", I18n.t("视距"), I18n.t("服务器发送给客户端的区块距离"), NUMBER, I18n.t("世界"), "32", null, null);
+        add("tick-distance", I18n.t("模拟距离"), I18n.t("实体和方块更新的距离"), NUMBER, I18n.t("世界"), "4", null, null);
+        add("enable-lan-visibility", I18n.t("局域网可见"), I18n.t("允许同一 Wi-Fi 下的客户端发现服务器"), BOOL, I18n.t("世界"), "true", null, null);
+        add("client-side-chunk-generation-enabled", I18n.t("客户端区块生成"), I18n.t("允许客户端本地生成部分区块"), BOOL, I18n.t("世界"), "true", null, null);
+        add("server-build-radius-ratio", I18n.t("服务器建造半径比例"), I18n.t("限制玩家建造范围，Disabled 为不限制"), TEXT, I18n.t("世界"), "Disabled", null, null);
+        add("player-position-acceptance-threshold", I18n.t("玩家位置接受阈值"), I18n.t("服务器接受玩家位置的最大偏差"), DECIMAL, I18n.t("世界"), "0.5", null, null);
+        add("player-movement-action-direction-threshold", I18n.t("移动方向阈值"), I18n.t("玩家移动方向判定的阈值"), DECIMAL, I18n.t("世界"), "0.85", null, null);
 
-        add("max-threads", "最大线程数", "服务端使用的最大线程数", NUMBER, "性能", "8", null, null);
-        add("persistent-ticking-area-max-count", "常驻 ticking 区域数量", "常驻加载区域的最大数量", NUMBER, "性能", "10", null, null);
-        add("persistent-ticking-area-max-chunks", "常驻 ticking 区块数", "常驻加载区域的最大区块数", NUMBER, "性能", "100", null, null);
-        add("transient-ticking-area-max-chunks", "临时 ticking 区块数", "临时加载区域的最大区块数", NUMBER, "性能", "300", null, null);
+        add("max-threads", I18n.t("最大线程数"), I18n.t("服务端使用的最大线程数"), NUMBER, I18n.t("性能"), "8", null, null);
+        add("persistent-ticking-area-max-count", I18n.t("常驻 ticking 区域数量"), I18n.t("常驻加载区域的最大数量"), NUMBER, I18n.t("性能"), "10", null, null);
+        add("persistent-ticking-area-max-chunks", I18n.t("常驻 ticking 区块数"), I18n.t("常驻加载区域的最大区块数"), NUMBER, I18n.t("性能"), "100", null, null);
+        add("transient-ticking-area-max-chunks", I18n.t("临时 ticking 区块数"), I18n.t("临时加载区域的最大区块数"), NUMBER, I18n.t("性能"), "300", null, null);
 
-        add("online-mode", "在线模式", "需要微软认证；手机网络可能无法完成认证", BOOL, "网络", "false", null, null);
-        add("server-udp-ports", "UDP 端口范围", "NetherNet 游戏 UDP 端口，如 19134 或 19140-19149", TEXT, "网络", "19134", null, null);
-        add("transport", "传输协议", "当前版本仅支持 NetherNet；RakNet 会启动失败", ENUM, "网络", "nethernet",
+        add("online-mode", I18n.t("在线模式"), I18n.t("需要微软认证；手机网络可能无法完成认证"), BOOL, I18n.t("网络"), "false", null, null);
+        add("server-udp-ports", I18n.t("UDP 端口范围"), I18n.t("NetherNet 游戏 UDP 端口，如 19134 或 19140-19149"), TEXT, I18n.t("网络"), "19134", null, null);
+        add("transport", I18n.t("传输协议"), I18n.t("当前版本仅支持 NetherNet；RakNet 会启动失败"), ENUM, I18n.t("网络"), "nethernet",
                 new String[]{"nethernet", "raknet"},
                 new String[]{"NetherNet", "RakNet（不支持）"});
-        add("server-ip", "绑定 IP", "留空表示所有网卡；只填本机 IP 可限制网卡", TEXT, "网络", "", null, null);
-        add("compression-threshold", "压缩阈值", "小于该字节数的数据包不压缩", NUMBER, "网络", "1", null, null);
-        add("compression-algorithm", "压缩算法", "网络压缩算法", ENUM, "网络", "zlib",
+        add("server-ip", I18n.t("绑定 IP"), I18n.t("留空表示所有网卡；只填本机 IP 可限制网卡"), TEXT, I18n.t("网络"), "", null, null);
+        add("compression-threshold", I18n.t("压缩阈值"), I18n.t("小于该字节数的数据包不压缩"), NUMBER, I18n.t("网络"), "1", null, null);
+        add("compression-algorithm", I18n.t("压缩算法"), I18n.t("网络压缩算法"), ENUM, I18n.t("网络"), "zlib",
                 new String[]{"zlib", "snappy"},
                 new String[]{"zlib", "snappy"});
-        add("block-network-ids-are-hashes", "网络 ID 使用哈希", "网络 ID 以哈希形式传输", BOOL, "网络", "true", null, null);
+        add("block-network-ids-are-hashes", I18n.t("网络 ID 使用哈希"), I18n.t("网络 ID 以哈希形式传输"), BOOL, I18n.t("网络"), "true", null, null);
 
-        add("server-authoritative-movement-strict", "严格移动校验", "启用严格的服务器移动校验", BOOL, "权威移动与反作弊", "false", null, null);
-        add("server-authoritative-dismount-strict", "严格下马校验", "严格校验玩家下马位置", BOOL, "权威移动与反作弊", "false", null, null);
-        add("server-authoritative-entity-interactions-strict", "严格实体交互", "严格校验实体交互", BOOL, "权威移动与反作弊", "false", null, null);
-        add("server-authoritative-entity-attack-request-validation", "攻击请求校验", "攻击请求校验模式", TEXT, "权威移动与反作弊", "disabled", null, null);
-        add("server-authoritative-entity-attack-range-validation", "攻击距离校验", "攻击距离校验模式", TEXT, "权威移动与反作弊", "disabled", null, null);
-        add("server-authoritative-entity-attack-range-tolerance", "攻击距离容差", "攻击距离校验的容差", DECIMAL, "权威移动与反作弊", "0.5", null, null);
-        add("server-authoritative-block-breaking-pick-range-scalar", "挖掘距离倍率", "服务器校验挖掘距离的倍率", DECIMAL, "权威移动与反作弊", "1.5", null, null);
+        add("server-authoritative-movement-strict", I18n.t("严格移动校验"), I18n.t("启用严格的服务器移动校验"), BOOL, I18n.t("权威移动与反作弊"), "false", null, null);
+        add("server-authoritative-dismount-strict", I18n.t("严格下马校验"), I18n.t("严格校验玩家下马位置"), BOOL, I18n.t("权威移动与反作弊"), "false", null, null);
+        add("server-authoritative-entity-interactions-strict", I18n.t("严格实体交互"), I18n.t("严格校验实体交互"), BOOL, I18n.t("权威移动与反作弊"), "false", null, null);
+        add("server-authoritative-entity-attack-request-validation", I18n.t("攻击请求校验"), I18n.t("攻击请求校验模式"), TEXT, I18n.t("权威移动与反作弊"), "disabled", null, null);
+        add("server-authoritative-entity-attack-range-validation", I18n.t("攻击距离校验"), I18n.t("攻击距离校验模式"), TEXT, I18n.t("权威移动与反作弊"), "disabled", null, null);
+        add("server-authoritative-entity-attack-range-tolerance", I18n.t("攻击距离容差"), I18n.t("攻击距离校验的容差"), DECIMAL, I18n.t("权威移动与反作弊"), "0.5", null, null);
+        add("server-authoritative-block-breaking-pick-range-scalar", I18n.t("挖掘距离倍率"), I18n.t("服务器校验挖掘距离的倍率"), DECIMAL, I18n.t("权威移动与反作弊"), "1.5", null, null);
 
-        add("content-log-file-enabled", "内容日志写入文件", "把内容日志写入文件", BOOL, "日志与脚本", "false", null, null);
-        add("content-log-console-output-enabled", "内容日志输出到控制台", "把内容日志输出到控制台", BOOL, "日志与脚本", "false", null, null);
-        add("content-log-level", "内容日志级别", "日志详细程度", ENUM, "日志与脚本", "info",
+        add("content-log-file-enabled", I18n.t("内容日志写入文件"), I18n.t("把内容日志写入文件"), BOOL, I18n.t("日志与脚本"), "false", null, null);
+        add("content-log-console-output-enabled", I18n.t("内容日志输出到控制台"), I18n.t("把内容日志输出到控制台"), BOOL, I18n.t("日志与脚本"), "false", null, null);
+        add("content-log-level", I18n.t("内容日志级别"), I18n.t("日志详细程度"), ENUM, I18n.t("日志与脚本"), "info",
                 new String[]{"info", "debug", "warning", "error"},
                 new String[]{"信息", "调试", "警告", "错误"});
-        add("allow-inbound-script-debugging", "允许入站脚本调试", "允许外部调试器连接脚本", BOOL, "日志与脚本", "false", null, null);
-        add("allow-outbound-script-debugging", "允许出站脚本调试", "允许脚本连接外部调试器", BOOL, "日志与脚本", "false", null, null);
-        add("script-debugger-auto-attach", "脚本调试器自动附加", "脚本调试器附加模式", TEXT, "日志与脚本", "disabled", null, null);
-        add("emit-server-telemetry", "发送服务器遥测", "向微软发送匿名服务器遥测", BOOL, "日志与脚本", "false", null, null);
+        add("allow-inbound-script-debugging", I18n.t("允许入站脚本调试"), I18n.t("允许外部调试器连接脚本"), BOOL, I18n.t("日志与脚本"), "false", null, null);
+        add("allow-outbound-script-debugging", I18n.t("允许出站脚本调试"), I18n.t("允许脚本连接外部调试器"), BOOL, I18n.t("日志与脚本"), "false", null, null);
+        add("script-debugger-auto-attach", I18n.t("脚本调试器自动附加"), I18n.t("脚本调试器附加模式"), TEXT, I18n.t("日志与脚本"), "disabled", null, null);
+        add("emit-server-telemetry", I18n.t("发送服务器遥测"), I18n.t("向微软发送匿名服务器遥测"), BOOL, I18n.t("日志与脚本"), "false", null, null);
     }
 
     private void add(String key, String label, String desc, String type, String section,
@@ -205,7 +205,7 @@ public class ServerSettingsView extends LinearLayout {
             } else {
                 type = TEXT;
             }
-            add(e.getKey(), e.getKey(), "未汉化的高级选项", type, "高级（自动）", v, null, null);
+            add(e.getKey(), e.getKey(), I18n.t("未汉化的高级选项"), type, I18n.t("高级（自动）"), v, null, null);
         }
     }
 
@@ -213,7 +213,7 @@ public class ServerSettingsView extends LinearLayout {
         content.removeAllViews();
         warning.setVisibility(GONE);
         saveBtn.setEnabled(false);
-        saveBtn.setText("读取中…");
+        saveBtn.setText(I18n.t("读取中…"));
 
         LinearLayout loading = MinecraftUi.panel(activity, "读取配置");
         TextView t = MinecraftUi.text(activity, "正在读取 server.properties…", 11, MinecraftUi.PANEL_MUTED, false);
@@ -268,7 +268,7 @@ public class ServerSettingsView extends LinearLayout {
                     ViewGroup.LayoutParams.MATCH_PARENT, dp(44)));
             guide.setOnClickListener(new OnClickListener() {
                 @Override public void onClick(View v) {
-                    ShizukuGate.showDialog(activity, "读取服务器设置", null);
+                    ShizukuGate.showDialog(activity, I18n.t("读取服务器设置"), null);
                 }
             });
         }
@@ -282,9 +282,9 @@ public class ServerSettingsView extends LinearLayout {
         content.addView(panel, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         warning.setVisibility(VISIBLE);
-        warning.setText("需要 Shizuku 已运行并授权，且服务端环境已安装");
+        warning.setText(I18n.t("需要 Shizuku 已运行并授权，且服务端环境已安装"));
         saveBtn.setEnabled(false);
-        saveBtn.setText("保存设置");
+        saveBtn.setText(I18n.t("保存设置"));
     }
 
     private void buildSettings() {
@@ -294,10 +294,10 @@ public class ServerSettingsView extends LinearLayout {
 
         warning.setVisibility(VISIBLE);
         if (!editable) {
-            warning.setText("服务端运行中：请先停止服务端，再修改配置");
+            warning.setText(I18n.t("服务端运行中：请先停止服务端，再修改配置"));
             warning.setTextColor(0xFFFFD180);
         } else {
-            warning.setText("服务端已停止：修改会立即写入，下次启动生效。\n不同 BDS 版本支持的键可能不同，未识别的键会保留在“高级（自动）”。");
+            warning.setText(I18n.t("服务端已停止：修改会立即写入，下次启动生效。\n不同 BDS 版本支持的键可能不同，未识别的键会保留在“高级（自动）”。"));
             warning.setTextColor(0xFFB8FFB0);
         }
         warning.setPadding(dp(2), dp(4), dp(2), dp(6));
@@ -324,7 +324,7 @@ public class ServerSettingsView extends LinearLayout {
 
         if (hidden > 0) {
             TextView hideNote = MinecraftUi.text(activity,
-                    "已按当前 BDS 版本隐藏 " + hidden + " 项不支持的设置。", 8.5f,
+                    I18n.t("已按当前 BDS 版本隐藏 ") + hidden + I18n.t(" 项不支持的设置。"), 8.5f,
                     MinecraftUi.PANEL_MUTED, false);
             hideNote.setPadding(0, dp(6), 0, 0);
             content.addView(hideNote);
@@ -334,7 +334,7 @@ public class ServerSettingsView extends LinearLayout {
         note.setPadding(0, dp(6), 0, dp(4));
         content.addView(note);
 
-        saveBtn.setText("保存设置");
+        saveBtn.setText(I18n.t("保存设置"));
         saveBtn.setEnabled(editable);
     }
 
@@ -470,7 +470,7 @@ public class ServerSettingsView extends LinearLayout {
 
     private void save() {
         if (!editable || ServerManager.get().isRunning()) {
-            Toast.makeText(activity, "请先停止服务端", Toast.LENGTH_SHORT).show();
+            Toast.makeText(activity, I18n.t("请先停止服务端"), Toast.LENGTH_SHORT).show();
             return;
         }
         final Map<String, String> updates = new LinkedHashMap<>();
@@ -485,7 +485,7 @@ public class ServerSettingsView extends LinearLayout {
         }
 
         saveBtn.setEnabled(false);
-        saveBtn.setText("保存中…");
+        saveBtn.setText(I18n.t("保存中…"));
 
         new Thread(new Runnable() {
             @Override
@@ -504,9 +504,9 @@ public class ServerSettingsView extends LinearLayout {
                             original = finalCheck;
                             parse(finalCheck);
                             saveBtn.setEnabled(true);
-                            saveBtn.setText("保存设置");
-                            Toast.makeText(activity, "已保存，下次启动生效", Toast.LENGTH_SHORT).show();
-                            AppLog.add("[设置] 保存 " + updates.size() + " 项");
+                            saveBtn.setText(I18n.t("保存设置"));
+                            Toast.makeText(activity, I18n.t("已保存，下次启动生效"), Toast.LENGTH_SHORT).show();
+                            AppLog.add(I18n.t("[设置] 保存 ") + updates.size() + I18n.t(" 项"));
                             if (onSaved != null) onSaved.onSaved(updates);
                         }
                     });
@@ -514,8 +514,8 @@ public class ServerSettingsView extends LinearLayout {
                     activity.runOnUiThread(new Runnable() {
                         @Override public void run() {
                             saveBtn.setEnabled(true);
-                            saveBtn.setText("保存设置");
-                            Toast.makeText(activity, "保存失败：" + e.getMessage(), Toast.LENGTH_LONG).show();
+                            saveBtn.setText(I18n.t("保存设置"));
+                            Toast.makeText(activity, I18n.t("保存失败：") + e.getMessage(), Toast.LENGTH_LONG).show();
                         }
                     });
                 }

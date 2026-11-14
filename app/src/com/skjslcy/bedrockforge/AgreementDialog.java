@@ -43,8 +43,8 @@ final class AgreementDialog {
 
         LinearLayout panel = MinecraftUi.panel(a, "用户协议");
         panel.addView(MinecraftUi.text(a,
-                "版本 " + VERSION + " · 生效 2026-11-13"
-                        + (accepted(a) && !consent ? " · 已同意当前版本" : ""),
+                I18n.t("版本 ") + VERSION + I18n.t(" · 生效 2026-11-13")
+                        + (accepted(a) && !consent ? I18n.t(" · 已同意当前版本") : ""),
                 8.5f, MinecraftUi.PANEL_MUTED, false));
 
         final ScrollView sv = new ScrollView(a);
@@ -81,7 +81,7 @@ final class AgreementDialog {
             final Runnable enable = () -> {
                 agree.setEnabled(true);
                 agree.setAlpha(1f);
-                hint.setText("已阅读完毕，可以同意");
+                hint.setText(I18n.t("已阅读完毕，可以同意"));
                 hint.setTextColor(MinecraftUi.GREEN);
             };
             sv.setOnScrollChangeListener((v, sx, sy, osx, osy) -> {
@@ -130,7 +130,9 @@ final class AgreementDialog {
             sb.append(line).append('\n');
             String t = line.trim();
             boolean heading = t.matches("^[一二三四五六七八九十]+、.*")
-                    || t.startsWith("附录");
+                    || t.startsWith("附录")
+                    || t.matches("^\\d{1,2}(?:\\.\\d{1,2})*[.、)]\\s*\\S.*")
+                    || t.startsWith("Appendix");
             if (heading) {
                 sb.setSpan(new StyleSpan(Typeface.BOLD), start, start + line.length(),
                         Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
@@ -144,8 +146,17 @@ final class AgreementDialog {
     }
 
     private static String readAsset(Activity a) {
+        String name = "legal/user_agreement.txt";
+        String localized = I18n.asset(name);
+        String text = tryRead(a, localized);
+        if (text == null && !localized.equals(name)) text = tryRead(a, name);
+        if (text != null) return text;
+        return I18n.t("用户协议读取失败：") + localized;
+    }
+
+    private static String tryRead(Activity a, String name) {
         try {
-            InputStream in = a.getAssets().open("legal/user_agreement.txt");
+            InputStream in = a.getAssets().open(name);
             ByteArrayOutputStream bos = new ByteArrayOutputStream();
             byte[] buf = new byte[8192];
             int n;
@@ -153,7 +164,7 @@ final class AgreementDialog {
             in.close();
             return new String(bos.toByteArray(), "UTF-8");
         } catch (Throwable e) {
-            return "用户协议读取失败：" + e.getMessage();
+            return null;
         }
     }
 

@@ -107,7 +107,7 @@ public class DeploySectionView extends LinearLayout {
             }
         });
 
-        deleteBtn = new MinecraftUi.McButton(activity, "删除" + typeName());
+        deleteBtn = new MinecraftUi.McButton(activity, I18n.t("删除") + I18n.sp() + typeName());
         if (deleteBtn instanceof MinecraftUi.McButton) {
             ((MinecraftUi.McButton) deleteBtn).setDangerStyle();
         }
@@ -120,7 +120,7 @@ public class DeploySectionView extends LinearLayout {
             @Override public void onClick(View v) { confirmDelete(); }
         });
 
-        backupBtn = new MinecraftUi.McButton(activity, "备份当前" + typeName());
+        backupBtn = new MinecraftUi.McButton(activity, I18n.t("备份当前") + I18n.sp() + typeName());
         LinearLayout.LayoutParams blp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, dp(44));
         blp.topMargin = dp(6);
@@ -242,7 +242,7 @@ public class DeploySectionView extends LinearLayout {
     private void refresh() {
         statusHost.removeAllViews();
         LinearLayout loading = MinecraftUi.panel(activity, typeName());
-        loading.addView(MinecraftUi.text(activity, "正在检测本地部署…", 10, MinecraftUi.PANEL_MUTED, false));
+        loading.addView(MinecraftUi.text(activity, I18n.t("正在检测本地部署…"), 10, MinecraftUi.PANEL_MUTED, false));
         statusHost.addView(loading, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         actionBtn.setEnabled(false);
@@ -268,21 +268,22 @@ public class DeploySectionView extends LinearLayout {
     private void render(DeployManager.Status s) {
         status = s;
         statusHost.removeAllViews();
-        LinearLayout panel = MinecraftUi.panel(activity, typeName() + " · 本地部署");
+        LinearLayout panel = MinecraftUi.panel(activity, typeName() + I18n.t(" · 本地部署"));
         statusHost.addView(panel, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
         if (s.installed) {
-            addRow(panel, "名称", s.name);
-            addRow(panel, "版本", s.version);
+            addRow(panel, I18n.t("名称"), s.name);
+            addRow(panel, I18n.t("版本"), s.version);
             if (type == DeployManager.TYPE_RUNTIME) {
                 addRow(panel, "Box64",
-                        s.box64Version == null || s.box64Version.isEmpty() ? "已编译" : s.box64Version);
+                        s.box64Version == null || s.box64Version.isEmpty() ? I18n.t("已编译") : s.box64Version);
             }
-            addRow(panel, "路径", s.path);
-            addRow(panel, "来源", s.source == null ? "" : s.source
-                    .replace("MSL 镜像", "官方地址")
-                    .replace("MSL", "官方地址"));
+            addRow(panel, I18n.t("路径"), s.path);
+            addRow(panel, I18n.t("来源"), s.source == null ? "" : s.source
+                    .replace(I18n.t("MSL 镜像"), I18n.t("官方地址"))
+                    .replace("MSL", I18n.t("官方地址"))
+                    .replace("镜像", I18n.t("镜像")));
             if (s.note != null && !s.note.isEmpty()) {
                 TextView note = MinecraftUi.text(activity, s.note, 8.5f, MinecraftUi.PANEL_MUTED, false);
                 note.setPadding(0, dp(7), 0, 0);
@@ -304,7 +305,7 @@ public class DeploySectionView extends LinearLayout {
                 box.addView(MinecraftUi.text(activity, "Box64：", 9,
                         MinecraftUi.PANEL_MUTED, true), new LinearLayout.LayoutParams(0,
                         ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
-                box.addView(MinecraftUi.text(activity, "未编译", 9.5f,
+                box.addView(MinecraftUi.text(activity, I18n.t("未编译"), 9.5f,
                         MinecraftUi.PANEL_TEXT, false));
                 panel.addView(box, blp);
             }
@@ -312,9 +313,10 @@ public class DeploySectionView extends LinearLayout {
 
         actionBtn.setEnabled(true);
         if (type == DeployManager.TYPE_SERVER) {
-            actionBtn.setText(s.installed ? "新增实例" : "添加服务端");
+            actionBtn.setText(s.installed ? I18n.t("新增实例") : I18n.t("添加服务端"));
         } else {
-            actionBtn.setText(s.installed ? "更换" + typeName() : "添加" + typeName());
+            actionBtn.setText(s.installed ? I18n.t("更换") + I18n.sp() + typeName()
+                : I18n.t("添加") + I18n.sp() + typeName());
         }
         deleteBtn.setVisibility(s.installed ? VISIBLE : GONE);
         deleteBtn.setEnabled(true);
@@ -325,7 +327,7 @@ public class DeploySectionView extends LinearLayout {
             rollbackBtn.setVisibility(GONE);
         }
         if (type == DeployManager.TYPE_RUNTIME && s.box64) {
-            actionBtn.setText("修复运行环境");
+            actionBtn.setText(I18n.t("修复运行环境"));
             if (actionBtn instanceof MinecraftUi.McButton) {
                 ((MinecraftUi.McButton) actionBtn).setDangerStyle();
             }
@@ -364,7 +366,8 @@ public class DeploySectionView extends LinearLayout {
                 } catch (Throwable ignored) {
                 }
                 Button b = new MinecraftUi.McButton(activity,
-                        display + (active ? "（当前）" : ""));
+                        display);
+                b.setSelected(active);   // 当前实例用按钮选中态表示，不再拼接（当前）
                 b.setSingleLine(true);
                 b.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12.5f);
                 b.setEllipsize(android.text.TextUtils.TruncateAt.END);
@@ -414,7 +417,7 @@ public class DeploySectionView extends LinearLayout {
             panel.addView(guide, glp);
             guide.setOnClickListener(new OnClickListener() {
                 @Override public void onClick(View v) {
-                    ShizukuGate.showDialog(activity, "检测运行环境", null);
+                    ShizukuGate.showDialog(activity, I18n.t("检测运行环境"), null);
                 }
             });
         }
@@ -430,7 +433,7 @@ public class DeploySectionView extends LinearLayout {
         statusHost.addView(panel, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         actionBtn.setEnabled(false);
-        actionBtn.setText("不可用");
+        actionBtn.setText(I18n.t("不可用"));
         deleteBtn.setVisibility(GONE);
         backupBtn.setVisibility(GONE);
         rollbackBtn.setVisibility(GONE);
@@ -456,17 +459,17 @@ public class DeploySectionView extends LinearLayout {
     }
 
     private String typeName() {
-        if (type == DeployManager.TYPE_SERVER) return "服务端";
-        if (type == DeployManager.TYPE_RUNTIME) return "运行环境";
-        return "运行环境";
+        if (type == DeployManager.TYPE_SERVER) return I18n.t("服务端");
+        if (type == DeployManager.TYPE_RUNTIME) return I18n.t("运行环境");
+        return I18n.t("运行环境");
     }
 
     private String emptyHint() {
         if (type == DeployManager.TYPE_SERVER) {
-            return "通过实例下载获取官方 BDS，或导入设备上的 Linux 服务端 ZIP。";
+            return I18n.t("通过实例下载获取官方 BDS，或导入设备上的 Linux 服务端 ZIP。");
         }
         if (type == DeployManager.TYPE_RUNTIME) {
-            return "下载 Ubuntu 24.04.3 rootfs，或导入完整的 Linux 运行环境包。";
+            return I18n.t("下载 Ubuntu 24.04.3 rootfs，或导入完整的 Linux 运行环境包。");
         }
         return "";
     }
@@ -481,10 +484,10 @@ public class DeploySectionView extends LinearLayout {
         wrap.setPadding(dp(14), dp(14), dp(14), dp(14));
         LinearLayout panel = MinecraftUi.panel(activity, "修复运行环境");
         panel.addView(MinecraftUi.text(activity,
-                "此操作会删除以下全部数据，且不可撤销：\n\n"
-                        + "· 所有服务端实例（世界存档、配置、白名单、权限）\n"
-                        + "· 现有 Box64 / Ubuntu 运行环境\n\n"
-                        + "备份文件不会被删除，可在“备份”页面回滚恢复。",
+                I18n.t("此操作会删除以下全部数据，且不可撤销：\n\n")
+                        + I18n.t("· 所有服务端实例（世界存档、配置、白名单、权限）\n")
+                        + I18n.t("· 现有 Box64 / Ubuntu 运行环境\n\n")
+                        + I18n.t("备份文件不会被删除，可在“备份”页面回滚恢复。"),
                 9.5f, MinecraftUi.RED, false));
         Button go = new MinecraftUi.McButton(activity, "我已确认，删除并重建");
         if (go instanceof MinecraftUi.McButton) ((MinecraftUi.McButton) go).setDangerStyle();
@@ -519,7 +522,7 @@ public class DeploySectionView extends LinearLayout {
 
     private void startRepairRuntime() {
         DeployManager.setRepairingRuntime(true);
-        startDeploy("修复运行环境", new Task() {
+        startDeploy(I18n.t("修复运行环境"), new Task() {
             @Override public void run(DeployManager.Progress p) throws Exception {
                 try {
                     DeployManager.wipeServersAndState(activity, p);
@@ -549,14 +552,14 @@ public class DeploySectionView extends LinearLayout {
 
         LinearLayout panel = MinecraftUi.panel(activity, "部署 Box64 运行环境");
         TextView text = MinecraftUi.text(activity,
-                "将按文档在 App 内从零部署：\n\n"
-                        + "1. 下载 Ubuntu 24.04.5 ARM64 rootfs\n"
-                        + "2. 配置 DNS 和清华软件源\n"
-                        + "3. 安装编译工具与 x86_64 运行库\n"
-                        + "4. 下载 Box64 源码\n"
-                        + "5. 单线程编译并安装 Box64\n\n"
-                        + "仅依赖内置工具链与 Box64；需要 Shizuku。\n"
-                        + "编译约 20–40 分钟，请保持 App 在前台并连接网络。",
+                I18n.t("将按文档在 App 内从零部署：\n\n")
+                        + I18n.t("1. 下载 Ubuntu 24.04.5 ARM64 rootfs\n")
+                        + I18n.t("2. 配置 DNS 和清华软件源\n")
+                        + I18n.t("3. 安装编译工具与 x86_64 运行库\n")
+                        + I18n.t("4. 下载 Box64 源码\n")
+                        + I18n.t("5. 单线程编译并安装 Box64\n\n")
+                        + I18n.t("仅依赖内置工具链与 Box64；需要 Shizuku。\n")
+                        + I18n.t("编译约 20–40 分钟，请保持 App 在前台并连接网络。"),
                 10, MinecraftUi.PANEL_TEXT, false);
         panel.addView(text);
 
@@ -620,7 +623,7 @@ public class DeploySectionView extends LinearLayout {
     }
 
     private void startBox64Install(final int threads) {
-        startDeploy("部署 Box64 运行环境 -j" + threads, new Task() {
+        startDeploy(I18n.t("部署 Box64 运行环境 -j") + threads, new Task() {
             @Override public void run(DeployManager.Progress p) throws Exception {
                 Box64Installer.install(activity, p, threads);
             }
@@ -638,15 +641,17 @@ public class DeploySectionView extends LinearLayout {
         wrap.setPadding(dp(14), dp(14), dp(14), dp(14));
 
         LinearLayout panel = MinecraftUi.panel(activity,
-                type == DeployManager.TYPE_SERVER ? "添加实例" : ((status != null && status.installed ? "更换" : "添加") + typeName()));
+                type == DeployManager.TYPE_SERVER ? I18n.t("添加实例")
+                : ((status != null && status.installed ? I18n.t("更换") : I18n.t("添加"))
+                + I18n.sp() + typeName()));
         wrap.addView(panel, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
         if (type == DeployManager.TYPE_SERVER) {
-            addOption(panel, "实例下载", new Runnable() {
+            addOption(panel, I18n.t("实例下载"), new Runnable() {
                 @Override public void run() { dialog.dismiss(); chooseServerVersion(); }
             }, 0);
-            addOption(panel, "从设备导入 ZIP / TAR.GZ", new Runnable() {
+            addOption(panel, I18n.t("从设备导入 ZIP / TAR.GZ"), new Runnable() {
                 @Override public void run() { dialog.dismiss(); pickLocal(); }
             }, 5);
             TextView credit = MinecraftUi.text(activity,
@@ -686,7 +691,7 @@ public class DeploySectionView extends LinearLayout {
     }
 
     private void chooseServerVersion() {
-        final Dialog loading = simpleDialog("获取版本列表", "正在请求实例版本列表…");
+        final Dialog loading = simpleDialog(I18n.t("获取版本列表"), I18n.t("正在请求实例版本列表…"));
         loading.show();
         new Thread(new Runnable() {
             @Override
@@ -703,7 +708,7 @@ public class DeploySectionView extends LinearLayout {
                     handler.post(new Runnable() {
                         @Override public void run() {
                             loading.dismiss();
-                            toast("获取版本失败：" + e.getMessage());
+                            toast(I18n.t("获取版本失败：") + e.getMessage());
                         }
                     });
                 }
@@ -737,12 +742,12 @@ public class DeploySectionView extends LinearLayout {
             }
             versions = higher;
             if (versions.isEmpty()) {
-                toast("没有高于当前实例 " + current + " 的 BDS 版本");
+                toast(I18n.t("没有高于当前实例 ") + current + I18n.t(" 的 BDS 版本"));
                 return;
             }
         }
         if (versions.isEmpty()) {
-            toast("镜像没有 Linux 正式版");
+            toast(I18n.t("镜像没有 Linux 正式版"));
             return;
         }
         final Dialog dialog = new Dialog(activity);
@@ -773,7 +778,7 @@ public class DeploySectionView extends LinearLayout {
                         upgradeSourceId = null;
                         startInstanceUpgrade(version, source);
                     } else {
-                        confirmDeploy("部署服务端 " + version, new Runnable() {
+                        confirmDeploy(I18n.t("部署服务端 ") + version, new Runnable() {
                             @Override public void run() { downloadServer(version); }
                         });
                     }
@@ -815,9 +820,9 @@ public class DeploySectionView extends LinearLayout {
         LinearLayout wrap = new LinearLayout(activity);
         wrap.setOrientation(VERTICAL);
         wrap.setPadding(dp(14), dp(14), dp(14), dp(14));
-        LinearLayout panel = MinecraftUi.panel(activity, "部署方式 · " + version);
+        LinearLayout panel = MinecraftUi.panel(activity, I18n.t("部署方式 · ") + version);
         panel.addView(MinecraftUi.text(activity,
-                "升级当前实例会保留当前世界、配置、白名单和权限。\n新建独立实例会创建空白世界，不影响当前实例。",
+                I18n.t("升级当前实例会保留当前世界、配置、白名单和权限。\n新建独立实例会创建空白世界，不影响当前实例。"),
                 9, MinecraftUi.PANEL_MUTED, false));
         Button keep = new MinecraftUi.McButton(activity, "升级当前实例（保留世界）");
         LinearLayout.LayoutParams lp1 = new LinearLayout.LayoutParams(
@@ -868,13 +873,13 @@ public class DeploySectionView extends LinearLayout {
         wrap.setPadding(dp(14), dp(14), dp(14), dp(14));
         LinearLayout panel = MinecraftUi.panel(activity, "实例名称");
         panel.addView(MinecraftUi.text(activity,
-                "只支持字母和数字，不支持中文、空格、下划线、横线或其他符号。\n最长 32 个字符。",
+                I18n.t("只支持字母和数字，不支持中文、空格、下划线、横线或其他符号。\n最长 32 个字符。"),
                 9, MinecraftUi.AMBER, false));
         final android.widget.EditText input = new android.widget.EditText(activity);
         MinecraftUi.styleInput(input);
         input.setSingleLine(true);
         input.setTextSize(14);
-        input.setHint("例如 Survival1");
+        input.setHint(I18n.t("例如 Survival1"));
         LinearLayout.LayoutParams ilp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, dp(46));
         ilp.topMargin = dp(8);
@@ -888,7 +893,7 @@ public class DeploySectionView extends LinearLayout {
             @Override public void onClick(View v) {
                 String name = input.getText().toString().trim();
                 if (!name.matches("[A-Za-z0-9]{1,32}")) {
-                    toast("实例名只支持字母和数字，最长 32 个字符");
+                    toast(I18n.t("实例名只支持字母和数字，最长 32 个字符"));
                     return;
                 }
                 d.dismiss();
@@ -913,13 +918,13 @@ public class DeploySectionView extends LinearLayout {
     }
 
     private void startDownloadServer(final String version, final boolean fresh, final String instanceName) {
-        startDeploy((fresh ? "新建独立实例 " : "升级服务端 ") + version, new Task() {
+        startDeploy((fresh ? I18n.t("新建独立实例 ") : I18n.t("升级服务端 ")) + version, new Task() {
             @Override public void run(DeployManager.Progress p) throws Exception {
-                p.update(2, "解析镜像地址…");
+                p.update(2, I18n.t("解析镜像地址…"));
                 String url = DeployManager.resolveServerUrl(version);
-                p.update(5, "开始下载…");
+                p.update(5, I18n.t("开始下载…"));
                 File zip = DeployManager.download(activity, url, "bds-" + version + ".zip", p);
-                DeployManager.installServer(activity, zip, "实例下载 " + version, version,
+                DeployManager.installServer(activity, zip, I18n.t("实例下载 ") + version, version,
                         fresh, instanceName, tail(p, 70));
                 zip.delete();
             }
@@ -932,14 +937,14 @@ public class DeploySectionView extends LinearLayout {
         host.pickFile(new PickCallback() {
             @Override
             public void onPicked(final File file) {
-                confirmDeploy("导入 " + file.getName(), new Runnable() {
+                confirmDeploy(I18n.t("导入 ") + file.getName(), new Runnable() {
                     @Override public void run() { startLocalDeploy(file, 0); }
                 });
             }
 
             @Override
             public void onCancel() {
-                toast("已取消");
+                toast(I18n.t("已取消"));
             }
         });
     }
@@ -959,7 +964,7 @@ public class DeploySectionView extends LinearLayout {
         wrap.setPadding(dp(14), dp(14), dp(14), dp(14));
         LinearLayout panel = MinecraftUi.panel(activity, "导入服务端版本");
         panel.addView(MinecraftUi.text(activity,
-                "压缩包文件名里没有版本号，无法自动识别。\n请输入该服务端的完整版本号，例如 1.26.63.1。",
+                I18n.t("压缩包文件名里没有版本号，无法自动识别。\n请输入该服务端的完整版本号，例如 1.26.63.1。"),
                 9, MinecraftUi.AMBER, false));
         final android.widget.EditText input = new android.widget.EditText(activity);
         MinecraftUi.styleInput(input);
@@ -978,7 +983,7 @@ public class DeploySectionView extends LinearLayout {
             @Override public void onClick(View v) {
                 String ver = input.getText().toString().trim();
                 if (!ver.matches("\\d+\\.\\d+\\.\\d+(\\.\\d+)?")) {
-                    toast("请输入正确版本号，例如 1.26.63.1");
+                    toast(I18n.t("请输入正确版本号，例如 1.26.63.1"));
                     return;
                 }
                 d.dismiss();
@@ -999,12 +1004,12 @@ public class DeploySectionView extends LinearLayout {
     }
 
     private void installLocal(final File file, final int loader, final String version) {
-        startDeploy("导入 " + file.getName(), new Task() {
+        startDeploy(I18n.t("导入 ") + file.getName(), new Task() {
             @Override public void run(DeployManager.Progress p) throws Exception {
                 if (type != DeployManager.TYPE_SERVER) {
-                    throw new Exception("运行环境仅支持 Box64 部署");
+                    throw new Exception(I18n.t("运行环境仅支持 Box64 部署"));
                 }
-                DeployManager.installServer(activity, file, "设备导入", version, p);
+                DeployManager.installServer(activity, file, I18n.t("设备导入"), version, p);
             }
         });
     }
@@ -1057,12 +1062,12 @@ public class DeploySectionView extends LinearLayout {
         LinearLayout wrap = new LinearLayout(activity);
         wrap.setOrientation(VERTICAL);
         wrap.setPadding(dp(14), dp(14), dp(14), dp(14));
-        LinearLayout panel = MinecraftUi.panel(activity, "实例操作 · " + id);
+        LinearLayout panel = MinecraftUi.panel(activity, I18n.t("实例操作 · ") + id);
         Button rename = new MinecraftUi.McButton(activity, "重命名实例");
         if (active && ServerManager.get().isRunning()) {
             rename.setEnabled(false);
             rename.setAlpha(0.55f);
-            rename.setText("重命名实例（运行中不可用）");
+            rename.setText(I18n.t("重命名实例（运行中不可用）"));
         }
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, dp(44));
@@ -1070,7 +1075,7 @@ public class DeploySectionView extends LinearLayout {
         rename.setOnClickListener(new OnClickListener() {
             @Override public void onClick(View v) {
                 if (active && ServerManager.get().isRunning()) {
-                    toast("请先停止服务端，再重命名实例");
+                    toast(I18n.t("请先停止服务端，再重命名实例"));
                     return;
                 }
                 d.dismiss();
@@ -1155,12 +1160,12 @@ public class DeploySectionView extends LinearLayout {
 
     private void showBackupParts(final String id) {
         if (ServerManager.get().isRunning()) {
-            toast("请先停止服务端再备份");
+            toast(I18n.t("请先停止服务端再备份"));
             return;
         }
         try {
             if (!id.equals(DeployManager.activeVersion())) {
-                toast("请先切换到该实例，再分类备份");
+                toast(I18n.t("请先切换到该实例，再分类备份"));
                 return;
             }
         } catch (Throwable ignored) {
@@ -1201,7 +1206,7 @@ public class DeploySectionView extends LinearLayout {
     }
 
     private void backupPartAsync(final String kind) {
-        final Dialog loading = simpleDialog("分类备份", "正在打包…");
+        final Dialog loading = simpleDialog(I18n.t("分类备份"), I18n.t("正在打包…"));
         loading.show();
         new Thread(new Runnable() {
             @Override public void run() {
@@ -1213,14 +1218,14 @@ public class DeploySectionView extends LinearLayout {
                     handler.post(new Runnable() {
                         @Override public void run() {
                             loading.dismiss();
-                            toast("分类备份完成：" + kind);
+                            toast(I18n.t("分类备份完成：") + kind);
                         }
                     });
                 } catch (final Throwable e) {
                     handler.post(new Runnable() {
                         @Override public void run() {
                             loading.dismiss();
-                            toast("备份失败：" + e.getMessage());
+                            toast(I18n.t("备份失败：") + e.getMessage());
                         }
                     });
                 }
@@ -1230,10 +1235,10 @@ public class DeploySectionView extends LinearLayout {
 
     private void backupInstance(final String id) {
         if (ServerManager.get().isRunning()) {
-            toast("请先停止服务端再备份");
+            toast(I18n.t("请先停止服务端再备份"));
             return;
         }
-        final Dialog loading = simpleDialog("备份实例", "正在打包实例…");
+        final Dialog loading = simpleDialog(I18n.t("备份实例"), I18n.t("正在打包实例…"));
         loading.show();
         new Thread(new Runnable() {
             @Override public void run() {
@@ -1250,7 +1255,7 @@ public class DeploySectionView extends LinearLayout {
                     handler.post(new Runnable() {
                         @Override public void run() {
                             loading.dismiss();
-                            toast("实例备份完成");
+                            toast(I18n.t("实例备份完成"));
                             refresh();
                         }
                     });
@@ -1258,7 +1263,7 @@ public class DeploySectionView extends LinearLayout {
                     handler.post(new Runnable() {
                         @Override public void run() {
                             loading.dismiss();
-                            toast("备份失败：" + e.getMessage());
+                            toast(I18n.t("备份失败：") + e.getMessage());
                         }
                     });
                 }
@@ -1268,7 +1273,7 @@ public class DeploySectionView extends LinearLayout {
 
     private void beginInstanceUpgrade(final String id) {
         if (ServerManager.get().isRunning()) {
-            toast("请先停止服务端，再升级实例");
+            toast(I18n.t("请先停止服务端，再升级实例"));
             return;
         }
         upgradeSourceId = id;
@@ -1280,11 +1285,11 @@ public class DeploySectionView extends LinearLayout {
     }
 
     private void doInstanceUpgrade(final String version, final String sourceId) {
-        startDeploy("升级实例 " + sourceId + " → " + version, new Task() {
+        startDeploy(I18n.t("升级实例 ") + sourceId + " → " + version, new Task() {
             @Override public void run(DeployManager.Progress p) throws Exception {
                 String url = DeployManager.resolveServerUrl(version);
                 File zip = DeployManager.download(activity, url, "bds-" + version + ".zip", p);
-                DeployManager.installServer(activity, zip, "实例下载 " + version, version,
+                DeployManager.installServer(activity, zip, I18n.t("实例下载 ") + version, version,
                         false, null, sourceId, tail(p, 70));
                 zip.delete();
             }
@@ -1295,10 +1300,10 @@ public class DeploySectionView extends LinearLayout {
 
     private void loadInstanceBackups(final String id) {
         if (ServerManager.get().isRunning()) {
-            toast("请先停止服务端，再回滚实例");
+            toast(I18n.t("请先停止服务端，再回滚实例"));
             return;
         }
-        final Dialog loading = simpleDialog("实例备份", "正在读取该实例的备份…");
+        final Dialog loading = simpleDialog(I18n.t("实例备份"), I18n.t("正在读取该实例的备份…"));
         loading.show();
         new Thread(new Runnable() {
             @Override public void run() {
@@ -1308,7 +1313,7 @@ public class DeploySectionView extends LinearLayout {
                         @Override public void run() {
                             loading.dismiss();
                             if (list.isEmpty()) {
-                                toast("该实例还没有可回滚的备份");
+                                toast(I18n.t("该实例还没有可回滚的备份"));
                             } else {
                                 showRollbackList(list);
                             }
@@ -1318,7 +1323,7 @@ public class DeploySectionView extends LinearLayout {
                     handler.post(new Runnable() {
                         @Override public void run() {
                             loading.dismiss();
-                            toast("读取备份失败：" + e.getMessage());
+                            toast(I18n.t("读取备份失败：") + e.getMessage());
                         }
                     });
                 }
@@ -1336,7 +1341,7 @@ public class DeploySectionView extends LinearLayout {
         wrap.setPadding(dp(14), dp(14), dp(14), dp(14));
         LinearLayout panel = MinecraftUi.panel(activity, "重命名实例");
         panel.addView(MinecraftUi.text(activity,
-                "只支持字母和数字，不支持中文、空格、下划线、横线或其他符号。最长 32 个字符。",
+                I18n.t("只支持字母和数字，不支持中文、空格、下划线、横线或其他符号。最长 32 个字符。"),
                 9, MinecraftUi.AMBER, false));
         final android.widget.EditText input = new android.widget.EditText(activity);
         MinecraftUi.styleInput(input);
@@ -1354,7 +1359,7 @@ public class DeploySectionView extends LinearLayout {
             @Override public void onClick(View v) {
                 final String name = input.getText().toString().trim();
                 if (!name.matches("[A-Za-z0-9]{1,32}")) {
-                    toast("实例名只支持字母和数字，最长 32 个字符");
+                    toast(I18n.t("实例名只支持字母和数字，最长 32 个字符"));
                     return;
                 }
                 d.dismiss();
@@ -1364,13 +1369,13 @@ public class DeploySectionView extends LinearLayout {
                             InstanceStore.rename(id, name);
                             handler.post(new Runnable() {
                                 @Override public void run() {
-                                    toast("已重命名为 " + name);
+                                    toast(I18n.t("已重命名为 ") + name);
                                     refresh();
                                 }
                             });
                         } catch (final Throwable e) {
                             handler.post(new Runnable() {
-                                @Override public void run() { toast("重命名失败：" + e.getMessage()); }
+                                @Override public void run() { toast(I18n.t("重命名失败：") + e.getMessage()); }
                             });
                         }
                     }
@@ -1392,16 +1397,16 @@ public class DeploySectionView extends LinearLayout {
 
     private void confirmSwitch(final String version) {
         if (ServerManager.get().isRunning()) {
-            toast("请先停止服务端，再切换实例");
+            toast(I18n.t("请先停止服务端，再切换实例"));
             return;
         }
-        confirmDeploy("切换到服务端 " + version + "？", new Runnable() {
+        confirmDeploy(I18n.t("切换到服务端 ") + version + "？", new Runnable() {
             @Override public void run() {
-                startDeploy("切换服务端版本", new Task() {
+                startDeploy(I18n.t("切换服务端版本"), new Task() {
                     @Override public void run(DeployManager.Progress p) throws Exception {
-                        p.update(30, "切换 symlink…");
+                        p.update(30, I18n.t("切换 symlink…"));
                         DeployManager.switchServer(activity, version);
-                        p.update(100, "已切换到 " + version);
+                        p.update(100, I18n.t("已切换到 ") + version);
                     }
                 });
             }
@@ -1409,14 +1414,14 @@ public class DeploySectionView extends LinearLayout {
     }
 
     private void confirmDeleteVersion(final String version) {
-        confirmDeploy("删除服务端版本 " + version + "？\n该版本目录（含世界与配置）会一并删除，不可恢复。",
+        confirmDeploy(I18n.t("删除服务端版本 ") + version + I18n.t("？\n该版本目录（含世界与配置）会一并删除，不可恢复。"),
                 new Runnable() {
                     @Override public void run() {
-                        startDeploy("删除服务端版本", new Task() {
+                        startDeploy(I18n.t("删除服务端版本"), new Task() {
                             @Override public void run(DeployManager.Progress p) throws Exception {
-                                p.update(30, "删除版本目录…");
+                                p.update(30, I18n.t("删除版本目录…"));
                                 DeployManager.deleteServerVersion(activity, version);
-                                p.update(100, "已删除 " + version);
+                                p.update(100, I18n.t("已删除 ") + version);
                             }
                         });
                     }
@@ -1433,7 +1438,7 @@ public class DeploySectionView extends LinearLayout {
         wrap.addView(panel, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         TextView msg = MinecraftUi.text(activity,
-                "是否先备份当前" + typeName() + "？备份可用于一键回滚。", 10,
+                I18n.t("是否先备份当前") + I18n.sp() + typeName() + I18n.t("？备份可用于一键回滚。"), 10,
                 MinecraftUi.PANEL_TEXT, false);
         msg.setPadding(0, dp(4), 0, dp(8));
         panel.addView(msg);
@@ -1444,7 +1449,7 @@ public class DeploySectionView extends LinearLayout {
         yes.setOnClickListener(new OnClickListener() {
             @Override public void onClick(View v) {
                 dialog.dismiss();
-                startDeploy("备份当前" + typeName(), new Task() {
+                startDeploy(I18n.t("备份当前") + I18n.sp() + typeName(), new Task() {
                     @Override public void run(DeployManager.Progress p) throws Exception {
                         DeployManager.backup(activity, type, p);
                     }
@@ -1482,10 +1487,10 @@ public class DeploySectionView extends LinearLayout {
 
     private void backupNow() {
         if (ServerManager.get().isRunning()) {
-            toast("请先停止服务端");
+            toast(I18n.t("请先停止服务端"));
             return;
         }
-        startDeploy("备份" + typeName(), new Task() {
+        startDeploy(I18n.t("备份") + I18n.sp() + typeName(), new Task() {
             @Override public void run(DeployManager.Progress p) throws Exception {
                 DeployManager.backup(activity, type, p);
             }
@@ -1493,7 +1498,7 @@ public class DeploySectionView extends LinearLayout {
     }
 
     private void showRollback() {
-        final Dialog loading = simpleDialog("读取备份", "正在加载备份列表…");
+        final Dialog loading = simpleDialog(I18n.t("读取备份"), I18n.t("正在加载备份列表…"));
         loading.show();
         new Thread(new Runnable() {
             @Override
@@ -1504,7 +1509,7 @@ public class DeploySectionView extends LinearLayout {
                         @Override public void run() {
                             loading.dismiss();
                             if (backups.isEmpty()) {
-                                toast("还没有备份");
+                                toast(I18n.t("还没有备份"));
                             } else {
                                 showRollbackList(backups);
                             }
@@ -1514,7 +1519,7 @@ public class DeploySectionView extends LinearLayout {
                     handler.post(new Runnable() {
                         @Override public void run() {
                             loading.dismiss();
-                            toast("读取备份失败：" + e.getMessage());
+                            toast(I18n.t("读取备份失败：") + e.getMessage());
                         }
                     });
                 }
@@ -1544,10 +1549,11 @@ public class DeploySectionView extends LinearLayout {
             b.setOnClickListener(new OnClickListener() {
                 @Override public void onClick(View v) {
                     dialog.dismiss();
-                    confirmDeploy("回滚到 " + name + "？当前" + typeName() + "会被覆盖。",
+                    confirmDeploy(I18n.t("回滚到 ") + name + I18n.t("？当前") + I18n.sp() + typeName()
+                + I18n.sp() + I18n.t("会被覆盖。"),
                             new Runnable() {
                                 @Override public void run() {
-                                    startDeploy("回滚" + typeName(), new Task() {
+                                    startDeploy(I18n.t("回滚") + I18n.sp() + typeName(), new Task() {
                                         @Override public void run(DeployManager.Progress p) throws Exception {
                                             DeployManager.restoreBackup(activity, type, name, p);
                                         }
@@ -1579,7 +1585,7 @@ public class DeploySectionView extends LinearLayout {
     private void confirmDelete() {
         String msg;
         if (type == DeployManager.TYPE_SERVER) {
-            msg = "将删除整个服务端目录（含 worlds 世界存档、server.properties、白名单和权限）。此操作不可恢复。";
+            msg = I18n.t("将删除整个服务端目录（含 worlds 世界存档、server.properties、白名单和权限）。此操作不可恢复。");
         } else {
             msg = "";
         }
@@ -1590,14 +1596,14 @@ public class DeploySectionView extends LinearLayout {
 
     private void doDelete() {
         if (ServerManager.get().isRunning()) {
-            toast("请先停止服务端");
+            toast(I18n.t("请先停止服务端"));
             return;
         }
-        startDeploy("删除" + typeName(), new Task() {
+        startDeploy(I18n.t("删除") + I18n.sp() + typeName(), new Task() {
             @Override public void run(DeployManager.Progress p) throws Exception {
-                p.update(20, "删除本地文件…");
+                p.update(20, I18n.t("删除本地文件…"));
                 DeployManager.delete(activity, type);
-                p.update(100, "已删除");
+                p.update(100, I18n.t("已删除"));
             }
         });
     }
@@ -1609,11 +1615,11 @@ public class DeploySectionView extends LinearLayout {
     private void startDeploy(String label, final Task task, final Runnable after) {
         if (!ShizukuGate.ensure(activity, label)) return;
         if (busy) {
-            toast("正在部署，请稍候");
+            toast(I18n.t("正在部署，请稍候"));
             return;
         }
         if (ServerManager.get().isRunning()) {
-            toast("请先停止服务端");
+            toast(I18n.t("请先停止服务端"));
             return;
         }
         busy = true;
@@ -1631,8 +1637,8 @@ public class DeploySectionView extends LinearLayout {
         backupBtn.setAlpha(0.55f);
         rollbackBtn.setAlpha(0.55f);
         DeployKeepAliveService.start(activity, label);
-        ServerManager.get().log("[部署] " + label);
-        AppLog.add("[部署] " + label);
+        ServerManager.get().log(I18n.t("[部署] ") + label);
+        AppLog.add(I18n.t("[部署] ") + label);
 
         new Thread(new Runnable() {
             @Override
@@ -1647,14 +1653,14 @@ public class DeploySectionView extends LinearLayout {
                                     progressText.setText(percent + "% · " + message);
                                     DeployState.update(type, percent, message);
                                     DeployKeepAliveService.progress(activity, percent, message);
-                                    boolean verbose = message.startsWith("下载中") || message.startsWith("上传部署包");
+                                    boolean verbose = message.startsWith(I18n.t("下载中 ")) || message.startsWith(I18n.t("上传部署包"));
                                     if (!verbose) {
                                         String old = progressLog.getText().toString();
                                         String line = "> " + message;
                                         if (!old.endsWith(line)) {
                                             progressLog.setText(old.isEmpty() ? line : old + "\n" + line);
                                         }
-                                        ServerManager.get().log("[部署] " + percent + "% " + message);
+                                        ServerManager.get().log(I18n.t("[部署] ") + percent + "% " + message);
                                         AppLog.add("  " + percent + "% " + message);
                                     }
                                 }
@@ -1672,9 +1678,9 @@ public class DeploySectionView extends LinearLayout {
                             deleteBtn.setAlpha(1f);
                             backupBtn.setAlpha(1f);
                             rollbackBtn.setAlpha(1f);
-                            toast("部署完成");
-                            AppLog.add("[完成] " + label);
-                            DeployState.finish(type, "部署完成", true);
+                            toast(I18n.t("部署完成"));
+                            AppLog.add(I18n.t("[完成] ") + label);
+                            DeployState.finish(type, I18n.t("部署完成"), true);
                             DeployKeepAliveService.stop(activity);
                             if (after != null) after.run();
                             else refresh();
@@ -1685,8 +1691,8 @@ public class DeploySectionView extends LinearLayout {
                         @Override public void run() {
                             busy = false;
                             DeployManager.setRepairingRuntime(false);
-                            progressText.setText("失败：" + e.getMessage());
-                            progressLog.setText(progressLog.getText() + "\n[错误] " + e.getMessage());
+                            progressText.setText(I18n.t("失败：") + e.getMessage());
+                            progressLog.setText(progressLog.getText() + I18n.t("\n[错误] ") + e.getMessage());
                             actionBtn.setEnabled(true);
                             deleteBtn.setEnabled(true);
                             backupBtn.setEnabled(true);
@@ -1695,11 +1701,11 @@ public class DeploySectionView extends LinearLayout {
                             deleteBtn.setAlpha(1f);
                             backupBtn.setAlpha(1f);
                             rollbackBtn.setAlpha(1f);
-                            toast("部署失败：" + e.getMessage());
-                            AppLog.add("[失败] " + label + "：" + e.getMessage());
-                            DeployState.finish(type, "部署失败：" + e.getMessage(), false);
+                            toast(I18n.t("部署失败：") + e.getMessage());
+                            AppLog.add(I18n.t("[失败] ") + label + "：" + e.getMessage());
+                            DeployState.finish(type, I18n.t("部署失败：") + e.getMessage(), false);
                             DeployKeepAliveService.stop(activity);
-                            ServerManager.get().log("[部署][错误] " + e.getMessage());
+                            ServerManager.get().log(I18n.t("[部署][错误] ") + e.getMessage());
                         }
                     });
                 }

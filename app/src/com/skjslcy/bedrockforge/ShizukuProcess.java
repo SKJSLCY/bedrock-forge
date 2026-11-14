@@ -31,11 +31,11 @@ public final class ShizukuProcess extends Process {
     }
 
     public static ShizukuProcess start(String[] cmd, String[] env, String dir) throws Exception {
-        if (!Shizuku.pingBinder()) throw new IOException("Shizuku binder 未就绪");
+        if (!Shizuku.pingBinder()) throw new IOException(I18n.t("Shizuku binder 未就绪"));
         IShizukuService service = IShizukuService.Stub.asInterface(Shizuku.getBinder());
-        if (service == null) throw new IOException("Shizuku service 为空");
+        if (service == null) throw new IOException(I18n.t("Shizuku service 为空"));
         IRemoteProcess rp = service.newProcess(cmd, env, dir);
-        if (rp == null) throw new IOException("Shizuku newProcess 返回空");
+        if (rp == null) throw new IOException(I18n.t("Shizuku newProcess 返回空"));
         return new ShizukuProcess(rp);
     }
 

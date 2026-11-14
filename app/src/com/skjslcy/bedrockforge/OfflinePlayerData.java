@@ -51,8 +51,8 @@ final class OfflinePlayerData {
         String label() {
             String id = msaId.isEmpty() ? serverId : msaId;
             if (id.length() > 8) id = id.substring(0, 8);
-            if (boundName != null && !boundName.isEmpty()) return boundName + "（" + id + "）";
-            return "账号 " + id;
+            if (boundName != null && !boundName.isEmpty()) return boundName + I18n.t("（") + id + I18n.t("）");
+            return I18n.t("账号 ") + id;
         }
     }
 
@@ -103,11 +103,11 @@ final class OfflinePlayerData {
             out.world = world;
             String dbDir = DeployManager.SERVER_DIR + "/worlds/" + world + "/db";
             if (!"1".equals(ShizukuShell.sh("test -d " + q(dbDir) + " && echo 1 || echo 0").trim())) {
-                throw new Exception("找不到世界数据库：" + world);
+                throw new Exception(I18n.t("找不到世界数据库：") + world);
             }
             File local = new File(ctx.getCacheDir(), "worlddb");
             deleteTree(local);
-            if (!local.mkdirs()) throw new Exception("无法创建临时目录");
+            if (!local.mkdirs()) throw new Exception(I18n.t("无法创建临时目录"));
 
             String list = ShizukuShell.sh("ls -1 " + q(dbDir) + " 2>/dev/null || true");
             int copied = 0;
@@ -125,7 +125,7 @@ final class OfflinePlayerData {
                 } catch (Throwable ignored) {
                 }
             }
-            if (copied == 0) throw new Exception("未能复制任何数据库文件");
+            if (copied == 0) throw new Exception(I18n.t("未能复制任何数据库文件"));
 
             java.util.LinkedHashMap<String, byte[]> all = LevelDbReader.list(local, "player_");
             List<String> playerKeys = new ArrayList<>();
@@ -162,7 +162,7 @@ final class OfflinePlayerData {
                 out.records.add(r);
             }
             if (out.records.isEmpty()) {
-                throw new Exception("存档里没有找到玩家记录（可能该世界还没有玩家进入过）");
+                throw new Exception(I18n.t("存档里没有找到玩家记录（可能该世界还没有玩家进入过）"));
             }
             java.util.Collections.sort(out.records, (a, b) -> a.label().compareTo(b.label()));
         } catch (Throwable t) {
@@ -191,7 +191,7 @@ final class OfflinePlayerData {
         long seq = LevelDbReader.lastSequence(local) + 1;
         LevelDbWriter.append(local, seq, key.getBytes("UTF-8"), value);
         File log = LevelDbWriter.newestLog(local);
-        if (log == null) throw new Exception("找不到可写回的日志文件");
+        if (log == null) throw new Exception(I18n.t("找不到可写回的日志文件"));
         String remote = DeployManager.SERVER_DIR + "/worlds/" + currentWorld() + "/db/" + log.getName();
         ShizukuShell.copyIn(log, remote, null);
         return seq;
@@ -201,7 +201,7 @@ final class OfflinePlayerData {
     static String verifyWritten(Context ctx, String key) throws Exception {
         File local = copyDb(ctx, "editverify");
         byte[] v = LevelDbReader.value(local, key);
-        if (v == null) throw new Exception("写入后读不到玩家数据");
+        if (v == null) throw new Exception(I18n.t("写入后读不到玩家数据"));
         NbtCodec.parse(v);
         return "ok";
     }
@@ -216,8 +216,8 @@ final class OfflinePlayerData {
 
     static String verifyDeleted(Context ctx, String msaId, String serverId) throws Exception {
         File local = copyDb(ctx, "editdelv");
-        if (LevelDbReader.value(local, "player_" + msaId) != null) throw new Exception("账号桩仍存在");
-        if (LevelDbReader.value(local, "player_server_" + serverId) != null) throw new Exception("玩家数据仍存在");
+        if (LevelDbReader.value(local, "player_" + msaId) != null) throw new Exception(I18n.t("账号桩仍存在"));
+        if (LevelDbReader.value(local, "player_server_" + serverId) != null) throw new Exception(I18n.t("玩家数据仍存在"));
         return "ok";
     }
 
@@ -226,10 +226,10 @@ final class OfflinePlayerData {
         File local = copyDb(ctx, "editbak");
         byte[] stub = LevelDbReader.value(local, "player_" + msaId);
         byte[] data = LevelDbReader.value(local, "player_server_" + serverId);
-        if (data == null) throw new Exception("找不到玩家数据");
+        if (data == null) throw new Exception(I18n.t("找不到玩家数据"));
         File dir = new File(ctx.getCacheDir(), "pbak");
         deleteTree(dir);
-        if (!dir.mkdirs()) throw new Exception("无法创建备份临时目录");
+        if (!dir.mkdirs()) throw new Exception(I18n.t("无法创建备份临时目录"));
         writeFile(new File(dir, "data.nbt"), data);
         if (stub != null) writeFile(new File(dir, "stub.bin"), stub);
         String meta = "{\"kind\":\"player\",\"name\":\"" + safe(name)
@@ -247,14 +247,14 @@ final class OfflinePlayerData {
         ShizukuShell.sh("mkdir -p " + q(DeployManager.BACKUPS_DIR)
                 + "; tar -czf " + q(out) + " -C /data/local/tmp/mcbds/tmp/pbak .");
         if (!"1".equals(ShizukuShell.sh("test -f " + q(out) + " && echo 1 || echo 0").trim())) {
-            throw new Exception("备份创建失败");
+            throw new Exception(I18n.t("备份创建失败"));
         }
         return out;
     }
 
     private static void pushLog(File local) throws Exception {
         File log = LevelDbWriter.newestLog(local);
-        if (log == null) throw new Exception("找不到可写回的日志文件");
+        if (log == null) throw new Exception(I18n.t("找不到可写回的日志文件"));
         String remote = DeployManager.SERVER_DIR + "/worlds/" + currentWorld() + "/db/" + log.getName();
         ShizukuShell.copyIn(log, remote, null);
     }
@@ -337,7 +337,7 @@ final class OfflinePlayerData {
     static byte[] filtered(byte[] full, boolean withPosition) throws Exception {
         NbtCodec.Tag root = NbtCodec.parse(full);
         Map<String, NbtCodec.Tag> src = NbtCodec.map(root);
-        if (src == null) throw new Exception("NBT 格式异常");
+        if (src == null) throw new Exception(I18n.t("NBT 格式异常"));
         String[] core = {"Inventory", "Armor", "Offhand", "EnderChestInventory",
                 "PlayerLevel", "PlayerLevelProgress", "PlayerGameMode",
                 "Health", "Air", "ActiveEffects", "Attributes", "Tags"};
@@ -380,14 +380,14 @@ final class OfflinePlayerData {
         LevelDbWriter.appendPlayerOps(local, seq, "player_" + msaId, stub,
                 "player_server_" + serverId, data, delKey);
         File log = LevelDbWriter.newestLog(local);
-        if (log == null) throw new Exception("找不到可写回的日志文件");
+        if (log == null) throw new Exception(I18n.t("找不到可写回的日志文件"));
         ShizukuShell.copyIn(log, dbDir + "/" + log.getName(), null);
         File verify = copyDbAt(ctx, "pverify", dbDir);
         if (LevelDbReader.value(verify, "player_" + msaId) == null) {
-            throw new Exception("写入后账号桩不存在");
+            throw new Exception(I18n.t("写入后账号桩不存在"));
         }
         byte[] back = LevelDbReader.value(verify, "player_server_" + serverId);
-        if (back == null) throw new Exception("写入后玩家数据不存在");
+        if (back == null) throw new Exception(I18n.t("写入后玩家数据不存在"));
         NbtCodec.parse(back);
         return "ok";
     }
@@ -407,7 +407,7 @@ final class OfflinePlayerData {
     private static File copyDbAt(Context ctx, String name, String dbDir) throws Exception {
         File local = new File(ctx.getCacheDir(), name);
         deleteTree(local);
-        if (!local.mkdirs()) throw new Exception("无法创建临时目录");
+        if (!local.mkdirs()) throw new Exception(I18n.t("无法创建临时目录"));
         String list = ShizukuShell.sh("ls -1 " + q(dbDir) + " 2>/dev/null || true");
         int copied = 0;
         for (String line : list.split("\n")) {
@@ -421,7 +421,7 @@ final class OfflinePlayerData {
             } catch (Throwable ignored) {
             }
         }
-        if (copied == 0) throw new Exception("未能复制数据库文件");
+        if (copied == 0) throw new Exception(I18n.t("未能复制数据库文件"));
         return local;
     }
 
@@ -430,7 +430,7 @@ final class OfflinePlayerData {
         String dbDir = DeployManager.SERVER_DIR + "/worlds/" + world + "/db";
         File local = new File(ctx.getCacheDir(), name);
         deleteTree(local);
-        if (!local.mkdirs()) throw new Exception("无法创建临时目录");
+        if (!local.mkdirs()) throw new Exception(I18n.t("无法创建临时目录"));
         String list = ShizukuShell.sh("ls -1 " + q(dbDir) + " 2>/dev/null || true");
         int copied = 0;
         for (String line : list.split("\n")) {
@@ -444,7 +444,7 @@ final class OfflinePlayerData {
             } catch (Throwable ignored) {
             }
         }
-        if (copied == 0) throw new Exception("未能复制数据库文件");
+        if (copied == 0) throw new Exception(I18n.t("未能复制数据库文件"));
         return local;
     }
 
@@ -471,32 +471,32 @@ final class OfflinePlayerData {
         Map<String, Object> m = s.nbt;
 
         List<Object> pos = BedrockNbt.asList(m.get("Pos"));
-        String posText = "未知";
+        String posText = I18n.t("未知");
         if (pos != null && pos.size() >= 3) {
             posText = String.format(Locale.US, "%.1f, %.1f, %.1f",
                     d(pos.get(0)), d(pos.get(1)), d(pos.get(2)));
         }
-        s.basic.add(new Row("位置", posText));
+        s.basic.add(new Row(I18n.t("位置"), posText));
 
         Object dim = first(m, "DimensionId", "Dimension");
-        if (dim != null) s.basic.add(new Row("维度", Translations.dim(dim)));
+        if (dim != null) s.basic.add(new Row(I18n.t("维度"), Translations.dim(dim)));
 
         Object hp = m.get("Health");
-        if (hp != null) s.basic.add(new Row("生命", Translations.num(hp)));
+        if (hp != null) s.basic.add(new Row(I18n.t("生命"), Translations.num(hp)));
 
         Object air = m.get("Air");
-        if (air != null) s.basic.add(new Row("氧气", Translations.num(air)));
+        if (air != null) s.basic.add(new Row(I18n.t("氧气"), Translations.num(air)));
 
         Object xp = m.get("PlayerLevel");
         Object xpP = m.get("PlayerLevelProgress");
         if (xp != null) {
             String v = Translations.num(xp);
-            if (xpP != null) v += "（进度 " + Translations.num(xpP) + "）";
-            s.basic.add(new Row("经验等级", v));
+            if (xpP != null) v += I18n.t("（进度 ") + Translations.num(xpP) + I18n.t("）");
+            s.basic.add(new Row(I18n.t("经验等级"), v));
         }
 
         Object gm = first(m, "PlayerGameMode", "GameMode");
-        if (gm != null) s.basic.add(new Row("游戏模式", Translations.gamemode(gm)));
+        if (gm != null) s.basic.add(new Row(I18n.t("游戏模式"), Translations.gamemode(gm)));
 
         List<Object> inv = BedrockNbt.asList(m.get("Inventory"));
         if (inv != null) {
@@ -522,7 +522,7 @@ final class OfflinePlayerData {
         List<Object> offhand = BedrockNbt.asList(m.get("Offhand"));
         if (offhand != null) {
             for (Object item : offhand) {
-                Row row = itemRow(BedrockNbt.asMap(item), "副手");
+                Row row = itemRow(BedrockNbt.asMap(item), I18n.t("副手"));
                 if (row != null) s.inventory.add(row);
             }
         }
@@ -546,7 +546,7 @@ final class OfflinePlayerData {
         if (im == null) return null;
         String name = ItemNames.display(BedrockNbt.str(im.get("Name")));
         if (name.isEmpty()) return null;
-        String label = slotLabel != null ? slotLabel : "槽位 " + BedrockNbt.str(im.get("Slot"));
+        String label = slotLabel != null ? slotLabel : I18n.t("槽位 ") + BedrockNbt.str(im.get("Slot"));
         Object count = im.get("Count");
         String value = name + (count == null ? "" : " ×" + Translations.num(count));
         String detail = itemDetail(im);
@@ -566,7 +566,7 @@ final class OfflinePlayerData {
                     if (em == null) continue;
                     if (sb.length() > 0) sb.append(" · ");
                     sb.append(Translations.enchant(em.get("id")))
-                            .append(" ").append(Translations.num(em.get("lvl"))).append(" 级");
+                            .append(" ").append(Translations.num(em.get("lvl"))).append(I18n.t(" 级"));
                 }
             }
             Map<String, Object> display = BedrockNbt.asMap(tag.get("display"));
@@ -574,19 +574,19 @@ final class OfflinePlayerData {
                 String custom = BedrockNbt.str(display.get("Name"));
                 if (!custom.isEmpty()) {
                     if (sb.length() > 0) sb.append(" · ");
-                    sb.append("名称：").append(custom);
+                    sb.append(I18n.t("名称：")).append(custom);
                 }
                 List<Object> lore = BedrockNbt.asList(display.get("Lore"));
                 if (lore != null && !lore.isEmpty()) {
                     if (sb.length() > 0) sb.append(" · ");
-                    sb.append("描述：").append(join(lore));
+                    sb.append(I18n.t("描述：")).append(join(lore));
                 }
             }
         }
         Object damage = im.get("Damage");
         if (damage != null && d(damage) > 0) {
             if (sb.length() > 0) sb.append(" · ");
-            sb.append("耐久损耗 ").append(Translations.num(damage));
+            sb.append(I18n.t("耐久损耗 ")).append(Translations.num(damage));
         }
         return sb.length() == 0 ? null : sb.toString();
     }
@@ -600,12 +600,12 @@ final class OfflinePlayerData {
             Object amp = first(em, "Amplifier", "amplifier", "Level");
             Object dur = first(em, "Duration", "DurationTicks", "duration");
             StringBuilder sb = new StringBuilder();
-            if (amp != null) sb.append("等级 ").append(Translations.num(amp));
+            if (amp != null) sb.append(I18n.t("等级 ")).append(Translations.num(amp));
             if (dur != null) {
                 double ticks = d(dur);
                 if (sb.length() > 0) sb.append(" · ");
-                sb.append("剩余 ").append(Translations.num(dur)).append(" 刻");
-                if (ticks > 0) sb.append("（约 ").append(Math.round(ticks / 20.0)).append(" 秒）");
+                sb.append(I18n.t("剩余 ")).append(Translations.num(dur)).append(I18n.t(" 刻"));
+                if (ticks > 0) sb.append(I18n.t("（约 ")).append(Math.round(ticks / 20.0)).append(I18n.t(" 秒）"));
             }
             out.add(new Row(Translations.effect(id), sb.toString()));
         }
@@ -640,10 +640,10 @@ final class OfflinePlayerData {
     }
 
     private static String groupOf(String key) {
-        if (STATE_FIELDS.contains(key)) return "状态";
-        if (SPAWN_DEATH.contains(key)) return "出生与死亡";
-        if (UI_FIELDS.contains(key)) return "界面状态";
-        return "其他";
+        if (STATE_FIELDS.contains(key)) return I18n.t("状态");
+        if (SPAWN_DEATH.contains(key)) return I18n.t("出生与死亡");
+        if (UI_FIELDS.contains(key)) return I18n.t("界面状态");
+        return I18n.t("其他");
     }
 
     private static void addAttributes(Record s, List<Object> list) {
@@ -664,14 +664,14 @@ final class OfflinePlayerData {
             String value = Translations.num(base == null ? "" : base);
             String sub = null;
             if (min != null && max != null) {
-                sub = "范围 " + rangeText(min) + " ~ " + rangeText(max);
+                sub = I18n.t("范围 ") + rangeText(min) + " ~ " + rangeText(max);
             } else if (def != null) {
-                sub = "默认 " + Translations.num(def);
+                sub = I18n.t("默认 ") + Translations.num(def);
             }
             Object mods = am.get("Modifiers");
             List<Object> modList = BedrockNbt.asList(mods);
             if (modList != null && !modList.isEmpty()) {
-                sub = (sub == null ? "" : sub + " · ") + "修饰 " + modList.size() + " 项";
+                sub = (sub == null ? "" : sub + " · ") + I18n.t("修饰 ") + modList.size() + I18n.t(" 项");
             }
             rows.add(new Row(name, value, sub));
         }
@@ -713,7 +713,7 @@ final class OfflinePlayerData {
         }
         if ("identifier".equals(key)) {
             String id = BedrockNbt.str(v);
-            return "minecraft:player".equals(id) ? "玩家" : id;
+            return "minecraft:player".equals(id) ? I18n.t("玩家") : id;
         }
         if (v instanceof List) return listSummary(key, BedrockNbt.asList(v));
         if (v instanceof Map) return mapSummary(key, BedrockNbt.asMap(v));
@@ -722,7 +722,7 @@ final class OfflinePlayerData {
 
     private static String listSummary(String key, List<Object> list) {
         if (list == null) return "";
-        if (list.isEmpty()) return "无";
+        if (list.isEmpty()) return I18n.t("无");
         switch (key) {
             case "Tags":
             case "SlotDropChances":
@@ -731,26 +731,26 @@ final class OfflinePlayerData {
                 return join(list);
             case "definitions":
             case "fogCommandStack":
-                return list.size() + " 项";
+                return list.size() + I18n.t(" 项");
             default:
-                return list.size() + " 项";
+                return list.size() + I18n.t(" 项");
         }
     }
 
     private static String mapSummary(String key, Map<String, Object> map) {
-        if (map == null) return "空";
+        if (map == null) return I18n.t("空");
         if ("recipe_unlocking".equals(key)) {
             List<Object> unlocked = BedrockNbt.asList(map.get("unlocked_recipes"));
-            return (unlocked == null ? 0 : unlocked.size()) + " 条已解锁";
+            return (unlocked == null ? 0 : unlocked.size()) + I18n.t(" 条已解锁");
         }
-        if ("internalComponents".equals(key)) return map.size() + " 项";
-        return map.size() + " 项";
+        if ("internalComponents".equals(key)) return map.size() + I18n.t(" 项");
+        return map.size() + I18n.t(" 项");
     }
 
     private static String rawValue(Object v) {
         if (v == null) return "null";
-        if (v instanceof Map) return "复合数据（" + ((Map<?, ?>) v).size() + " 项）";
-        if (v instanceof List) return "列表（" + ((List<?>) v).size() + " 项）";
+        if (v instanceof Map) return I18n.t("复合数据（") + ((Map<?, ?>) v).size() + I18n.t(" 项）");
+        if (v instanceof List) return I18n.t("列表（") + ((List<?>) v).size() + I18n.t(" 项）");
         return String.valueOf(v);
     }
 

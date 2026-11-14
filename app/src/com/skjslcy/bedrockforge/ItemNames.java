@@ -19,11 +19,11 @@ final class ItemNames {
     /** 按盔甲列表顺序给出部位名。 */
     static String armorSlotByIndex(int i) {
         switch (i) {
-            case 0: return "头盔";
-            case 1: return "胸甲";
-            case 2: return "护腿";
-            case 3: return "靴子";
-            default: return "装备 " + i;
+            case 0: return I18n.t("头盔");
+            case 1: return I18n.t("胸甲");
+            case 2: return I18n.t("护腿");
+            case 3: return I18n.t("靴子");
+            default: return I18n.t("装备 ") + i;
         }
     }
 }

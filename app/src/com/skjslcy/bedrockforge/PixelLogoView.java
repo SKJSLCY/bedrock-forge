@@ -11,7 +11,7 @@ import android.view.View;
 final class PixelLogoView extends View {
 
     private final Paint paint = new Paint();
-    private String text = "基岩工坊";
+    private String text = I18n.t("基岩工坊");
     private float spacing;
     private float accentHeight;
     private float accentGap;

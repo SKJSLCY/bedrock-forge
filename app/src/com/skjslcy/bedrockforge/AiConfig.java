@@ -158,7 +158,7 @@ final class AiConfig {
 
     static String aiName(Context c) {
         String v = prefs(c).getString("ai_name", "");
-        return v == null || v.trim().isEmpty() ? "AI 助手" : v;
+        return v == null || v.trim().isEmpty() ? I18n.t("AI 助手") : v;
     }
 
     static void setAiName(Context c, String v) {
@@ -167,7 +167,7 @@ final class AiConfig {
 
     static String userName(Context c) {
         String v = prefs(c).getString("user_name", "");
-        return v == null || v.trim().isEmpty() ? "你" : v;
+        return v == null || v.trim().isEmpty() ? I18n.t("你") : v;
     }
 
     static void setUserName(Context c, String v) {
@@ -265,22 +265,24 @@ final class AiConfig {
 
     static String presetText(String id) {
         for (String[] row : PROMPTS) {
-            if (row[0].equals(id)) return row[2];
+            if (row[0].equals(id)) return I18n.tl(row[2]);
         }
-        return PROMPTS[0][2];
+        return I18n.tl(PROMPTS[0][2]);
     }
 
     static String presetName(String id) {
         for (String[] row : PROMPTS) {
-            if (row[0].equals(id)) return row[1];
+            if (row[0].equals(id)) return I18n.t(row[1]);
         }
-        return "自定义";
+        return I18n.t("自定义");
     }
 
     static String systemPrompt(Context c) {
         String id = presetId(c);
-        if ("custom".equals(id)) return customPrompt(c);
-        return presetText(id);
+        String base = "custom".equals(id) ? customPrompt(c) : presetText(id);
+        // 强制模型用与界面一致的语言回答，避免繁體/英文界面收到简体回复。
+        String lang = I18n.t("始终使用简体中文回答；技术名词保留英文原名（allow-list、TPS、LevelDB）。");
+        return base + "\n\n" + lang;
     }
 
     static void setSystemPrompt(Context c, String v) {
