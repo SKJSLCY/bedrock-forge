@@ -234,6 +234,7 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
     protected void onCreate(Bundle savedInstanceState) {
         setTheme(R.style.AppTheme);
         super.onCreate(savedInstanceState);
+        I18n.init(this);
         ThemeManager.apply(this);
         if (!MinecraftUi.MINIMAL && !MinecraftUi.ORE && !MinecraftUi.LIQUID) {
             getWindow().setStatusBarColor(0xFF1A120B);
@@ -241,7 +242,7 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
         }
         buildUi();
         if (savedInstanceState == null) showSplash();
-        AppLog.add("App 启动");
+        AppLog.add(I18n.t("App 启动"));
         loadConfig();
         requestNotificationPermission();
         showPage(0);
@@ -274,11 +275,11 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
             boolean granted = grantResults.length > 0
                     && grantResults[0] == PackageManager.PERMISSION_GRANTED;
             if (granted) {
-                toast("通知权限已允许");
+                toast(I18n.t("通知权限已允许"));
             } else {
-                toast("通知未授权，正在打开系统设置");
+                toast(I18n.t("通知未授权，正在打开系统设置"));
                 if (!PermissionView.showNotificationSettings(this)) {
-                    toast("无法打开通知设置，请手动进入系统设置");
+                    toast(I18n.t("无法打开通知设置，请手动进入系统设置"));
                 }
             }
         }
@@ -290,8 +291,8 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
         pendingPick = callback;
         try {
             String title = manageTitle == null ? "" : manageTitle.getText().toString();
-            pendingPickType = "服务端".equals(title) ? DeployManager.TYPE_SERVER
-                    : ("运行环境".equals(title) ? DeployManager.TYPE_RUNTIME : -1);
+            pendingPickType = I18n.t("服务端").equals(title) ? DeployManager.TYPE_SERVER
+                    : (I18n.t("运行环境").equals(title) ? DeployManager.TYPE_RUNTIME : -1);
         } catch (Throwable ignored) {
             pendingPickType = -1;
         }
@@ -303,7 +304,7 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
             startActivityForResult(intent, REQ_PICK_FILE);
         } catch (Throwable t) {
             pendingPick = null;
-            toast("无法打开文件选择器：" + t.getMessage());
+            toast(I18n.t("无法打开文件选择器：") + t.getMessage());
             callback.onCancel();
         }
     }
@@ -320,7 +321,7 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
                 }
                 pendingWallpaperUri = data.getData().toString();
                 if (themeWallpaperStatus != null) {
-                    themeWallpaperStatus.setText("待应用：已选择新壁纸（点击应用主题后重启生效）");
+                    themeWallpaperStatus.setText(I18n.t("待应用：已选择新壁纸（点击应用主题后重启生效）"));
                 }
                 wallpaperForApply = false;
                 confirmWallpaperSwitch();
@@ -351,7 +352,7 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
                     lastPickedName = name;
                     File out = new File(getCacheDir(), "import_" + System.currentTimeMillis() + ext);
                     InputStream in = getContentResolver().openInputStream(uri);
-                    if (in == null) throw new java.io.IOException("无法读取文件");
+                    if (in == null) throw new java.io.IOException(I18n.t("无法读取文件"));
                     FileOutputStream fos = new FileOutputStream(out);
                     byte[] buf = new byte[65536];
                     int n;
@@ -368,7 +369,7 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
                 } catch (final Throwable e) {
                     runOnUiThread(new Runnable() {
                         @Override public void run() {
-                            toast("导入文件失败：" + e.getMessage());
+                            toast(I18n.t("导入文件失败：") + e.getMessage());
                             if (cb != null) cb.onCancel();
                         }
                     });
@@ -381,7 +382,7 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
 
     private void orphanImport(final File file, int type) {
         if (type != DeployManager.TYPE_SERVER) {
-            toast("文件已复制，但页面状态丢失，请重新进入对应页面导入");
+            toast(I18n.t("文件已复制，但页面状态丢失，请重新进入对应页面导入"));
             return;
         }
         String name = file.getName();
@@ -395,34 +396,34 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
         MinecraftUi.styleInput(input);
         input.setHint("1.26.63.1");
         new android.app.AlertDialog.Builder(this)
-                .setTitle("导入服务端版本")
-                .setMessage("文件名没有版本号，请输入完整版本号，例如 1.26.63.1")
+                .setTitle(I18n.t("导入服务端版本"))
+                .setMessage(I18n.t("文件名没有版本号，请输入完整版本号，例如 1.26.63.1"))
                 .setView(input)
-                .setPositiveButton("导入", (d, w) -> {
+                .setPositiveButton(I18n.t("导入"), (d, w) -> {
                     String v = input.getText().toString().trim();
                     if (!v.matches("\\d+\\.\\d+\\.\\d+(\\.\\d+)?")) {
-                        toast("版本号格式不正确");
+                        toast(I18n.t("版本号格式不正确"));
                         return;
                     }
                     startOrphanServerImport(file, v);
                 })
-                .setNegativeButton("取消", null)
+                .setNegativeButton(I18n.t("取消"), null)
                 .show();
     }
 
     private void startOrphanServerImport(final File file, final String version) {
-        toast("开始导入服务端 " + version);
+        toast(I18n.t("开始导入服务端 ") + version);
         io.execute(new Runnable() {
             @Override public void run() {
                 try {
-                    DeployManager.installServer(MainActivity.this, file, "设备导入", version,
+                    DeployManager.installServer(MainActivity.this, file, I18n.t("设备导入"), version,
                             new DeployManager.Progress() {
                                 @Override public void update(int percent, String message) {
                                 }
                             });
                     runOnUiThread(new Runnable() {
                         @Override public void run() {
-                            toast("导入完成：" + version);
+                            toast(I18n.t("导入完成：") + version);
                             showManagePage();
                             openManageSection(0);
                         }
@@ -430,7 +431,7 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
                 } catch (final Throwable e) {
                     runOnUiThread(new Runnable() {
                         @Override public void run() {
-                            toast("导入失败：" + e.getMessage());
+                            toast(I18n.t("导入失败：") + e.getMessage());
                         }
                     });
                 }
@@ -501,11 +502,11 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
         TextView text = MinecraftUi.text(this,
-                "运行 x86_64 服务端需要 Shizuku 以 shell 身份启动 Box64。\n\n"
-                        + "1. 安装 Shizuku\n"
-                        + "2. 开发者选项 → 无线调试 → 配对并启动 Shizuku\n"
-                        + "3. 回到本应用授予 Shizuku 权限\n\n"
-                        + "通知权限用于部署进度与前台保活。",
+                I18n.t("运行 x86_64 服务端需要 Shizuku 以 shell 身份启动 Box64。\n\n")
+                        + I18n.t("1. 安装 Shizuku\n")
+                        + I18n.t("2. 开发者选项 → 无线调试 → 配对并启动 Shizuku\n")
+                        + I18n.t("3. 回到本应用授予 Shizuku 权限\n\n")
+                        + I18n.t("通知权限用于部署进度与前台保活。"),
                 10, MinecraftUi.PANEL_TEXT, false);
         text.setPadding(0, dp(2), 0, dp(8));
         panel.addView(text);
@@ -625,14 +626,14 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
         anim.addUpdateListener(a -> {
             int v = (Integer) a.getAnimatedValue();
             bar.set(10, v);
-            if (v >= 8) status.setText("准备界面…");
-            else if (v >= 6) status.setText("读取服务端配置…");
-            else if (v >= 3) status.setText("检查运行环境…");
-            else status.setText("正在准备运行环境…");
+            if (v >= 8) status.setText(I18n.t("准备界面…"));
+            else if (v >= 6) status.setText(I18n.t("读取服务端配置…"));
+            else if (v >= 3) status.setText(I18n.t("检查运行环境…"));
+            else status.setText(I18n.t("正在准备运行环境…"));
         });
         anim.start();
         splashFinish = () -> {
-            status.setText("就绪");
+            status.setText(I18n.t("就绪"));
             splash.animate().alpha(0f).setDuration(240).withEndAction(() -> {
                 ViewGroup parent = (ViewGroup) splash.getParent();
                 if (parent != null) parent.removeView(splash);
@@ -740,14 +741,14 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
             g.setStroke(dp(1), 0x66FFFFFF);
             row.setBackground(g);
             TextView brand = new TextView(this);
-            brand.setText("基岩工坊");
+            brand.setText(I18n.t("基岩工坊"));
             brand.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 24);
             brand.setTextColor(0xFFFFFFFF);
             brand.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
             row.addView(brand, new LinearLayout.LayoutParams(0,
                     ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
             TextView status = new TextView(this);
-            status.setText("● 已停止");
+            status.setText(I18n.t("● 已停止"));
             status.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 14);
             status.setTextColor(0xFFFFB4AA);
             row.addView(status);
@@ -768,7 +769,7 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
             row.setPadding(dp(20), dp(2), dp(20), dp(2));
 
             TextView brand = new TextView(this);
-            brand.setText("基岩工坊");
+            brand.setText(I18n.t("基岩工坊"));
             brand.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 16);
             brand.setTextColor(0xFF1B1B1B);
             brand.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
@@ -822,7 +823,7 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
 
         if (MinecraftUi.MINIMAL) {
             TextView title = new TextView(this);
-            title.setText("基岩工坊");
+            title.setText(I18n.t("基岩工坊"));
             title.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 30);
             title.setTextColor(MinecraftUi.PANEL_TEXT);
             title.setTypeface(android.graphics.Typeface.create("serif",
@@ -906,13 +907,13 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
         LinearLayout info = MinecraftUi.panel(this, "服务器信息");
         addPanel(col, info);
 
-        serverTypeValue = addInfoRow(info, "服务器类型", "Minecraft BDS");
-        serverVersionValue = addInfoRow(info, "服务端版本", "--");
-        gameVersionValue = addInfoRow(info, "游戏版本", "--");
-        ipValue = addInfoRow(info, "IP 地址", "--");
-        worldValue = addInfoRow(info, "端口 / 世界", port + " · " + worldName);
-        onlineModeValue = addInfoRow(info, "在线模式", "--");
-        uptimeValue = addInfoRow(info, "运行时长", "未运行");
+        serverTypeValue = addInfoRow(info, I18n.t("服务器类型"), "Minecraft BDS");
+        serverVersionValue = addInfoRow(info, I18n.t("服务端版本"), "--");
+        gameVersionValue = addInfoRow(info, I18n.t("游戏版本"), "--");
+        ipValue = addInfoRow(info, I18n.t("IP 地址"), "--");
+        worldValue = addInfoRow(info, I18n.t("端口 / 世界"), port + " · " + worldName);
+        onlineModeValue = addInfoRow(info, I18n.t("在线模式"), "--");
+        uptimeValue = addInfoRow(info, I18n.t("运行时长"), I18n.t("未运行"));
 
         LinearLayout statusRow = new LinearLayout(this);
         statusRow.setOrientation(LinearLayout.HORIZONTAL);
@@ -948,7 +949,7 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
         r1lp.topMargin = dp(2);
         load.addView(row1, r1lp);
 
-        LinearLayout cpuCell = metricCell(MinecraftUi.PixelIconView.CPU, "设备 CPU");
+        LinearLayout cpuCell = metricCell(MinecraftUi.PixelIconView.CPU, I18n.t("设备 CPU"));
         cpuValue = (TextView) cpuCell.getTag();
         cpuBar = new MinecraftUi.SegmentBar(this);
         LinearLayout.LayoutParams cblp = new LinearLayout.LayoutParams(
@@ -957,7 +958,7 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
         cpuCell.addView(cpuBar, cblp);
         row1.addView(cpuCell, metricParams(1, 0, 0, 4));
 
-        LinearLayout memCell = metricCell(MinecraftUi.PixelIconView.MEM, "设备内存");
+        LinearLayout memCell = metricCell(MinecraftUi.PixelIconView.MEM, I18n.t("设备内存"));
         memValue = (TextView) memCell.getTag();
         memBar = new MinecraftUi.SegmentBar(this);
         LinearLayout.LayoutParams mblp = new LinearLayout.LayoutParams(
@@ -973,14 +974,14 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
         r2lp.topMargin = dp(7);
         load.addView(row2, r2lp);
 
-        LinearLayout netCell = metricCell(MinecraftUi.PixelIconView.NET, "网络吞吐");
+        LinearLayout netCell = metricCell(MinecraftUi.PixelIconView.NET, I18n.t("网络吞吐"));
         netValue = (TextView) netCell.getTag();
         netValue.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
         netValue.setSingleLine(true);
         netValue.setEllipsize(TextUtils.TruncateAt.END);
         row2.addView(netCell, metricParams(1, 0, 0, 4));
 
-        LinearLayout tpsCell = metricCell(MinecraftUi.PixelIconView.TPS, "服务器 TPS");
+        LinearLayout tpsCell = metricCell(MinecraftUi.PixelIconView.TPS, I18n.t("服务器 TPS"));
         tpsValue = (TextView) tpsCell.getTag();
         tpsBar = new MinecraftUi.SegmentBar(this);
         LinearLayout.LayoutParams tblp = new LinearLayout.LayoutParams(
@@ -1041,11 +1042,11 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
 
         homeDeployGuide = MinecraftUi.panel(this, "开始部署");
         homeGuideText = MinecraftUi.text(this,
-                "还没有部署服务器。\n\n"
-                        + "1. 先部署运行环境（Box64 + Ubuntu）\n"
-                        + "2. 再部署服务端（BDS）\n"
-                        + "3. 回到首页启动服务器\n\n"
-                        + "运行服务端需要 Shizuku；首次使用请看权限管理里的启动指引。",
+                I18n.t("还没有部署服务器。\n\n")
+                        + I18n.t("1. 先部署运行环境（Box64 + Ubuntu）\n")
+                        + I18n.t("2. 再部署服务端（BDS）\n")
+                        + I18n.t("3. 回到首页启动服务器\n\n")
+                        + I18n.t("运行服务端需要 Shizuku；首次使用请看权限管理里的启动指引。"),
                 10, MinecraftUi.PANEL_TEXT, false);
         homeDeployGuide.addView(homeGuideText);
 
@@ -1069,7 +1070,7 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
         homeGuideServerBtn.setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View v) {
                 if (!canRuntime || !homeGuideServerBtn.isEnabled()) {
-                    toast("请先部署运行环境");
+                    toast(I18n.t("请先部署运行环境"));
                     return;
                 }
                 showManagePage();
@@ -1258,7 +1259,7 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
         consoleInput.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
         consoleInput.setTextColor(MinecraftUi.MINIMAL ? MinecraftUi.PANEL_TEXT : 0xFFB8FFB0);
         consoleInput.setHintTextColor(MinecraftUi.MINIMAL ? MinecraftUi.PANEL_MUTED : 0xFF6A8A6A);
-        consoleInput.setHint("输入命令，如 list");
+        consoleInput.setHint(I18n.t("输入命令，如 list"));
         consoleInput.setTypeface(Typeface.MONOSPACE);
         consoleInput.setBackground(MinecraftUi.terminalDrawable(this));
         consoleInput.setPadding(dp(9), dp(8), dp(9), dp(8));
@@ -1305,10 +1306,10 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
 
     private void showTerminalDialog() {
         if (ServerManager.get().isRunning()) {
-            toast("请先停止服务端");
+            toast(I18n.t("请先停止服务端"));
             return;
         }
-        if (!ShizukuGate.ensure(this, "Ubuntu 终端")) return;
+        if (!ShizukuGate.ensure(this, I18n.t("Ubuntu 终端"))) return;
         final Dialog dialog = new Dialog(this);
         dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
 
@@ -1375,11 +1376,11 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
             @Override public void onClick(View v) {
                 String[] logs = ServerManager.get().getLogs();
                 if (logs.length == 0) {
-                    toast("暂无日志");
+                    toast(I18n.t("暂无日志"));
                 } else {
                     ClipboardManager cm = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
-                    cm.setPrimaryClip(ClipData.newPlainText("BDS 日志", TextUtils.join("\n", logs)));
-                    toast("已复制 " + logs.length + " 行");
+                    cm.setPrimaryClip(ClipData.newPlainText(I18n.t("BDS 日志"), TextUtils.join("\n", logs)));
+                    toast(I18n.t("已复制 ") + logs.length + I18n.t(" 行"));
                 }
                 dialog.dismiss();
             }
@@ -1425,6 +1426,10 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
     }
 
     private static int logColor(String line) {
+        return ThemeManager.mapTextColor(rawLogColor(line));
+    }
+
+    private static int rawLogColor(String line) {
         String u = line.toUpperCase();
         if (u.contains("WARN]") || u.contains("WARNING")) return 0xFFFFD166;
         if (u.contains("ERROR]") || u.contains("FATAL]") || u.contains("SEVERE]")) return 0xFFFF6B6B;
@@ -1502,7 +1507,7 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
         if (aiInput == null) return;
         String text = aiInput.getText().toString().trim();
         if (text.isEmpty()) return;
-        toast("AI 功能暂未实装");
+        toast(I18n.t("AI 功能暂未实装"));
     }
 
     private View buildSettings() {
@@ -1515,7 +1520,7 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
         LinearLayout panel = MinecraftUi.panel(this, "设置");
         addPanel(col, panel);
 
-        String[] items = {"主题", "语言", "权限管理", "AI 智能体", "关于", "清除所有数据"};
+        String[] items = {"主题", "语言", "屏幕常亮", "权限管理", "AI 智能体", "关于", "清除所有数据"};
         for (int i = 0; i < items.length; i++) {
             final String title = items[i];
             Button item = new MinecraftUi.McButton(this, title);
@@ -1529,19 +1534,21 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
             item.setOnClickListener(new View.OnClickListener() {
                 @Override public void onClick(View v) {
                     if ("主题".equals(title)) {
-                        showSettingsSubPage("主题", buildThemePage());
+                        showSettingsSubPage(I18n.t("主题"), buildThemePage());
                     } else if ("语言".equals(title)) {
-                        showSettingsSubPage("语言", buildLanguagePage());
+                        showSettingsSubPage(I18n.t("语言"), buildLanguagePage());
+                    } else if ("屏幕常亮".equals(title)) {
+                        showSettingsSubPage(I18n.t("屏幕常亮"), buildScreenOnPage());
                     } else if ("权限管理".equals(title)) {
-                        showSettingsSubPage("权限管理",
+                        showSettingsSubPage(I18n.t("权限管理"),
                                 scrollWrap(new PermissionView(MainActivity.this)));
                     } else if ("AI 智能体".equals(title)) {
-                        showSettingsSubPage("AI 智能体",
+                        showSettingsSubPage(I18n.t("AI 智能体"),
                                 scrollWrap(new AiSettingsView(MainActivity.this)));
                     } else if ("清除所有数据".equals(title)) {
                         showWipeFirst();
                     } else if ("关于".equals(title)) {
-                        showSettingsSubPage("关于", buildAboutPage());
+                        showSettingsSubPage(I18n.t("关于"), buildAboutPage());
                     }
                 }
             });
@@ -1551,18 +1558,9 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
     }
 
     private void showAgreementDialog() {
-        String text;
-        try {
-            java.io.InputStream in = getAssets().open("legal/user_agreement.txt");
-            java.io.ByteArrayOutputStream bos = new java.io.ByteArrayOutputStream();
-            byte[] buf = new byte[8192];
-            int n;
-            while ((n = in.read(buf)) > 0) bos.write(buf, 0, n);
-            in.close();
-            text = new String(bos.toByteArray(), "UTF-8");
-        } catch (Throwable e) {
-            text = "用户协议读取失败：" + e.getMessage();
-        }
+        String text = I18n.readAsset(I18n.asset("legal/user_agreement.txt"));
+        if (text == null) text = I18n.readAsset("legal/user_agreement.txt");
+        if (text == null) text = I18n.t("用户协议读取失败：") + I18n.asset("legal/user_agreement.txt");
 
         final Dialog d = new Dialog(this);
         d.requestWindowFeature(Window.FEATURE_NO_TITLE);
@@ -1604,11 +1602,11 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
         wrap.setPadding(dp(12), dp(12), dp(12), dp(12));
         LinearLayout panel = MinecraftUi.panel(this, "清除所有数据");
         panel.addView(MinecraftUi.text(this,
-                "将删除本应用产生的全部数据：\n"
-                        + "· /data/local/tmp/mcbds 下的服务端实例、世界、备份、运行环境\n"
-                        + "· 应用设置、AI 配置与 API Key、对话记录、日志与缓存\n\n"
-                        + "服务端会先被停止；清理后需要重新部署运行环境。\n"
-                        + "此操作不可恢复，请确认已自行保留需要的数据。",
+                I18n.t("将删除本应用产生的全部数据：\n")
+                        + I18n.t("· /data/local/tmp/mcbds 下的服务端实例、世界、备份、运行环境\n")
+                        + I18n.t("· 应用设置、AI 配置与 API Key、对话记录、日志与缓存\n\n")
+                        + I18n.t("服务端会先被停止；清理后需要重新部署运行环境。\n")
+                        + I18n.t("此操作不可恢复，请确认已自行保留需要的数据。"),
                 9f, MinecraftUi.PANEL_TEXT, false));
         Button next = new MinecraftUi.McButton(this, "继续");
         if (next instanceof MinecraftUi.McButton) ((MinecraftUi.McButton) next).setDangerStyle();
@@ -1646,8 +1644,9 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
         wrap.setPadding(dp(12), dp(12), dp(12), dp(12));
         LinearLayout panel = MinecraftUi.panel(this, "二次确认");
         panel.addView(MinecraftUi.text(this,
-                "请输入“清除”两个字以确认。", 9f, MinecraftUi.PANEL_TEXT, false));
-        final EditText input = MinecraftUi.terminalInput(this, "清除");
+                I18n.f("请输入“%s”以确认。", I18n.t("清除")),
+                9f, MinecraftUi.PANEL_TEXT, false));
+        final EditText input = MinecraftUi.terminalInput(this, I18n.t("清除"));
         LinearLayout.LayoutParams ilp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, dp(44));
         ilp.topMargin = dp(6);
@@ -1660,8 +1659,8 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
         olp.topMargin = dp(8);
         panel.addView(ok, olp);
         ok.setOnClickListener(v -> {
-            if (!"清除".equals(input.getText().toString().trim())) {
-                toast("请输入“清除”后重试");
+            if (!I18n.t("清除").equalsIgnoreCase(input.getText().toString().trim())) {
+                toast(I18n.f("请输入“%s”后重试", I18n.t("清除")));
                 return;
             }
             d.dismiss();
@@ -1701,11 +1700,11 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
                 deleteTree(getCacheDir());
                 deleteTree(getFilesDir());
                 runOnUiThread(() -> {
-                    toast("已清除全部数据，请重新打开应用");
+                    toast(I18n.t("已清除全部数据，请重新打开应用"));
                     finishAffinity();
                 });
             } catch (Throwable e) {
-                runOnUiThread(() -> toast("清除失败：" + e.getMessage()));
+                runOnUiThread(() -> toast(I18n.t("清除失败：") + e.getMessage()));
             }
         }, "wipe-data").start();
     }
@@ -1820,26 +1819,34 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
         panel.addView(summary);
 
         final Runnable refresh = () -> {
-            classic.setText(ThemeManager.CLASSIC.equals(sel[0]) ? "经典风格（当前）" : "经典风格");
-            minimal.setText(ThemeManager.MINIMAL.equals(sel[0]) ? "简约风格（当前）" : "简约风格");
-            ore.setText(ThemeManager.ORE.equals(sel[0]) ? "苔石风格（当前）" : "苔石风格");
-            liquid.setText(ThemeManager.LIQUID.equals(sel[0]) ? "液态玻璃（当前）" : "液态玻璃");
-            light.setText(ThemeManager.MODE_LIGHT.equals(sel[1]) ? "浅色模式（当前）" : "浅色模式");
-            dark.setText(ThemeManager.MODE_DARK.equals(sel[1]) ? "深色模式（当前）" : "深色模式");
+            // 三态：未选中 = 浅灰；选中 = 绿色 + 白色下划线；按下 = 凹陷
+            classic.setText(I18n.t("经典风格"));
+            minimal.setText(I18n.t("简约风格"));
+            ore.setText(I18n.t("苔石风格"));
+            liquid.setText(I18n.t("玻璃风格"));
+            light.setText(I18n.t("浅色模式"));
+            dark.setText(I18n.t("深色模式"));
+            classic.setSelected(ThemeManager.CLASSIC.equals(sel[0]));
+            minimal.setSelected(ThemeManager.MINIMAL.equals(sel[0]));
+            ore.setSelected(ThemeManager.ORE.equals(sel[0]));
+            liquid.setSelected(ThemeManager.LIQUID.equals(sel[0]));
+            light.setSelected(ThemeManager.MODE_LIGHT.equals(sel[1]));
+            dark.setSelected(ThemeManager.MODE_DARK.equals(sel[1]));
             boolean minimalSel = ThemeManager.MINIMAL.equals(sel[0]);
-            light.setEnabled(minimalSel);
-            dark.setEnabled(minimalSel);
-            light.setAlpha(minimalSel ? 1f : 0.5f);
-            dark.setAlpha(minimalSel ? 1f : 0.5f);
-            String modeText = ThemeManager.MODE_DARK.equals(sel[1]) ? "深色模式" : "浅色模式";
+            boolean lightDarkApplies = minimalSel;
+            light.setEnabled(lightDarkApplies);
+            dark.setEnabled(lightDarkApplies);
+            light.setAlpha(lightDarkApplies ? 1f : 0.5f);
+            dark.setAlpha(lightDarkApplies ? 1f : 0.5f);
+            String modeText = ThemeManager.MODE_DARK.equals(sel[1]) ? I18n.t("深色模式") : I18n.t("浅色模式");
             if (ThemeManager.LIQUID.equals(sel[0])) {
-                summary.setText("重启后使用：液态玻璃 · 需先导入壁纸");
+                summary.setText(I18n.t("重启后使用：玻璃风格 · 需先导入壁纸"));
             } else if (ThemeManager.ORE.equals(sel[0])) {
-                summary.setText("重启后使用：苔石风格 · 标准外观（不支持明暗模式）");
+                summary.setText(I18n.t("重启后使用：苔石风格 · 标准外观（不支持明暗模式）"));
             } else if (minimalSel) {
-                summary.setText("重启后使用：简约风格 · " + modeText);
+                summary.setText(I18n.t("重启后使用：简约风格 · ") + modeText);
             } else {
-                summary.setText("重启后使用：经典风格");
+                summary.setText(I18n.t("重启后使用：经典风格"));
             }
         };
         refresh.run();
@@ -1855,7 +1862,7 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
         panel.addView(apply, dialogBtnLp(12));
         apply.setOnClickListener(v -> {
             if (sel[0].equals(oldStyle) && sel[1].equals(oldMode)) {
-                toast("当前已是该主题");
+                toast(I18n.t("当前已是该主题"));
                 return;
             }
             d.dismiss();
@@ -1912,7 +1919,7 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
             pendingWallpaperUri = null;
             if (themeWallpaperStatus != null) {
                 themeWallpaperStatus.setText(LiquidWallpaper.has(MainActivity.this)
-                        ? "当前壁纸已导入" : "未导入壁纸，应用液态玻璃前必须导入");
+                        ? I18n.t("当前壁纸已导入") : I18n.t("未导入壁纸，应用液态玻璃前必须导入"));
             }
             d.dismiss();
         });
@@ -1945,7 +1952,7 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
             i.setType("image/*");
             startActivityForResult(i, REQ_WALLPAPER);
         } catch (Throwable t) {
-            toast("无法打开图片选择器");
+            toast(I18n.t("无法打开图片选择器"));
         }
     }
 
@@ -1968,8 +1975,8 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
         wrap.setPadding(dp(14), dp(14), dp(14), dp(14));
         LinearLayout panel = MinecraftUi.panel(this, "重启应用");
         TextView msg = MinecraftUi.text(this,
-                "主题已更改，需要重启应用后生效。\n\n"
-                        + "点击“立即重启”保存并重启；点击“取消”放弃本次更改。",
+                I18n.t("主题已更改，需要重启应用后生效。\n\n")
+                        + I18n.t("点击“立即重启”保存并重启；点击“取消”放弃本次更改。"),
                 9.5f, MinecraftUi.PANEL_TEXT, false);
         msg.setPadding(0, dp(2), 0, dp(10));
         panel.addView(msg);
@@ -2108,12 +2115,68 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
         col.setOrientation(LinearLayout.VERTICAL);
         col.setPadding(dp(2), 0, dp(2), 0);
         LinearLayout panel = MinecraftUi.panel(this, null);
-        panel.addView(MinecraftUi.text(this,
-                "语言切换功能暂未实装。\n\n当前界面使用简体中文。",
-                10, MinecraftUi.PANEL_TEXT, false));
         col.addView(panel);
+        panel.addView(MinecraftUi.text(this,
+                I18n.t("选择界面语言，切换后立即生效。"), 9,
+                MinecraftUi.PANEL_MUTED, false));
+
+        final String cur = I18n.lang(this);
+        // 保持原有纵向布局，只把“当前语言”换成苔石选中态（绿色 + 下划线）
+        for (String[] l : I18n.LANGUAGES) {
+            boolean active = l[0].equals(cur);
+            Button b = new MinecraftUi.McButton(this, l[1]);
+            b.setText(l[1]);          // 语言名按本语言书写，不参与翻译
+            b.setSelected(active);
+            panel.addView(b, dialogBtnLp(6));
+            b.setOnClickListener(v -> {
+                if (!l[0].equals(I18n.lang(this))) confirmLanguage(l[0], l[1]);
+            });
+        }
+        panel.addView(MinecraftUi.text(this,
+                I18n.t("界面语言只影响应用内文字，服务端日志与控制台输出保持原样。"),
+                8.5f, MinecraftUi.PANEL_MUTED, false));
         sv.addView(col);
         return sv;
+    }
+
+    private void confirmLanguage(final String code, final String name) {
+        final Dialog d = new Dialog(this);
+        d.requestWindowFeature(Window.FEATURE_NO_TITLE);
+        LinearLayout wrap = new LinearLayout(this);
+        wrap.setOrientation(LinearLayout.VERTICAL);
+        wrap.setPadding(dp(14), dp(14), dp(14), dp(14));
+        LinearLayout panel = MinecraftUi.panel(this, "切换语言");
+        panel.addView(MinecraftUi.text(this,
+                I18n.f("切换为 %s？\n\n切换后界面立即刷新，正在运行的部署任务不会中断。", name),
+                9.5f, MinecraftUi.PANEL_TEXT, false));
+        Button ok = new MinecraftUi.McButton(this, "确定切换");
+        panel.addView(ok, dialogBtnLp(8));
+        Button cancel = new MinecraftUi.McButton(this, "取消");
+        panel.addView(cancel, dialogBtnLp(6));
+        ok.setOnClickListener(v -> {
+            d.dismiss();
+            I18n.setLang(this, code);
+            applyLanguage();
+        });
+        cancel.setOnClickListener(v -> d.dismiss());
+        wrap.addView(panel);
+        d.setContentView(wrap);
+        d.show();
+        Window w = d.getWindow();
+        if (w != null) {
+            w.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+            w.setLayout((int) (getResources().getDisplayMetrics().widthPixels * 0.9f),
+                    ViewGroup.LayoutParams.WRAP_CONTENT);
+        }
+    }
+
+    /** 语言切换后重建界面；失败时退回重启应用。 */
+    private void applyLanguage() {
+        try {
+            handler.post(() -> recreate());
+        } catch (Throwable t) {
+            restartApp();
+        }
     }
 
     private View buildThemePage() {
@@ -2128,7 +2191,7 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
         final String oldMode = ThemeManager.mode(this);
         final String[] sel = {oldStyle, oldMode};
 
-        panel.addView(MinecraftUi.text(this, "风格", 9, MinecraftUi.PANEL_MUTED, true));
+        panel.addView(MinecraftUi.text(this, I18n.t("风格"), 9, MinecraftUi.PANEL_MUTED, true));
         final Button classic = new MinecraftUi.McButton(this, "经典风格");
         panel.addView(classic, dialogBtnLp(0));
         final Button minimal = new MinecraftUi.McButton(this, "简约风格");
@@ -2152,7 +2215,7 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         wlp.topMargin = dp(12);
         panel.addView(wallBox, wlp);
-        wallBox.addView(MinecraftUi.text(this, "液态玻璃壁纸", 9,
+        wallBox.addView(MinecraftUi.text(this, I18n.t("液态玻璃壁纸"), 9,
                 MinecraftUi.PANEL_MUTED, true));
         final TextView wallStatus = MinecraftUi.text(this, "", 8.5f,
                 MinecraftUi.PANEL_TEXT, false);
@@ -2176,18 +2239,25 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
             light.setVisibility(mv);
             dark.setVisibility(mv);
             wallStatus.setText(pendingWallpaperUri != null
-                    ? "待应用：已选择新壁纸（点击应用主题后重启生效）"
+                    ? I18n.t("待应用：已选择新壁纸（点击应用主题后重启生效）")
                     : (LiquidWallpaper.has(MainActivity.this)
-                    ? "当前壁纸已导入" : "未导入壁纸，应用液态玻璃前必须导入"));
+                    ? I18n.t("当前壁纸已导入") : I18n.t("未导入壁纸，应用液态玻璃前必须导入")));
         };
 
         final Runnable refresh = () -> {
-            classic.setText(ThemeManager.CLASSIC.equals(sel[0]) ? "经典风格（当前）" : "经典风格");
-            minimal.setText(ThemeManager.MINIMAL.equals(sel[0]) ? "简约风格（当前）" : "简约风格");
-            ore.setText(ThemeManager.ORE.equals(sel[0]) ? "苔石风格（当前）" : "苔石风格");
-            liquid.setText(ThemeManager.LIQUID.equals(sel[0]) ? "液态玻璃（当前）" : "液态玻璃");
-            light.setText(ThemeManager.MODE_LIGHT.equals(sel[1]) ? "浅色模式（当前）" : "浅色模式");
-            dark.setText(ThemeManager.MODE_DARK.equals(sel[1]) ? "深色模式（当前）" : "深色模式");
+            // 三态：未选中 = 浅灰；选中 = 绿色 + 白色下划线；按下 = 凹陷
+            classic.setText(I18n.t("经典风格"));
+            minimal.setText(I18n.t("简约风格"));
+            ore.setText(I18n.t("苔石风格"));
+            liquid.setText(I18n.t("玻璃风格"));
+            light.setText(I18n.t("浅色模式"));
+            dark.setText(I18n.t("深色模式"));
+            classic.setSelected(ThemeManager.CLASSIC.equals(sel[0]));
+            minimal.setSelected(ThemeManager.MINIMAL.equals(sel[0]));
+            ore.setSelected(ThemeManager.ORE.equals(sel[0]));
+            liquid.setSelected(ThemeManager.LIQUID.equals(sel[0]));
+            light.setSelected(ThemeManager.MODE_LIGHT.equals(sel[1]));
+            dark.setSelected(ThemeManager.MODE_DARK.equals(sel[1]));
             refreshWall.run();
         };
         refresh.run();
@@ -2204,7 +2274,7 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
             boolean same = sel[0].equals(oldStyle) && sel[1].equals(oldMode)
                     && pendingWallpaperUri == null;
             if (same) {
-                toast("当前已是该主题");
+                toast(I18n.t("当前已是该主题"));
                 return;
             }
             if (ThemeManager.LIQUID.equals(sel[0])
@@ -2236,7 +2306,7 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
         col.setPadding(dp(2), 0, dp(2), 0);
 
         LinearLayout head = MinecraftUi.panel(this, null);
-        head.addView(MinecraftUi.text(this, "基岩工坊", 24, MinecraftUi.PANEL_TEXT, true));
+        head.addView(MinecraftUi.text(this, I18n.t("基岩工坊"), 24, MinecraftUi.PANEL_TEXT, true));
         head.addView(MinecraftUi.text(this, "BEDROCK FORGE", 9,
                 MinecraftUi.PANEL_MUTED, true));
         String ver = "0.1";
@@ -2254,15 +2324,15 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
         final String fVer = ver;
         final String fCode = code;
         head.addView(MinecraftUi.text(this,
-                "手机上的 Minecraft 基岩版服务端管理工具。\n"
-                        + "支持运行环境、服务端、世界与玩家数据、备份、addons 与 AI 助手。\n"
-                        + "软件完全免费。", 9, MinecraftUi.PANEL_TEXT, false));
+                I18n.t("手机上的 Minecraft 基岩版服务端管理工具。\n")
+                        + I18n.t("支持运行环境、服务端、世界与玩家数据、备份、addons 与 AI 助手。\n")
+                        + I18n.t("软件完全免费。"), 9, MinecraftUi.PANEL_TEXT, false));
         col.addView(head);
 
         LinearLayout version = MinecraftUi.panel(this, "版本信息");
-        addAboutRow(version, "应用版本", ver + "（" + code + "）");
-        addAboutRow(version, "安装/更新时间", updated);
-        addAboutRow(version, "包名", getPackageName());
+        addAboutRow(version, I18n.t("应用版本"), ver + I18n.t("（") + code + I18n.t("）"));
+        addAboutRow(version, I18n.t("安装/更新时间"), updated);
+        addAboutRow(version, I18n.t("包名"), getPackageName());
         col.addView(version);
 
         LinearLayout links = MinecraftUi.panel(this, "快捷入口");
@@ -2272,63 +2342,66 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
         Button license = new MinecraftUi.McButton(this, "开源许可证");
         links.addView(license, dialogBtnLp(6));
         license.setOnClickListener(v -> AboutDialog.showLicense(this));
-        addLink(links, "项目仓库", "https://github.com/SKJSLCY/bedrock-forge");
-        addLink(links, "反馈问题", "https://github.com/SKJSLCY/bedrock-forge/issues");
-        addLink(links, "QQ 交流群", "https://qun.qq.com/universal-share/share?ac=1&authKey=aXbbDrFrIwkpxJWFhcclaTZyZFjQDRq%2FQDR0P3gUHSRNAbsG3aD9lb1CbRCc9yGq&busi_data=eyJncm91cENvZGUiOiIxMTI4OTM1NzE5IiwidG9rZW4iOiIveC9SQ3dvNXV1ZUFMNE5wbVFDYnJYSTkxenNoWjk0cy9VNGtxRUdhb3pFU2VZUEptRzJYWHZ3UGZPbGR1TWUvIiwidWluIjoiMTc5NDE5NjkxMCJ9&data=yGAGNaWN2jy6ZnJloDPda8gfQmSA1EsYMxjwmfDp3-KHEv5LlI0GSpgBilPvAARl0bzOz30CQcG-4XWs6yapRw&svctype=4&tempid=h5_group_info");
-        addLink(links, "赞助作者", "https://afdian.com/a/SKJSLCY");
+        addLink(links, I18n.t("项目仓库"), "https://github.com/SKJSLCY/bedrock-forge");
+        addLink(links, I18n.t("反馈问题"), "https://github.com/SKJSLCY/bedrock-forge/issues");
+        addLink(links, I18n.t("QQ 交流群"), "https://qun.qq.com/universal-share/share?ac=1&authKey=aXbbDrFrIwkpxJWFhcclaTZyZFjQDRq%2FQDR0P3gUHSRNAbsG3aD9lb1CbRCc9yGq&busi_data=eyJncm91cENvZGUiOiIxMTI4OTM1NzE5IiwidG9rZW4iOiIveC9SQ3dvNXV1ZUFMNE5wbVFDYnJYSTkxenNoWjk0cy9VNGtxRUdhb3pFU2VZUEptRzJYWHZ3UGZPbGR1TWUvIiwidWluIjoiMTc5NDE5NjkxMCJ9&data=yGAGNaWN2jy6ZnJloDPda8gfQmSA1EsYMxjwmfDp3-KHEv5LlI0GSpgBilPvAARl0bzOz30CQcG-4XWs6yapRw&svctype=4&tempid=h5_group_info");
+        addLink(links, I18n.t("赞助作者"), "https://afdian.com/a/SKJSLCY");
         col.addView(links);
 
         final LinearLayout env = MinecraftUi.panel(this, "环境信息");
         String shz;
         try {
-            shz = !ShizukuGate.isRunning() ? "未运行"
-                    : (ShizukuGate.isAuthorized() ? "已授权" : "待授权");
+            shz = !ShizukuGate.isRunning() ? I18n.t("未运行")
+                    : (ShizukuGate.isAuthorized() ? I18n.t("已授权") : I18n.t("待授权"));
         } catch (Throwable t2) {
-            shz = "未知";
+            shz = I18n.t("未知");
         }
         final String fShz = shz;
-        addAboutRow(env, "Android", Build.VERSION.RELEASE + "（API " + Build.VERSION.SDK_INT + "）");
-        addAboutRow(env, "设备", (Build.MANUFACTURER + " " + Build.MODEL).trim());
+        addAboutRow(env, "Android", Build.VERSION.RELEASE + I18n.t("（API ")
+                + Build.VERSION.SDK_INT + I18n.t("）"));
+        addAboutRow(env, I18n.t("设备"), (Build.MANUFACTURER + " " + Build.MODEL).trim());
         addAboutRow(env, "Shizuku", shz);
-        final TextView boxV = addAboutRow(env, "Box64", "读取中…");
-        final TextView ubV = addAboutRow(env, "Ubuntu", "读取中…");
-        final TextView bdsV = addAboutRow(env, "服务端", "读取中…");
-        final TextView worldV = addAboutRow(env, "世界", "读取中…");
+        addAboutRow(env, I18n.t("界面语言"), I18n.label());
+        final TextView boxV = addAboutRow(env, "Box64", I18n.t("读取中…"));
+        final TextView ubV = addAboutRow(env, "Ubuntu", I18n.t("读取中…"));
+        final TextView bdsV = addAboutRow(env, I18n.t("服务端"), I18n.t("读取中…"));
+        final TextView worldV = addAboutRow(env, I18n.t("世界"), I18n.t("读取中…"));
         Button copy = new MinecraftUi.McButton(this, "复制诊断信息");
         env.addView(copy, dialogBtnLp(8));
         copy.setOnClickListener(v -> {
-            String text = "基岩工坊 " + fVer + "（" + fCode + "）\n"
-                    + "包名：" + getPackageName() + "\n"
-                    + "Android：" + Build.VERSION.RELEASE + "（API " + Build.VERSION.SDK_INT + "）\n"
-                    + "设备：" + (Build.MANUFACTURER + " " + Build.MODEL).trim() + "\n"
+            String text = I18n.t("基岩工坊 ") + fVer + I18n.t("（") + fCode + "）\n"
+                    + I18n.t("包名：") + getPackageName() + "\n"
+                    + I18n.t("Android：") + Build.VERSION.RELEASE + I18n.t("（API ")
+                    + Build.VERSION.SDK_INT + I18n.t("）") + "\n"
+                    + I18n.t("设备：") + (Build.MANUFACTURER + " " + Build.MODEL).trim() + "\n"
                     + "Shizuku：" + fShz + "\n"
                     + "Box64：" + boxV.getText() + "\n"
                     + "Ubuntu：" + ubV.getText() + "\n"
-                    + "服务端：" + bdsV.getText() + "\n"
-                    + "世界：" + worldV.getText();
+                    + I18n.t("服务端：") + bdsV.getText() + "\n"
+                    + I18n.t("世界：") + worldV.getText();
             android.content.ClipboardManager cm = (android.content.ClipboardManager)
                     getSystemService(CLIPBOARD_SERVICE);
             if (cm != null) {
-                cm.setPrimaryClip(android.content.ClipData.newPlainText("诊断信息", text));
-                toast("诊断信息已复制");
+                cm.setPrimaryClip(android.content.ClipData.newPlainText(I18n.t("诊断信息"), text));
+                toast(I18n.t("诊断信息已复制"));
             }
         });
         col.addView(env);
 
         new Thread(() -> {
-            String box = "未部署", ubuntu = "未部署", bds = "未部署", world = "未知";
+            String box = I18n.t("未部署"), ubuntu = I18n.t("未部署"), bds = I18n.t("未部署"), world = I18n.t("未知");
             try {
                 DeployManager.Status rt = DeployManager.detect(this, DeployManager.TYPE_RUNTIME);
                 if (rt.installed) {
                     box = rt.box64 ? (rt.box64Version == null || rt.box64Version.isEmpty()
-                            ? "已编译" : rt.box64Version) : "未编译";
-                    ubuntu = rt.version == null || rt.version.isEmpty() ? "未知" : rt.version;
+                            ? I18n.t("已编译") : rt.box64Version) : I18n.t("未编译");
+                    ubuntu = rt.version == null || rt.version.isEmpty() ? I18n.t("未知") : rt.version;
                 }
             } catch (Throwable ignored) {
             }
             try {
                 DeployManager.Status srv = DeployManager.detect(this, DeployManager.TYPE_SERVER);
-                if (srv.installed) bds = srv.version == null || srv.version.isEmpty() ? "未知" : srv.version;
+                if (srv.installed) bds = srv.version == null || srv.version.isEmpty() ? I18n.t("未知") : srv.version;
             } catch (Throwable ignored) {
             }
             try {
@@ -2361,42 +2434,41 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
 
         LinearLayout compat = MinecraftUi.panel(this, "兼容性说明");
         compat.addView(MinecraftUi.text(this,
-                "· Android 8.0（API 26）及以上\n"
-                        + "· arm64 设备（不支持 32 位 / x86 模拟器）\n"
-                        + "· 需要 Shizuku（shell 权限）\n"
-                        + "· 至少 4 GB 可用存储，建议 6 GB 以上内存\n"
-                        + "· 已测试 BDS 1.26.60.6 / 1.26.63.1\n"
-                        + "· 玩家数据编辑依赖 LevelDB 格式\n"
-                        + "· 不提供公网中继、账号系统或服务器托管\n"
-                        + "· 修改数据、回滚备份前必须停止服务端",
+                I18n.t("· Android 8.0（API 26）及以上\n")
+                        + I18n.t("· arm64 设备（不支持 32 位 / x86 模拟器）\n")
+                        + I18n.t("· 需要 Shizuku（shell 权限）\n")
+                        + I18n.t("· 至少 4 GB 可用存储，建议 6 GB 以上内存\n")
+                        + I18n.t("· 玩家数据编辑依赖 LevelDB 格式\n")
+                        + I18n.t("· 不提供公网中继、账号系统或服务器托管\n")
+                        + I18n.t("· 修改数据、回滚备份前必须停止服务端"),
                 8.5f, MinecraftUi.PANEL_MUTED, false));
         col.addView(compat);
 
         LinearLayout credits = MinecraftUi.panel(this, "贡献者名单");
         credits.addView(MinecraftUi.text(this,
-                "开发者：SKJSLCY\n"
-                        + "制作方式：由 AI 制作\n"
-                        + "数据与接口：MCAPKS、Mojang 官方 BDS 下载\n"
-                        + "开源组件：Box64、proot、Ubuntu Base、Shizuku、AOSP\n"
-                        + "界面素材：自制像素纹理与图标\n"
-                        + "测试与反馈：待补充",
+                I18n.t("开发者：SKJSLCY\n")
+                        + I18n.t("制作方式：由 AI 制作\n")
+                        + I18n.t("数据与接口：MCAPKS、Mojang 官方 BDS 下载\n")
+                        + I18n.t("开源组件：Box64、proot、Ubuntu Base、Shizuku、AOSP\n")
+                        + I18n.t("界面素材：自制像素纹理与图标\n")
+                        + I18n.t("测试与反馈：SKJSLCY"),
                 8.5f, MinecraftUi.PANEL_MUTED, false));
         col.addView(credits);
 
         LinearLayout thanks = MinecraftUi.panel(this, "致谢");
         thanks.addView(MinecraftUi.text(this,
-                "感谢 Box64、proot、Ubuntu Base、Termux、Shizuku、AOSP，\n"
-                        + "MCAPKS 提供历史版本列表接口，\n"
-                        + "清华大学 TUNA 镜像提供 rootfs 下载，\n"
-                        + "以及所有提交反馈与测试的用户。",
+                I18n.t("感谢 Box64、proot、Ubuntu Base、Termux、Shizuku、AOSP，\n")
+                        + I18n.t("MCAPKS 提供历史版本列表接口，\n")
+                        + I18n.t("清华大学 TUNA 镜像提供 rootfs 下载，\n")
+                        + I18n.t("以及所有提交反馈与测试的用户。"),
                 8.5f, MinecraftUi.PANEL_MUTED, false));
         col.addView(thanks);
 
         LinearLayout notice = MinecraftUi.panel(this, "非官方声明");
         notice.addView(MinecraftUi.text(this,
-                "本软件由 AI 制作。\n"
-                        + "本软件为非官方工具，与 Mojang Studios、Microsoft 及其关联公司无隶属、授权或合作关系。\n"
-                        + "Minecraft、Minecraft Bedrock Edition 及相关商标归其权利人所有。",
+                I18n.t("本软件由 AI 制作。\n")
+                        + I18n.t("本软件为非官方工具，与 Mojang Studios、Microsoft 及其关联公司无隶属、授权或合作关系。\n")
+                        + I18n.t("Minecraft、Minecraft Bedrock Edition 及相关商标归其权利人所有。"),
                 8.5f, MinecraftUi.PANEL_MUTED, false));
         col.addView(notice);
 
@@ -2430,9 +2502,44 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
                 startActivity(new android.content.Intent(
                         android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url)));
             } catch (Throwable t) {
-                toast("无法打开链接");
+                toast(I18n.t("无法打开链接"));
             }
         });
+    }
+
+    /** 设置 → 屏幕常亮：二级页面，直接点选三种策略。 */
+    private View buildScreenOnPage() {
+        ScrollView sv = new ScrollView(this);
+        LinearLayout col = new LinearLayout(this);
+        col.setOrientation(LinearLayout.VERTICAL);
+        col.setPadding(dp(2), 0, dp(2), 0);
+        LinearLayout panel = MinecraftUi.panel(this, null);
+        col.addView(panel);
+        panel.addView(MinecraftUi.text(this,
+                I18n.t("保持屏幕不熄灭，避免部署或开服时锁屏中断。"), 9,
+                MinecraftUi.PANEL_MUTED, false));
+        panel.addView(MinecraftUi.text(this, I18n.t("风险提示"), 10,
+                MinecraftUi.RED, true));
+        LinearLayout warn = MinecraftUi.slot(this);
+        warn.addView(MinecraftUi.text(this,
+                I18n.t("· OLED 屏幕长时间停留在一个画面中屏幕可能会出现烧屏现象。\n")
+                        + I18n.t("· 屏幕长时间开启可能会对屏幕造成不可逆的损伤和老化。"),
+                8.5f, MinecraftUi.PANEL_TEXT, false));
+        panel.addView(warn, dialogBtnLp(4));
+        final int cur = ScreenOnManager.mode(this);
+        int[] modes = {ScreenOnManager.OFF, ScreenOnManager.WHILE_SERVER, ScreenOnManager.ALWAYS};
+        for (int m : modes) {
+            Button b = new MinecraftUi.McButton(this, ScreenOnManager.label(m));
+            b.setSelected(m == cur);
+            panel.addView(b, dialogBtnLp(6));
+            b.setOnClickListener(v -> {
+                ScreenOnManager.setMode(MainActivity.this, m);
+                ScreenOnManager.apply(MainActivity.this);
+                showSettingsSubPage(I18n.t("屏幕常亮"), buildScreenOnPage());
+            });
+        }
+        sv.addView(col);
+        return sv;
     }
 
     private View buildSettingsPage() {
@@ -2470,7 +2577,7 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
 
     private void showSettingsSubPage(String title, View content) {
         if (settingsPage == null) return;
-        settingsTitle.setText(title);
+        settingsTitle.setText(I18n.t(title));
         settingsHost.removeAllViews();
         settingsHost.addView(content, new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
@@ -2555,11 +2662,11 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
 
     private void showManagePage() {
         if (oreBack != null) oreBack.setVisibility(View.VISIBLE);
-        if (oreTitle != null) oreTitle.setText("服务器管理");
+        if (oreTitle != null) oreTitle.setText(I18n.t("服务器管理"));
         for (View p : pages) p.setVisibility(View.GONE);
         managePage.setVisibility(View.VISIBLE);
         currentPage = 4;
-        manageTitle.setText("服务器管理");
+        manageTitle.setText(I18n.t("服务器管理"));
         showManageList();
     }
 
@@ -2572,9 +2679,9 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
     }
 
     private String manageDeniedReason(int index) {
-        if (index == 0) return "请先部署运行环境";
-        if (index == 2) return "请先部署服务端";
-        return "请先完成运行环境和服务端部署";
+        if (index == 0) return I18n.t("请先部署运行环境");
+        if (index == 2) return I18n.t("请先部署服务端");
+        return I18n.t("请先完成运行环境和服务端部署");
     }
 
     private void applyManageGating() {
@@ -2623,7 +2730,7 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
 
     private void showManageList() {
         manageSectionOpen = false;
-        if (manageTitle != null) manageTitle.setText("服务器管理");
+        if (manageTitle != null) manageTitle.setText(I18n.t("服务器管理"));
         if (manageList.getParent() != null) {
             ((ViewGroup) manageList.getParent()).removeView(manageList);
         }
@@ -2635,13 +2742,13 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
     }
 
     private void openManageSection(int index) {
-        if (!ShizukuGate.ensure(this, "服务器管理")) return;
+        if (!ShizukuGate.ensure(this, I18n.t("服务器管理"))) return;
         if (!manageAllowed(index)) {
             toast(manageDeniedReason(index));
             return;
         }
         manageSectionOpen = true;
-        if (manageTitle != null) manageTitle.setText(MANAGE_LABELS[index]);
+        if (manageTitle != null) manageTitle.setText(I18n.t(MANAGE_LABELS[index]));
         manageHost.removeAllViews();
         String label = MANAGE_LABELS[index];
         View section = null;
@@ -2785,33 +2892,33 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
                         if (serverVersionValue != null) serverVersionValue.setText("--");
                         if (gameVersionValue != null) gameVersionValue.setText("--");
                         if (!ShizukuGate.isRunning()) {
-                            homeGuideText.setText("还没有检测到 Shizuku，无法检测本地部署。\n\n"
-                                    + "启动 Shizuku 后，这里会显示运行环境和部署指引。");
-                            homeGuideRuntimeBtn.setText("去部署运行环境");
+                            homeGuideText.setText(I18n.t("还没有检测到 Shizuku，无法检测本地部署。\n\n")
+                                    + I18n.t("启动 Shizuku 后，这里会显示运行环境和部署指引。"));
+                            homeGuideRuntimeBtn.setText(I18n.t("去部署运行环境"));
                             homeGuideRuntimeBtn.setEnabled(true);
                             homeGuideServerBtn.setEnabled(false);
                             return;
                         }
                         if (hasRuntime) {
-                            homeGuideText.setText("运行环境已部署完成。\n\n"
-                                    + "下一步：部署服务端（BDS）\n"
-                                    + "部署完成后回到首页启动服务器。");
-                            homeGuideRuntimeBtn.setText("运行环境已部署 ✓");
+                            homeGuideText.setText(I18n.t("运行环境已部署完成。\n\n")
+                                    + I18n.t("下一步：部署服务端（BDS）\n")
+                                    + I18n.t("部署完成后回到首页启动服务器。"));
+                            homeGuideRuntimeBtn.setText(I18n.t("运行环境已部署 ✓"));
                             homeGuideRuntimeBtn.setEnabled(false);
                             homeGuideRuntimeBtn.setAlpha(0.6f);
-                            homeGuideServerBtn.setText("去部署服务端");
+                            homeGuideServerBtn.setText(I18n.t("去部署服务端"));
                             homeGuideServerBtn.setEnabled(true);
                             homeGuideServerBtn.setAlpha(1f);
                         } else {
-                            homeGuideText.setText("还没有部署运行环境。\n\n"
-                                    + "1. 先部署运行环境（Box64 + Ubuntu）\n"
-                                    + "2. 再部署服务端（BDS）\n"
-                                    + "3. 回到首页启动服务器\n\n"
-                                    + "运行服务端需要 Shizuku；首次使用请看权限管理里的启动指引。");
-                            homeGuideRuntimeBtn.setText("去部署运行环境");
+                            homeGuideText.setText(I18n.t("还没有部署运行环境。\n\n")
+                                    + I18n.t("1. 先部署运行环境（Box64 + Ubuntu）\n")
+                                    + I18n.t("2. 再部署服务端（BDS）\n")
+                                    + I18n.t("3. 回到首页启动服务器\n\n")
+                                    + I18n.t("运行服务端需要 Shizuku；首次使用请看权限管理里的启动指引。"));
+                            homeGuideRuntimeBtn.setText(I18n.t("去部署运行环境"));
                             homeGuideRuntimeBtn.setEnabled(true);
                             homeGuideRuntimeBtn.setAlpha(1f);
-                            homeGuideServerBtn.setText("请先部署运行环境");
+                            homeGuideServerBtn.setText(I18n.t("请先部署运行环境"));
                             homeGuideServerBtn.setEnabled(false);
                             homeGuideServerBtn.setAlpha(0.5f);
                         }
@@ -2861,12 +2968,12 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
         boolean running = ServerManager.get().isRunning();
-        String state = running ? (serverReady ? "运行中" : "启动中") : "已停止";
-        TextView status = MinecraftUi.text(this, "状态：" + state, 13, MinecraftUi.PANEL_TEXT, true);
+        String state = running ? (serverReady ? I18n.t("运行中") : I18n.t("启动中")) : I18n.t("已停止");
+        TextView status = MinecraftUi.text(this, I18n.t("状态：") + state, 13, MinecraftUi.PANEL_TEXT, true);
         panel.addView(status);
 
         String addr = (lanIp == null ? "--" : lanIp) + ":" + port;
-        TextView address = MinecraftUi.text(this, "地址：" + addr, 12, MinecraftUi.PANEL_MUTED, true);
+        TextView address = MinecraftUi.text(this, I18n.t("地址：") + addr, 12, MinecraftUi.PANEL_MUTED, true);
         address.setPadding(0, dp(5), 0, dp(8));
         panel.addView(address);
 
@@ -2940,39 +3047,39 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
     }
 
     private void startServer() {
-        if (!ShizukuGate.ensure(this, "启动服务端")) return;
+        if (!ShizukuGate.ensure(this, I18n.t("启动服务端"))) return;
         boolean ping;
         try {
             ping = Shizuku.pingBinder();
         } catch (Throwable t) {
-            toast("Shizuku 不可用：" + t.getMessage());
+            toast(I18n.t("Shizuku 不可用：") + t.getMessage());
             return;
         }
         if (!ping) {
-            toast("Shizuku 未运行：请先启动 Shizuku 服务");
+            toast(I18n.t("Shizuku 未运行：请先启动 Shizuku 服务"));
             return;
         }
         try {
             if (Shizuku.checkSelfPermission() != PackageManager.PERMISSION_GRANTED) {
                 Shizuku.requestPermission(0);
-                toast("请在 Shizuku 弹窗中允许本应用");
+                toast(I18n.t("请在 Shizuku 弹窗中允许本应用"));
                 return;
             }
         } catch (Throwable t) {
-            toast("Shizuku 权限检查失败：" + t.getMessage());
+            toast(I18n.t("Shizuku 权限检查失败：") + t.getMessage());
             return;
         }
         Intent i = new Intent(this, ServerService.class).setAction(ServerService.ACTION_START);
         if (Build.VERSION.SDK_INT >= 26) startForegroundService(i); else startService(i);
         serverReady = false;
-        toast("正在启动服务端…");
+        toast(I18n.t("正在启动服务端…"));
     }
 
     private void stopServer() {
         Intent i = new Intent(this, ServerService.class).setAction(ServerService.ACTION_STOP);
         startService(i);
         serverReady = false;
-        toast("正在停止…");
+        toast(I18n.t("正在停止…"));
     }
 
     private void restartServer() {
@@ -2981,7 +3088,7 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
             return;
         }
         stopServer();
-        toast("已停止，75 秒后自动重启（释放端口）");
+        toast(I18n.t("已停止，75 秒后自动重启（释放端口）"));
         handler.postDelayed(new Runnable() {
             @Override
             public void run() {
@@ -2997,7 +3104,7 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
         String cmd = consoleInput.getText().toString().trim();
         if (cmd.isEmpty()) return;
         boolean ok = ServerManager.get().send(cmd);
-        if (!ok) toast("服务端未运行");
+        if (!ok) toast(I18n.t("服务端未运行"));
         consoleInput.setText("");
     }
 
@@ -3053,10 +3160,10 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
         long minutes = (totalSec % 3600) / 60;
         long seconds = totalSec % 60;
         StringBuilder sb = new StringBuilder();
-        if (days > 0) sb.append(days).append("天");
-        if (hours > 0 || days > 0) sb.append(hours).append("小时");
-        if (minutes > 0 || hours > 0 || days > 0) sb.append(minutes).append("分钟");
-        sb.append(seconds).append("秒");
+        if (days > 0) sb.append(days).append(I18n.t("天"));
+        if (hours > 0 || days > 0) sb.append(hours).append(I18n.t("小时"));
+        if (minutes > 0 || hours > 0 || days > 0) sb.append(minutes).append(I18n.t("分钟"));
+        sb.append(seconds).append(I18n.t("秒"));
         return sb.toString();
     }
 
@@ -3069,23 +3176,23 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
             if (running && m.getStartTime() > 0) {
                 uptimeValue.setText(formatDuration(System.currentTimeMillis() - m.getStartTime()));
             } else {
-                uptimeValue.setText("未运行");
+                uptimeValue.setText(I18n.t("未运行"));
             }
         }
 
         String state;
         int color;
         if (running && stopping) {
-            state = "停止中";
+            state = I18n.t("停止中");
             color = MinecraftUi.AMBER;
         } else if (running && !ready) {
-            state = "启动中";
+            state = I18n.t("启动中");
             color = MinecraftUi.AMBER;
         } else if (running) {
-            state = "运行中";
+            state = I18n.t("运行中");
             color = MinecraftUi.GREEN;
         } else {
-            state = "已停止";
+            state = I18n.t("已停止");
             color = MinecraftUi.RED;
         }
 
@@ -3097,7 +3204,7 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
             lampDot.setBackgroundColor(color);
         }
         if (runStateValue != null) {
-            runStateValue.setText(running ? state : "关闭");
+            runStateValue.setText(running ? state : I18n.t("已关闭"));
             runStateValue.setTextColor(color);
         }
         if (startBtn != null) startBtn.setEnabled(!running);
@@ -3114,7 +3221,7 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
             }
             serverReady = false;
         } else if (!ready && playersValue != null) {
-            playersValue.setText("连接中…");
+            playersValue.setText(I18n.t("连接中…"));
             playersValue.setTextColor(MinecraftUi.AMBER);
         }
 
@@ -3133,20 +3240,20 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
             shizukuPermissionRequested = true;
             try {
                 Shizuku.requestPermission(0);
-                toast("检测到 Shizuku，正在请求授权");
+                toast(I18n.t("检测到 Shizuku，正在请求授权"));
             } catch (Throwable ignored) {
             }
         }
         String s;
         int sc;
         if (!shizuku) {
-            s = "Shizuku 未运行 · 请先启动 Shizuku";
+            s = I18n.t("Shizuku 未运行 · 请先启动 Shizuku");
             sc = 0xFFFFB4AB;
         } else if (!granted) {
-            s = "Shizuku 已连接 · 待授权";
+            s = I18n.t("Shizuku 已连接 · 待授权");
             sc = 0xFFFFD180;
         } else {
-            s = "Shizuku 已连接";
+            s = I18n.t("Shizuku 已连接");
             sc = 0xFFB8FFB0;
         }
         if (shizukuNote != null) {
@@ -3154,16 +3261,16 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
             shizukuNote.setTextColor(sc);
         }
         if (settingsShizuku != null) {
-            settingsShizuku.setText(!shizuku ? "未运行" : granted ? "已连接" : "待授权");
+            settingsShizuku.setText(!shizuku ? I18n.t("未运行") : granted ? I18n.t("已连接") : I18n.t("待授权"));
         }
         if (settingsEnv != null) {
-            settingsEnv.setText(EnvManager.isInstalled(this) ? "已安装" : "未安装");
+            settingsEnv.setText(EnvManager.isInstalled(this) ? I18n.t("已安装") : I18n.t("未安装"));
         }
         if (settingsIp != null) {
             settingsIp.setText(lanIp == null ? "--" : lanIp + ":" + port);
         }
 
-        if (ipValue != null) ipValue.setText(lanIp == null ? "获取中…" : lanIp);
+        if (ipValue != null) ipValue.setText(lanIp == null ? I18n.t("获取中…") : lanIp);
         if (worldValue != null) {
             String level = (serverReady && !liveLevel.isEmpty()) ? liveLevel : worldName;
             worldValue.setText(port + " · " + level);
@@ -3231,7 +3338,7 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
                     ThemeManager.mapTextColor(logColor(line))), start, sb.length(),
                     Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
         }
-        consoleText.setText(sb.length() == 0 ? "等待服务端日志…" : sb);
+        consoleText.setText(sb.length() == 0 ? I18n.t("等待服务端日志…") : sb);
         if (consoleScroll != null) {
             final boolean toBottom = stick;
             final int restoreY = keepY;
@@ -3300,7 +3407,7 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
                         worldName = finalWorld;
                         onlineMode = finalOnline;
                         if (onlineModeValue != null) {
-                            onlineModeValue.setText(finalOnline ? "在线模式" : "离线模式");
+                            onlineModeValue.setText(finalOnline ? I18n.t("开启") : I18n.t("已关闭"));
                             onlineModeValue.setTextColor(finalOnline ? MinecraftUi.GREEN : MinecraftUi.AMBER);
                         }
                         ServerManager.get().setPort(port);
@@ -3320,7 +3427,7 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
                         if (body == null) {
                             serverReady = false;
                             if (playersValue != null) {
-                                playersValue.setText("连接中…");
+                                playersValue.setText(I18n.t("连接中…"));
                                 playersValue.setTextColor(MinecraftUi.AMBER);
                             }
                             return;
@@ -3336,7 +3443,7 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
                                 liveGameVersion = gv;
                                 liveProtocol = proto;
                                 if (gameVersionValue != null) {
-                                    gameVersionValue.setText(gv + (proto > 0 ? " · 协议 " + proto : ""));
+                                    gameVersionValue.setText(gv + (proto > 0 ? I18n.t(" · 协议 ") + proto : ""));
                                 }
                             }
                             if (!lvl.isEmpty()) {

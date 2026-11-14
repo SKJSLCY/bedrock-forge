@@ -29,9 +29,9 @@ final class ScreenOnManager {
 
     static String label(int mode) {
         switch (mode) {
-            case WHILE_SERVER: return "仅开服时保持";
-            case ALWAYS: return "始终保持";
-            default: return "关闭";
+            case WHILE_SERVER: return I18n.t("仅开服时保持");
+            case ALWAYS: return I18n.t("始终保持");
+            default: return I18n.t("关闭");
         }
     }
 

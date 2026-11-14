@@ -28,7 +28,6 @@ public class PermissionView extends LinearLayout {
     private final TextView batteryStatus;
     private final TextView storageStatus;
     private final TextView networkStatus;
-    private final TextView screenStatus;
 
     public PermissionView(Activity activity) {
         super(activity);
@@ -40,13 +39,13 @@ public class PermissionView extends LinearLayout {
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
         TextView intro = MinecraftUi.text(activity,
-                "运行服务端需要 Shizuku；通知权限用于部署进度和前台服务。\n"
-                        + "AI 功能需要网络，INTERNET 权限在安装时已授予。", 9,
+                I18n.t("运行服务端需要 Shizuku；通知权限用于部署进度和前台服务。\n")
+                        + I18n.t("AI 功能需要网络，INTERNET 权限在安装时已授予。"), 9,
                 MinecraftUi.PANEL_MUTED, false);
         intro.setPadding(0, 0, 0, dp(6));
         panel.addView(intro);
 
-        LinearLayout nRow = row(panel, "通知权限");
+        LinearLayout nRow = row(panel, I18n.t("通知权限"));
         notificationStatus = (TextView) nRow.getTag();
         Button nBtn = new MinecraftUi.McButton(activity, "打开通知设置");
         nRow.addView(nBtn, new LinearLayout.LayoutParams(dp(130), dp(40)));
@@ -75,7 +74,7 @@ public class PermissionView extends LinearLayout {
             @Override public void onClick(View v) { showShizukuGuide(activity); }
         });
 
-        LinearLayout bRow = row(panel, "电池优化");
+        LinearLayout bRow = row(panel, I18n.t("电池优化"));
         batteryStatus = (TextView) bRow.getTag();
         Button bBtn = new MinecraftUi.McButton(activity, "忽略优化");
         bRow.addView(bBtn, new LinearLayout.LayoutParams(dp(110), dp(40)));
@@ -83,7 +82,7 @@ public class PermissionView extends LinearLayout {
             @Override public void onClick(View v) { requestBattery(); }
         });
 
-        LinearLayout stRow = row(panel, "存储权限");
+        LinearLayout stRow = row(panel, I18n.t("存储权限"));
         storageStatus = (TextView) stRow.getTag();
         Button stBtn = new MinecraftUi.McButton(activity,
                 Build.VERSION.SDK_INT >= 30 ? "系统设置" : "申请");
@@ -92,7 +91,7 @@ public class PermissionView extends LinearLayout {
             @Override public void onClick(View v) { requestStorage(); }
         });
 
-        LinearLayout netRow = row(panel, "网络");
+        LinearLayout netRow = row(panel, I18n.t("网络"));
         networkStatus = (TextView) netRow.getTag();
         Button nRefresh = new MinecraftUi.McButton(activity, "刷新");
         netRow.addView(nRefresh, new LinearLayout.LayoutParams(dp(76), dp(40)));
@@ -105,14 +104,6 @@ public class PermissionView extends LinearLayout {
         netRow.addView(nSet, nslp);
         nSet.setOnClickListener(new OnClickListener() {
             @Override public void onClick(View v) { openNetworkSettings(); }
-        });
-
-        LinearLayout screenRow = row(panel, "屏幕常亮");
-        screenStatus = (TextView) screenRow.getTag();
-        Button sSet = new MinecraftUi.McButton(activity, "设置");
-        screenRow.addView(sSet, new LinearLayout.LayoutParams(dp(96), dp(40)));
-        sSet.setOnClickListener(new OnClickListener() {
-            @Override public void onClick(View v) { showScreenOnDialog(); }
         });
 
         refresh();
@@ -128,7 +119,7 @@ public class PermissionView extends LinearLayout {
                 activity.startActivity(new Intent(android.provider.Settings.ACTION_SETTINGS)
                         .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
             } catch (Throwable t2) {
-                toast("无法打开网络设置");
+                toast(I18n.t("无法打开网络设置"));
             }
         }
     }
@@ -140,7 +131,7 @@ public class PermissionView extends LinearLayout {
                     (android.app.NotificationManager) activity.getSystemService(Activity.NOTIFICATION_SERVICE);
             notify = nm.areNotificationsEnabled();
         }
-        notificationStatus.setText(notify ? "已允许" : "未允许");
+        notificationStatus.setText(notify ? I18n.t("已允许") : I18n.t("未允许"));
         notificationStatus.setTextColor(notify ? MinecraftUi.GREEN : MinecraftUi.RED);
 
         boolean ping = false, granted = false;
@@ -149,7 +140,7 @@ public class PermissionView extends LinearLayout {
             granted = ping && Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED;
         } catch (Throwable ignored) {
         }
-        shizukuStatus.setText(!ping ? "未运行" : (granted ? "已连接并授权" : "已连接，待授权"));
+        shizukuStatus.setText(!ping ? I18n.t("未运行") : (granted ? I18n.t("已连接并授权") : I18n.t("已连接，待授权")));
         shizukuStatus.setTextColor(granted ? MinecraftUi.GREEN : MinecraftUi.RED);
 
         boolean battery = true;
@@ -158,17 +149,17 @@ public class PermissionView extends LinearLayout {
             battery = pm.isIgnoringBatteryOptimizations(activity.getPackageName());
         } catch (Throwable ignored) {
         }
-        batteryStatus.setText(battery ? "已忽略" : "未忽略");
+        batteryStatus.setText(battery ? I18n.t("已忽略") : I18n.t("未忽略"));
         batteryStatus.setTextColor(battery ? MinecraftUi.GREEN : MinecraftUi.AMBER);
 
         boolean storage;
         if (Build.VERSION.SDK_INT >= 30) {
             storage = true;
-            storageStatus.setText("无需（分区存储）");
+            storageStatus.setText(I18n.t("无需（分区存储）"));
         } else {
             storage = activity.checkSelfPermission(android.Manifest.permission.WRITE_EXTERNAL_STORAGE)
                     == PackageManager.PERMISSION_GRANTED;
-            storageStatus.setText(storage ? "已允许" : "未允许");
+            storageStatus.setText(storage ? I18n.t("已允许") : I18n.t("未允许"));
         }
         storageStatus.setTextColor(storage ? MinecraftUi.GREEN : MinecraftUi.RED);
 
@@ -188,79 +179,15 @@ public class PermissionView extends LinearLayout {
         } catch (Throwable ignored) {
         }
         if (!connected) {
-            networkStatus.setText("未连接");
+            networkStatus.setText(I18n.t("未连接"));
             networkStatus.setTextColor(MinecraftUi.RED);
         } else {
-            networkStatus.setText(wifi ? "Wi‑Fi 已连接" : (cellular ? "移动数据已连接" : "已连接"));
+            networkStatus.setText(wifi ? I18n.t("Wi‑Fi 已连接") : (cellular ? I18n.t("移动数据已连接") : I18n.t("已连接")));
             networkStatus.setTextColor(MinecraftUi.GREEN);
         }
 
-        int so = ScreenOnManager.mode(activity);
-        screenStatus.setText(ScreenOnManager.label(so)
-                + (so == ScreenOnManager.WHILE_SERVER && !ServerManager.get().isRunning()
-                ? "（当前未开服，不生效）" : ""));
-        screenStatus.setTextColor(so == ScreenOnManager.OFF
-                ? MinecraftUi.PANEL_MUTED : MinecraftUi.GREEN);
     }
 
-    private void showScreenOnDialog() {
-        final Dialog d = new Dialog(activity);
-        d.requestWindowFeature(Window.FEATURE_NO_TITLE);
-        LinearLayout wrap = new LinearLayout(activity);
-        wrap.setOrientation(LinearLayout.VERTICAL);
-        wrap.setPadding(dp(12), dp(12), dp(12), dp(12));
-        LinearLayout panel = MinecraftUi.panel(activity, "屏幕常亮");
-        panel.addView(MinecraftUi.text(activity,
-                "开启后，本应用在前台时不会自动熄屏。\n\n"
-                        + "风险提示：\n"
-                        + "· 屏幕长时间点亮会明显增加耗电与发热\n"
-                        + "· 长时间显示同一界面可能造成烧屏\n"
-                        + "· App 退到后台、手动锁屏或系统强制息屏时仍会熄灭\n"
-                        + "· 建议仅在需要观察控制台/监控服务器时开启",
-                8.5f, MinecraftUi.PANEL_TEXT, false));
-        int current = ScreenOnManager.mode(activity);
-        String[] labels = {"关闭", "仅开服时保持", "始终保持"};
-        int[] values = {ScreenOnManager.OFF, ScreenOnManager.WHILE_SERVER, ScreenOnManager.ALWAYS};
-        for (int i = 0; i < labels.length; i++) {
-            final int value = values[i];
-            boolean selected = value == current;
-            Button b = new MinecraftUi.McButton(activity, (selected ? "✓ " : "") + labels[i]);
-            if (selected) {
-                b.setTextColor(0xFF1B1B1B);
-                b.setBackground(new MinecraftUi.BevelDrawable(0xFFC6C6C6,
-                        MinecraftUi.GREEN_BRIGHT, 0xFFFFFFFF, 0xFF5A5A5A,
-                        dp(2), dp(2)));
-            }
-            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT, dp(42));
-            lp.topMargin = i == 0 ? dp(8) : dp(4);
-            panel.addView(b, lp);
-            b.setOnClickListener(v -> {
-                ScreenOnManager.setMode(activity, value);
-                ScreenOnManager.apply(activity);
-                d.dismiss();
-                refresh();
-                if (value != ScreenOnManager.OFF) {
-                    toast("已开启：请留意耗电与烧屏风险");
-                }
-            });
-        }
-        Button cancel = new MinecraftUi.McButton(activity, "取消");
-        LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, dp(42));
-        clp.topMargin = dp(6);
-        panel.addView(cancel, clp);
-        cancel.setOnClickListener(v -> d.dismiss());
-        wrap.addView(panel);
-        d.setContentView(wrap);
-        d.show();
-        Window w = d.getWindow();
-        if (w != null) {
-            w.setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(0x00000000));
-            w.setLayout((int) (activity.getResources().getDisplayMetrics().widthPixels * 0.92f),
-                    (int) (ViewGroup.LayoutParams.WRAP_CONTENT));
-        }
-    }
 
     private LinearLayout row(LinearLayout panel, String label) {
         LinearLayout row = new LinearLayout(activity);
@@ -287,7 +214,7 @@ public class PermissionView extends LinearLayout {
 
     private void openNotificationSettings() {
         if (!showNotificationSettings(activity)) {
-            toast("无法打开通知设置，请手动进入系统设置");
+            toast(I18n.t("无法打开通知设置，请手动进入系统设置"));
         }
     }
 
@@ -326,7 +253,7 @@ public class PermissionView extends LinearLayout {
             try {
                 activity.startActivity(new Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS));
             } catch (Throwable t2) {
-                toast("无法打开电池优化设置");
+                toast(I18n.t("无法打开电池优化设置"));
             }
         }
     }
@@ -340,7 +267,7 @@ public class PermissionView extends LinearLayout {
                         .setData(Uri.parse("package:" + activity.getPackageName()));
                 activity.startActivity(i);
             } catch (Throwable t) {
-                toast("无法打开应用设置：" + t.getMessage());
+                toast(I18n.t("无法打开应用设置：") + t.getMessage());
             }
             return;
         }
@@ -359,11 +286,11 @@ public class PermissionView extends LinearLayout {
         wrap.addView(panel, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
-        String steps = "1. 安装 Shizuku\n"
-                + "2. 打开开发者选项 → 无线调试\n"
-                + "3. 在 Shizuku 内配对并启动服务\n"
-                + "4. 回到本应用，允许 Shizuku 授权\n\n"
-                + "Shizuku 只负责以 shell 身份启动 Box64；不需要电脑长期连接。";
+        String steps = I18n.t("1. 安装 Shizuku\n")
+                + I18n.t("2. 打开开发者选项 → 无线调试\n")
+                + I18n.t("3. 在 Shizuku 内配对并启动服务\n")
+                + I18n.t("4. 回到本应用，允许 Shizuku 授权\n\n")
+                + I18n.t("Shizuku 只负责以 shell 身份启动 Box64；不需要电脑长期连接。");
         TextView t = MinecraftUi.text(activity, steps, 10, MinecraftUi.PANEL_TEXT, false);
         t.setPadding(0, dp(activity, 2), 0, dp(activity, 8));
         panel.addView(t);
@@ -377,12 +304,12 @@ public class PermissionView extends LinearLayout {
                     Intent i = activity.getPackageManager()
                             .getLaunchIntentForPackage("moe.shizuku.privileged.api");
                     if (i == null) {
-                        Toast.makeText(activity, "未安装 Shizuku，请先安装", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(activity, I18n.t("未安装 Shizuku，请先安装"), Toast.LENGTH_SHORT).show();
                     } else {
                         activity.startActivity(i);
                     }
                 } catch (Throwable e) {
-                    Toast.makeText(activity, "无法打开 Shizuku：" + e.getMessage(), Toast.LENGTH_SHORT).show();
+                    Toast.makeText(activity, I18n.t("无法打开 Shizuku：") + e.getMessage(), Toast.LENGTH_SHORT).show();
                 }
             }
         });

@@ -62,12 +62,12 @@ final class AboutDialog {
         content.addView(head, cardLp(a));
 
         // 版本
-        String name = "未知";
-        String code = "未知";
-        String updated = "未知";
+        String name = I18n.t("未知");
+        String code = I18n.t("未知");
+        String updated = I18n.t("未知");
         try {
             PackageInfo pi = a.getPackageManager().getPackageInfo(a.getPackageName(), 0);
-            name = pi.versionName == null ? "未知" : pi.versionName;
+            name = pi.versionName == null ? I18n.t("未知") : pi.versionName;
             code = Build.VERSION.SDK_INT >= 28
                     ? String.valueOf(pi.getLongVersionCode()) : String.valueOf(pi.versionCode);
             updated = new SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.CHINA)
@@ -77,18 +77,18 @@ final class AboutDialog {
         final String appName = name;
         final String appCode = code;
         LinearLayout ver = MinecraftUi.panel(a, "版本信息");
-        addRow(a, ver, "应用版本", name + "（" + code + "）");
-        addRow(a, ver, "安装/更新时间", updated);
-        addRow(a, ver, "包名", a.getPackageName());
+        addRow(a, ver, I18n.t("应用版本"), name + I18n.t("（") + code + I18n.t("）"));
+        addRow(a, ver, I18n.t("安装/更新时间"), updated);
+        addRow(a, ver, I18n.t("包名"), a.getPackageName());
         content.addView(ver, cardLp(a));
 
         // 简介
         LinearLayout intro = MinecraftUi.panel(a, "简介");
         intro.addView(MinecraftUi.text(a,
-                "手机上的 Minecraft 基岩版服务端管理工具。\n"
-                        + "支持运行环境部署、服务端启停、控制台与日志、"
-                        + "世界与玩家数据管理、备份恢复、addons 管理以及 AI 助手。\n\n"
-                        + "软件完全免费。",
+                I18n.t("手机上的 Minecraft 基岩版服务端管理工具。\n")
+                        + I18n.t("支持运行环境部署、服务端启停、控制台与日志、")
+                        + I18n.t("世界与玩家数据管理、备份恢复、addons 管理以及 AI 助手。\n\n")
+                        + I18n.t("软件完全免费。"),
                 9f, MinecraftUi.PANEL_TEXT, false));
         content.addView(intro, cardLp(a));
 
@@ -121,17 +121,18 @@ final class AboutDialog {
         final LinkedHashMap<String, TextView> diag = new LinkedHashMap<>();
         LinearLayout env = MinecraftUi.panel(a, "环境信息");
         diag.put("Android", addRow(a, env, "Android",
-                Build.VERSION.RELEASE + "（API " + Build.VERSION.SDK_INT + "）"));
+                Build.VERSION.RELEASE + I18n.t("（API ") + Build.VERSION.SDK_INT + I18n.t("）")));
         diag.put("设备", addRow(a, env, "设备",
                 (Build.MANUFACTURER + " " + Build.MODEL).trim()));
         String shz;
         try {
-            shz = !ShizukuGate.isRunning() ? "未运行"
-                    : (ShizukuGate.isAuthorized() ? "已授权" : "待授权");
+            shz = !ShizukuGate.isRunning() ? I18n.t("未运行")
+                    : (ShizukuGate.isAuthorized() ? I18n.t("已授权") : I18n.t("待授权"));
         } catch (Throwable t) {
-            shz = "未知";
+            shz = I18n.t("未知");
         }
         diag.put("Shizuku", addRow(a, env, "Shizuku", shz));
+        addRow(a, env, I18n.t("界面语言"), I18n.label());
         diag.put("Box64", addRow(a, env, "Box64", "读取中…"));
         diag.put("Ubuntu", addRow(a, env, "Ubuntu", "读取中…"));
         diag.put("服务端", addRow(a, env, "服务端", "读取中…"));
@@ -140,37 +141,37 @@ final class AboutDialog {
         env.addView(copy, btnLp(a, 8));
         copy.setOnClickListener(v -> {
             StringBuilder sb = new StringBuilder();
-            sb.append("基岩工坊 ").append(appName).append("（").append(appCode).append("）\n");
-            sb.append("包名：").append(a.getPackageName()).append("\n");
+            sb.append(I18n.t("基岩工坊 ")).append(appName).append(I18n.t("（")).append(appCode).append("）\n");
+            sb.append(I18n.t("包名：")).append(a.getPackageName()).append("\n");
             for (Map.Entry<String, TextView> e : diag.entrySet()) {
                 sb.append(e.getKey()).append("：").append(e.getValue().getText()).append("\n");
             }
             ClipboardManager cm = (ClipboardManager) a.getSystemService(Context.CLIPBOARD_SERVICE);
             if (cm != null) {
-                cm.setPrimaryClip(ClipData.newPlainText("基岩工坊诊断信息", sb.toString()));
-                toast(a, "诊断信息已复制");
+                cm.setPrimaryClip(ClipData.newPlainText(I18n.t("基岩工坊诊断信息"), sb.toString()));
+                toast(a, I18n.t("诊断信息已复制"));
             } else {
-                toast(a, "剪贴板不可用");
+                toast(a, I18n.t("剪贴板不可用"));
             }
         });
         content.addView(env, cardLp(a));
 
         new Thread(() -> {
-            String box = "未部署", ubuntu = "未部署", bds = "未部署", world = "未知";
+            String box = I18n.t("未部署"), ubuntu = I18n.t("未部署"), bds = I18n.t("未部署"), world = I18n.t("未知");
             try {
                 DeployManager.Status rt = DeployManager.detect(a, DeployManager.TYPE_RUNTIME);
                 if (rt.installed) {
                     box = rt.box64
                             ? (rt.box64Version == null || rt.box64Version.isEmpty()
-                            ? "已编译" : rt.box64Version)
-                            : "未编译";
-                    ubuntu = rt.version == null || rt.version.isEmpty() ? "未知" : rt.version;
+                            ? I18n.t("已编译") : rt.box64Version)
+                            : I18n.t("未编译");
+                    ubuntu = rt.version == null || rt.version.isEmpty() ? I18n.t("未知") : rt.version;
                 }
             } catch (Throwable ignored) {
             }
             try {
                 DeployManager.Status srv = DeployManager.detect(a, DeployManager.TYPE_SERVER);
-                if (srv.installed) bds = srv.version == null || srv.version.isEmpty() ? "未知" : srv.version;
+                if (srv.installed) bds = srv.version == null || srv.version.isEmpty() ? I18n.t("未知") : srv.version;
             } catch (Throwable ignored) {
             }
             try {
@@ -183,7 +184,7 @@ final class AboutDialog {
                     if (s.startsWith("server-port=")) port = s.substring("server-port=".length()).trim();
                 }
                 if (w != null && !w.isEmpty()) {
-                    world = w + (port == null || port.isEmpty() ? "" : " · 端口 " + port);
+                    world = w + (port == null || port.isEmpty() ? "" : I18n.t(" · 端口 ") + port);
                 }
             } catch (Throwable ignored) {
             }
@@ -191,8 +192,8 @@ final class AboutDialog {
             a.runOnUiThread(() -> {
                 set(diag, "Box64", fBox);
                 set(diag, "Ubuntu", fUbuntu);
-                set(diag, "服务端", fBds);
-                set(diag, "世界", fWorld);
+                set(diag, I18n.t("服务端"), fBds);
+                set(diag, I18n.t("世界"), fWorld);
             });
         }, "about-diagnostics").start();
 
@@ -209,8 +210,8 @@ final class AboutDialog {
         // 支持作者
         LinearLayout sponsor = MinecraftUi.panel(a, "支持作者");
         sponsor.addView(MinecraftUi.text(a,
-                "软件完全免费，赞助自愿，不影响使用与开源权利。\n"
-                        + "点击按钮前往爱发电赞助作者。",
+                I18n.t("软件完全免费，赞助自愿，不影响使用与开源权利。\n")
+                        + I18n.t("点击按钮前往爱发电赞助作者。"),
                 8.5f, MinecraftUi.PANEL_MUTED, false));
         Button sponsorBtn = new MinecraftUi.McButton(a, "赞助作者");
         sponsor.addView(sponsorBtn, btnLp(a, 8));
@@ -220,31 +221,31 @@ final class AboutDialog {
         // 兼容性
         LinearLayout compat = MinecraftUi.panel(a, "兼容性说明");
         String compatText =
-                "最低要求\n"
-                        + "· Android 8.0（API 26）及以上\n"
-                        + "· arm64 设备（不支持 32 位 / x86 模拟器）\n"
-                        + "· Shizuku（shell 权限）\n"
-                        + "· 至少 4 GB 可用存储\n"
-                        + "· 建议 6 GB 以上内存\n\n"
-                        + "网络\n"
-                        + "· 局域网可直接联机\n"
-                        + "· 公网联机需要端口映射或内网穿透\n"
-                        + "· AI 功能需要网络与 API Key\n\n"
-                        + "已知限制\n"
-                        + "· Android 11+ 可通过无线调试启动 Shizuku；\n"
-                        + "  Android 8–10 通常需要 Root 或电脑 ADB\n"
-                        + "· 部分 ROM 会限制后台，需要关闭电池优化\n"
-                        + "· Box64 运行 x86_64 服务端有性能损耗\n"
-                        + "· 已测试 BDS 1.26.60.6 / 1.26.63.1，\n"
-                        + "  其他版本可导入但不保证全部功能兼容\n"
-                        + "· 玩家数据编辑依赖 LevelDB 格式，未来版本可能变化\n"
-                        + "· addons 支持 .mcpack / .zip，不保证第三方兼容\n"
-                        + "· 不提供公网中继、账号系统或服务器托管\n"
-                        + "· 修改玩家数据、回滚备份前必须停止服务端\n"
-                        + "· 删除世界或玩家数据不可恢复，请先备份";
+                I18n.t("最低要求\n")
+                        + I18n.t("· Android 8.0（API 26）及以上\n")
+                        + I18n.t("· arm64 设备（不支持 32 位 / x86 模拟器）\n")
+                        + I18n.t("· Shizuku（shell 权限）\n")
+                        + I18n.t("· 至少 4 GB 可用存储\n")
+                        + I18n.t("· 建议 6 GB 以上内存\n\n")
+                        + I18n.t("网络\n")
+                        + I18n.t("· 局域网可直接联机\n")
+                        + I18n.t("· 公网联机需要端口映射或内网穿透\n")
+                        + I18n.t("· AI 功能需要网络与 API Key\n\n")
+                        + I18n.t("已知限制\n")
+                        + I18n.t("· Android 11+ 可通过无线调试启动 Shizuku；\n")
+                        + I18n.t("  Android 8–10 通常需要 Root 或电脑 ADB\n")
+                        + I18n.t("· 部分 ROM 会限制后台，需要关闭电池优化\n")
+                        + I18n.t("· Box64 运行 x86_64 服务端有性能损耗\n")
+                        + I18n.t("· 已测试 BDS 1.26.60.6 / 1.26.63.1，\n")
+                        + I18n.t("  其他版本可导入但不保证全部功能兼容\n")
+                        + I18n.t("· 玩家数据编辑依赖 LevelDB 格式，未来版本可能变化\n")
+                        + I18n.t("· addons 支持 .mcpack / .zip，不保证第三方兼容\n")
+                        + I18n.t("· 不提供公网中继、账号系统或服务器托管\n")
+                        + I18n.t("· 修改玩家数据、回滚备份前必须停止服务端\n")
+                        + I18n.t("· 删除世界或玩家数据不可恢复，请先备份");
         android.text.SpannableStringBuilder csb =
                 new android.text.SpannableStringBuilder(compatText);
-        for (String h : new String[]{"最低要求", "网络", "已知限制"}) {
+        for (String h : new String[]{I18n.t("最低要求"), I18n.t("网络"), I18n.t("已知限制")}) {
             int idx = compatText.indexOf(h);
             if (idx >= 0) {
                 csb.setSpan(new android.text.style.StyleSpan(android.graphics.Typeface.BOLD),
@@ -262,34 +263,34 @@ final class AboutDialog {
         // 贡献者
         LinearLayout credits = MinecraftUi.panel(a, "贡献者名单");
         credits.addView(MinecraftUi.text(a,
-                "开发者：SKJSLCY\n"
-                        + "制作方式：由 AI 制作\n"
-                        + "数据与接口：MCAPKS（历史版本列表）、Mojang 官方 BDS 下载\n"
-                        + "测试与反馈：待补充\n"
-                        + "开源组件：Box64、proot、Ubuntu Base、Shizuku、AOSP\n"
-                        + "界面素材：自制像素纹理与图标\n"
-                        + "特别感谢：所有提交反馈与测试的用户",
+                I18n.t("开发者：SKJSLCY\n")
+                        + I18n.t("制作方式：由 AI 制作\n")
+                        + I18n.t("数据与接口：MCAPKS（历史版本列表）、Mojang 官方 BDS 下载\n")
+                        + I18n.t("测试与反馈：待补充\n")
+                        + I18n.t("开源组件：Box64、proot、Ubuntu Base、Shizuku、AOSP\n")
+                        + I18n.t("界面素材：自制像素纹理与图标\n")
+                        + I18n.t("特别感谢：所有提交反馈与测试的用户"),
                 8.5f, MinecraftUi.PANEL_MUTED, false));
         content.addView(credits, cardLp(a));
 
         // 致谢
         LinearLayout thanks = MinecraftUi.panel(a, "致谢");
         thanks.addView(MinecraftUi.text(a,
-                "感谢以下开源项目与服务：\n"
+                I18n.t("感谢以下开源项目与服务：\n")
                         + "Box64、proot、Ubuntu Base、Shizuku、AOSP\n"
-                        + "MCAPKS 提供历史版本列表接口\n"
-                        + "清华大学 TUNA 镜像提供 rootfs 下载\n"
-                        + "以及所有提交反馈与测试的用户。",
+                        + I18n.t("MCAPKS 提供历史版本列表接口\n")
+                        + I18n.t("清华大学 TUNA 镜像提供 rootfs 下载\n")
+                        + I18n.t("以及所有提交反馈与测试的用户。"),
                 8.5f, MinecraftUi.PANEL_MUTED, false));
         content.addView(thanks, cardLp(a));
 
         // 非官方声明
         LinearLayout notice = MinecraftUi.panel(a, "非官方声明");
         notice.addView(MinecraftUi.text(a,
-                "本软件由 AI 制作。\n"
-                        + "本软件为非官方工具，与 Mojang Studios、Microsoft 及其关联公司"
-                        + "无隶属、授权或合作关系。\n"
-                        + "Minecraft、Minecraft Bedrock Edition 及相关商标归其权利人所有。",
+                I18n.t("本软件由 AI 制作。\n")
+                        + I18n.t("本软件为非官方工具，与 Mojang Studios、Microsoft 及其关联公司")
+                        + I18n.t("无隶属、授权或合作关系。\n")
+                        + I18n.t("Minecraft、Minecraft Bedrock Edition 及相关商标归其权利人所有。"),
                 8.5f, MinecraftUi.PANEL_MUTED, false));
         content.addView(notice, cardLp(a));
 
@@ -314,37 +315,37 @@ final class AboutDialog {
     }
 
     static void showFaq(final Activity a) {
-        String text = "Q1：Shizuku 显示未运行\n"
-                + "A：先在 Shizuku 内启动服务，再回到本应用授予权限。\n\n"
-                + "Q2：部署卡在编译 Box64\n"
-                + "A：编译耗时较长，请保持前台并确保存储空间充足；失败可点“修复运行环境”重试。\n\n"
-                + "Q3：服务端启动失败 / 端口被占用\n"
-                + "A：检查 server.properties 中的 server-port 是否被其他进程占用，停止后重启。\n\n"
-                + "Q4：玩家进服被拦截\n"
-                + "A：检查 allow-list 是否开启、玩家是否在白名单中，必要时在玩家管理中添加。\n\n"
-                + "Q5：AI 请求失败（401 / 超时）\n"
-                + "A：401 多为 API Key 无效或未选择模型；超时检查网络与服务商地址。\n\n"
-                + "Q6：修改玩家数据后未生效\n"
-                + "A：修改后需要启动服务端；跨版本数据可能被服务端忽略。\n\n"
-                + "Q7：备份回滚失败\n"
-                + "A：确认原世界仍存在、服务端已停止，且备份版本不高于当前实例。\n\n"
-                + "Q8：如何反馈问题\n"
-                + "A：在关于页复制诊断信息，并附上复现步骤与截图。\n\n"
-                + "Q9：这个软件会持续维护下去吗？\n"
-                + "A：会的。\n\n"
-                + "Q10：这个基岩工坊后续会支持插件加载器吗？\n"
-                + "A：不会，因为目前做不到。\n\n"
-                + "Q11：低内存的手机可以开服吗？\n"
-                + "A：低于8G内存的手机很难。\n\n"
-                + "Q12：为什么我是花钱买的软件？\n"
-                + "A：本软件开源完全免费，这个问题你应该问卖家。\n\n"
-                + "Q13：为什么我用不了AI助手?\n"
-                + "A：只有输入AI服务商提供给你的APIkey选择模型后才能使用。";
-        showTextDialog(a, "常见问题", text);
+        String text = I18n.t("Q1：Shizuku 显示未运行\n")
+                + I18n.t("A：先在 Shizuku 内启动服务，再回到本应用授予权限。\n\n")
+                + I18n.t("Q2：部署卡在编译 Box64\n")
+                + I18n.t("A：编译耗时较长，请保持前台并确保存储空间充足；失败可点“修复运行环境”重试。\n\n")
+                + I18n.t("Q3：服务端启动失败 / 端口被占用\n")
+                + I18n.t("A：检查 server.properties 中的 server-port 是否被其他进程占用，停止后重启。\n\n")
+                + I18n.t("Q4：玩家进服被拦截\n")
+                + I18n.t("A：检查 allow-list 是否开启、玩家是否在白名单中，必要时在玩家管理中添加。\n\n")
+                + I18n.t("Q5：AI 请求失败（401 / 超时）\n")
+                + I18n.t("A：401 多为 API Key 无效或未选择模型；超时检查网络与服务商地址。\n\n")
+                + I18n.t("Q6：修改玩家数据后未生效\n")
+                + I18n.t("A：修改后需要启动服务端；跨版本数据可能被服务端忽略。\n\n")
+                + I18n.t("Q7：备份回滚失败\n")
+                + I18n.t("A：确认原世界仍存在、服务端已停止，且备份版本不高于当前实例。\n\n")
+                + I18n.t("Q8：如何反馈问题\n")
+                + I18n.t("A：在关于页复制诊断信息，并附上复现步骤与截图。\n\n")
+                + I18n.t("Q9：这个软件会持续维护下去吗？\n")
+                + I18n.t("A：会的。\n\n")
+                + I18n.t("Q10：这个基岩工坊后续会支持插件加载器吗？\n")
+                + I18n.t("A：不会，因为目前做不到。\n\n")
+                + I18n.t("Q11：低内存的手机可以开服吗？\n")
+                + I18n.t("A：低于8G内存的手机很难。\n\n")
+                + I18n.t("Q12：为什么我是花钱买的软件？\n")
+                + I18n.t("A：本软件开源完全免费，这个问题你应该问卖家。\n\n")
+                + I18n.t("Q13：为什么我用不了AI助手?\n")
+                + I18n.t("A：只有输入AI服务商提供给你的APIkey选择模型后才能使用。");
+        showTextDialog(a, I18n.t("常见问题"), text);
     }
 
     static void showChangelog(final Activity a) {
-        showTextDialog(a, "更新日志", readAsset(a, "legal/changelog.txt"));
+        showTextDialog(a, I18n.t("更新日志"), readAsset(a, "legal/changelog.txt"));
     }
 
     static void showLicense(final Activity a) {
@@ -398,6 +399,14 @@ final class AboutDialog {
     }
 
     private static String readAsset(Activity a, String name) {
+        String localized = I18n.asset(name);
+        String text = tryRead(a, localized);
+        if (text == null && !localized.equals(name)) text = tryRead(a, name);
+        if (text != null) return text;
+        return I18n.t("读取失败：") + localized;
+    }
+
+    private static String tryRead(Activity a, String name) {
         try {
             java.io.InputStream in = a.getAssets().open(name);
             java.io.ByteArrayOutputStream bos = new java.io.ByteArrayOutputStream();
@@ -407,13 +416,13 @@ final class AboutDialog {
             in.close();
             return new String(bos.toByteArray(), "UTF-8");
         } catch (Throwable e) {
-            return "读取失败：" + e.getMessage();
+            return null;
         }
     }
 
     private static void set(LinkedHashMap<String, TextView> map, String key, String value) {
         TextView t = map.get(key);
-        if (t != null) t.setText(value);
+        if (t != null) t.setText(I18n.t(value));
     }
 
     private static TextView addRow(Activity a, LinearLayout panel, String label, String value) {
@@ -454,7 +463,7 @@ final class AboutDialog {
                     android.net.Uri.parse(url));
             a.startActivity(i);
         } catch (Throwable t) {
-            toast(a, "无法打开链接：" + url);
+            toast(a, I18n.t("无法打开链接：") + url);
         }
     }
 
