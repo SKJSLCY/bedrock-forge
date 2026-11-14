@@ -322,10 +322,8 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
                 if (themeWallpaperStatus != null) {
                     themeWallpaperStatus.setText("待应用：已选择新壁纸（点击应用主题后重启生效）");
                 }
-                if (wallpaperForApply) {
-                    wallpaperForApply = false;
-                    showRestartPrompt(pendingStyle, pendingMode, () -> pendingWallpaperUri = null);
-                }
+                wallpaperForApply = false;
+                confirmWallpaperSwitch();
             }
             return;
         }
@@ -1876,6 +1874,67 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
             w.setLayout((int) (getResources().getDisplayMetrics().widthPixels * 0.9f),
                     ViewGroup.LayoutParams.WRAP_CONTENT);
         }
+    }
+
+    private void confirmWallpaperSwitch() {
+        final Dialog d = new Dialog(this);
+        d.requestWindowFeature(Window.FEATURE_NO_TITLE);
+        LinearLayout wrap = new LinearLayout(this);
+        wrap.setOrientation(LinearLayout.VERTICAL);
+        wrap.setPadding(dp(14), dp(14), dp(14), dp(14));
+        LinearLayout panel = MinecraftUi.panel(this, "切换壁纸");
+        TextView msg = MinecraftUi.text(this,
+                "确定切换壁纸吗？\n\n切换将会重启应用。", 9.5f,
+                MinecraftUi.PANEL_TEXT, false);
+        msg.setPadding(0, dp(2), 0, dp(10));
+        panel.addView(msg);
+
+        Button ok = new MinecraftUi.McButton(this, "确定切换");
+        if (MinecraftUi.LIQUID || MinecraftUi.MINIMAL || MinecraftUi.ORE) {
+            ((MinecraftUi.McButton) ok).setPrimaryStyle();
+        }
+        panel.addView(ok, dialogBtnLp(0));
+        Button cancel = new MinecraftUi.McButton(this, "取消");
+        panel.addView(cancel, dialogBtnLp(6));
+
+        ok.setOnClickListener(v -> {
+            d.dismiss();
+            if (pendingWallpaperUri != null) {
+                LiquidWallpaper.set(MainActivity.this, pendingWallpaperUri);
+            }
+            ThemeManager.setStyle(MainActivity.this,
+                    pendingStyle == null ? ThemeManager.LIQUID : pendingStyle);
+            ThemeManager.setMode(MainActivity.this,
+                    pendingMode == null ? ThemeManager.mode(MainActivity.this) : pendingMode);
+            restartApp();
+        });
+        cancel.setOnClickListener(v -> {
+            pendingWallpaperUri = null;
+            if (themeWallpaperStatus != null) {
+                themeWallpaperStatus.setText(LiquidWallpaper.has(MainActivity.this)
+                        ? "当前壁纸已导入" : "未导入壁纸，应用液态玻璃前必须导入");
+            }
+            d.dismiss();
+        });
+
+        wrap.addView(panel);
+        d.setContentView(wrap);
+        d.show();
+        Window w = d.getWindow();
+        if (w != null) {
+            w.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+            w.setLayout((int) (getResources().getDisplayMetrics().widthPixels * 0.9f),
+                    ViewGroup.LayoutParams.WRAP_CONTENT);
+        }
+    }
+
+    private void restartApp() {
+        android.content.Intent i = new android.content.Intent(this, SplashActivity.class);
+        i.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK
+                | android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK);
+        startActivity(i);
+        overridePendingTransition(0, 0);
+        finishAffinity();
     }
 
     private void pickWallpaper() {
