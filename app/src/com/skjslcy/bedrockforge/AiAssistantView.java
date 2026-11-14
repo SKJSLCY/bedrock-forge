@@ -183,12 +183,15 @@ final class AiAssistantView extends LinearLayout {
             LinearLayout tab = new LinearLayout(activity);
             tab.setGravity(Gravity.CENTER);
             tab.setPadding(dp(12), dp(8), dp(12), dp(8));
-            int tabText = MinecraftUi.ORE
-                    ? (i == current ? MinecraftUi.ON_ACCENT : MinecraftUi.PANEL_MUTED)
+            int tabText = (MinecraftUi.ORE || MinecraftUi.LIQUID)
+                    ? (i == current ? 0xFFFFFFFF : 0xFFCCD9E4)
                     : (i == current ? MinecraftUi.PANEL_TEXT : MinecraftUi.PANEL_MUTED);
             TextView label = MinecraftUi.text(activity, title, 10, tabText, true);
             tab.addView(label);
-            if (MinecraftUi.ORE) {
+            if (MinecraftUi.LIQUID) {
+                tab.setBackground(i == current ? MinecraftUi.selectedDrawable(activity)
+                        : MinecraftUi.slotDrawable(activity));
+            } else if (MinecraftUi.ORE) {
                 tab.setBackground(i == current ? MinecraftUi.selectedDrawable(activity)
                         : MinecraftUi.slotDrawable(activity));
             } else if (MinecraftUi.MINIMAL) {

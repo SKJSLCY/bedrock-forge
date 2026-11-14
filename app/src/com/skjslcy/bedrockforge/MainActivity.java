@@ -111,6 +111,9 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
     private static final int REQ_WALLPAPER = 993;
     private String pendingStyle;
     private String pendingMode;
+    private String pendingWallpaperUri;
+    private boolean wallpaperForApply;
+    private TextView themeWallpaperStatus;
     private TextView lampText;
     private TextView runStateValue;
     private TextView playersValue;
@@ -315,8 +318,14 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
                             android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION);
                 } catch (Throwable ignored) {
                 }
-                LiquidWallpaper.set(this, data.getData().toString());
-                showRestartPrompt(pendingStyle, pendingMode);
+                pendingWallpaperUri = data.getData().toString();
+                if (themeWallpaperStatus != null) {
+                    themeWallpaperStatus.setText("待应用：已选择新壁纸（点击应用主题后重启生效）");
+                }
+                if (wallpaperForApply) {
+                    wallpaperForApply = false;
+                    showRestartPrompt(pendingStyle, pendingMode, () -> pendingWallpaperUri = null);
+                }
             }
             return;
         }
@@ -1909,6 +1918,9 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
         Button restart = new MinecraftUi.McButton(this, "立即重启");
         panel.addView(restart, dialogBtnLp(0));
         restart.setOnClickListener(v -> {
+            if (ThemeManager.LIQUID.equals(style) && pendingWallpaperUri != null) {
+                LiquidWallpaper.set(MainActivity.this, pendingWallpaperUri);
+            }
             ThemeManager.setStyle(MainActivity.this, style);
             ThemeManager.setMode(MainActivity.this, mode);
             d.dismiss();
@@ -2067,11 +2079,48 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
         final Button liquid = new MinecraftUi.McButton(this, "液态玻璃");
         panel.addView(liquid, dialogBtnLp(6));
 
-        panel.addView(MinecraftUi.text(this, "简约风格明暗", 9, MinecraftUi.PANEL_MUTED, true));
+        final TextView modeLabel = MinecraftUi.text(this, "简约风格明暗", 9,
+                MinecraftUi.PANEL_MUTED, true);
+        panel.addView(modeLabel);
         final Button light = new MinecraftUi.McButton(this, "浅色模式");
         panel.addView(light, dialogBtnLp(0));
         final Button dark = new MinecraftUi.McButton(this, "深色模式");
         panel.addView(dark, dialogBtnLp(6));
+
+        final LinearLayout wallBox = new LinearLayout(this);
+        wallBox.setOrientation(LinearLayout.VERTICAL);
+        LinearLayout.LayoutParams wlp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        wlp.topMargin = dp(12);
+        panel.addView(wallBox, wlp);
+        wallBox.addView(MinecraftUi.text(this, "液态玻璃壁纸", 9,
+                MinecraftUi.PANEL_MUTED, true));
+        final TextView wallStatus = MinecraftUi.text(this, "", 8.5f,
+                MinecraftUi.PANEL_TEXT, false);
+        wallStatus.setPadding(0, dp(4), 0, dp(6));
+        wallBox.addView(wallStatus);
+        Button changeWall = new MinecraftUi.McButton(this, "导入 / 更换壁纸");
+        wallBox.addView(changeWall, dialogBtnLp(0));
+        changeWall.setOnClickListener(v -> {
+            wallpaperForApply = false;
+            pendingStyle = sel[0];
+            pendingMode = sel[1];
+            pickWallpaper();
+        });
+        themeWallpaperStatus = wallStatus;
+
+        final Runnable refreshWall = () -> {
+            boolean liq = ThemeManager.LIQUID.equals(sel[0]);
+            wallBox.setVisibility(liq ? View.VISIBLE : View.GONE);
+            int mv = ThemeManager.MINIMAL.equals(sel[0]) ? View.VISIBLE : View.GONE;
+            modeLabel.setVisibility(mv);
+            light.setVisibility(mv);
+            dark.setVisibility(mv);
+            wallStatus.setText(pendingWallpaperUri != null
+                    ? "待应用：已选择新壁纸（点击应用主题后重启生效）"
+                    : (LiquidWallpaper.has(MainActivity.this)
+                    ? "当前壁纸已导入" : "未导入壁纸，应用液态玻璃前必须导入"));
+        };
 
         final Runnable refresh = () -> {
             classic.setText(ThemeManager.CLASSIC.equals(sel[0]) ? "经典风格（当前）" : "经典风格");
@@ -2080,11 +2129,7 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
             liquid.setText(ThemeManager.LIQUID.equals(sel[0]) ? "液态玻璃（当前）" : "液态玻璃");
             light.setText(ThemeManager.MODE_LIGHT.equals(sel[1]) ? "浅色模式（当前）" : "浅色模式");
             dark.setText(ThemeManager.MODE_DARK.equals(sel[1]) ? "深色模式（当前）" : "深色模式");
-            boolean minimalSel = ThemeManager.MINIMAL.equals(sel[0]);
-            light.setEnabled(minimalSel);
-            dark.setEnabled(minimalSel);
-            light.setAlpha(minimalSel ? 1f : 0.5f);
-            dark.setAlpha(minimalSel ? 1f : 0.5f);
+            refreshWall.run();
         };
         refresh.run();
         classic.setOnClickListener(v -> { sel[0] = ThemeManager.CLASSIC; refresh.run(); });
@@ -2097,19 +2142,26 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
         Button apply = new MinecraftUi.McButton(this, "应用主题");
         panel.addView(apply, dialogBtnLp(12));
         apply.setOnClickListener(v -> {
-            if (sel[0].equals(oldStyle) && sel[1].equals(oldMode)) {
+            boolean same = sel[0].equals(oldStyle) && sel[1].equals(oldMode)
+                    && pendingWallpaperUri == null;
+            if (same) {
                 toast("当前已是该主题");
                 return;
             }
-            if (ThemeManager.LIQUID.equals(sel[0]) && !LiquidWallpaper.has(MainActivity.this)) {
+            if (ThemeManager.LIQUID.equals(sel[0])
+                    && pendingWallpaperUri == null
+                    && !LiquidWallpaper.has(MainActivity.this)) {
+                wallpaperForApply = true;
                 pendingStyle = sel[0];
                 pendingMode = sel[1];
                 pickWallpaper();
                 return;
             }
+            if (!ThemeManager.LIQUID.equals(sel[0])) pendingWallpaperUri = null;
             showRestartPrompt(sel[0], sel[1], () -> {
                 sel[0] = oldStyle;
                 sel[1] = oldMode;
+                pendingWallpaperUri = null;
                 refresh.run();
             });
         });
