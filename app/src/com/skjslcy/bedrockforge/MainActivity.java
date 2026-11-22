@@ -143,6 +143,10 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
     private EditText consoleInput;
     private ScrollView consoleScroll;
     private int lastLogCount = -1;
+    /** 控制台用户滚动位置，用于 setText 后恢复（setText 会把 scrollY 归零）。 */
+    private int consoleUserScrollY = 0;
+    private boolean consoleRestoring = false;
+    private String lastLogTail = "";
     private long lastLogUpdateMs = 0L;
 
     private LinearLayout chatMessages;
@@ -1352,6 +1356,11 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
 
         consoleScroll = new ScrollView(this);
         consoleScroll.setFillViewport(true);
+        consoleScroll.setOnScrollChangeListener(new View.OnScrollChangeListener() {
+            @Override public void onScrollChange(View v, int sx, int sy, int ox, int oy) {
+                if (!consoleRestoring) consoleUserScrollY = sy;
+            }
+        });
 
         consoleText = MinecraftUi.text(this, "等待服务端日志…", 9.5f, 0xFFD0D0D0, false);
         consoleText.setTypeface(Typeface.MONOSPACE);
@@ -3480,13 +3489,15 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
     private void updateLogs() {
         if (consoleText == null) return;
         String[] logs = ServerManager.get().getLogs();
-        if (logs.length == lastLogCount) return;
+        String tail = logs.length == 0 ? "" : logs[logs.length - 1];
+        if (logs.length == lastLogCount && tail.equals(lastLogTail)) return;
         long now = System.currentTimeMillis();
         if (now - lastLogUpdateMs < 350) return;
         lastLogUpdateMs = now;
         lastLogCount = logs.length;
+        lastLogTail = tail;
         boolean stick = isConsoleNearBottom();
-        int keepY = consoleScroll == null ? 0 : consoleScroll.getScrollY();
+        int keepY = consoleScroll == null ? consoleUserScrollY : consoleUserScrollY;
         int from = Math.max(0, logs.length - 500);
         SpannableStringBuilder sb = new SpannableStringBuilder();
         int[] listRemain = {-1};
@@ -3509,17 +3520,28 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
         if (consoleScroll != null) {
             final boolean toBottom = stick;
             final int restoreY = keepY;
-            consoleScroll.post(new Runnable() {
+            // 必须等 TextView 重新布局后再恢复，否则会被布局归零覆盖（表现为“一直弹回顶部”）
+            consoleText.post(new Runnable() {
                 @Override public void run() {
+                    consoleRestoring = true;
                     if (toBottom) {
                         consoleScroll.fullScroll(View.FOCUS_DOWN);
-                        consoleScroll.post(new Runnable() {
+                        consoleText.post(new Runnable() {
                             @Override public void run() {
                                 consoleScroll.fullScroll(View.FOCUS_DOWN);
+                                consoleUserScrollY = consoleScroll.getScrollY();
+                                consoleRestoring = false;
                             }
                         });
                     } else {
                         consoleScroll.scrollTo(0, restoreY);
+                        consoleText.post(new Runnable() {
+                            @Override public void run() {
+                                consoleScroll.scrollTo(0, restoreY);
+                                consoleUserScrollY = restoreY;
+                                consoleRestoring = false;
+                            }
+                        });
                     }
                 }
             });
