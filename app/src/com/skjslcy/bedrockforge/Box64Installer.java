@@ -24,7 +24,8 @@ public final class Box64Installer {
         if (!ShizukuGate.isRunning() || !ShizukuGate.isAuthorized()) {
             throw new IOException(I18n.t("需要 Shizuku 权限"));
         }
-        int jobs = Math.max(1, Math.min(4, threads));
+        // 允许 -j1 ~ -j8（此前被 Math.min(4, …) 钳成 4，导致 -j6/-j8 无效）
+        int jobs = Math.max(1, Math.min(8, threads));
         String base = DeployManager.BOX64_BASE;
         String rootfs = DeployManager.BOX64_ROOTFS;
 

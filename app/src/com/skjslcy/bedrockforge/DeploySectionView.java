@@ -499,7 +499,13 @@ public class DeploySectionView extends LinearLayout {
         go.setOnClickListener(new OnClickListener() {
             @Override public void onClick(View v) {
                 d.dismiss();
-                startRepairRuntime();
+                // 重建同样要选线程数，避免默认 -j1 拖慢修复
+                showThreadDialog(I18n.t("修复运行环境"),
+                        I18n.t("将删除现有运行环境与全部服务端实例，然后重新编译安装。\n\n")
+                                + I18n.t("备份文件不会被删除。"),
+                        new Pick() {
+                            @Override public void on(int threads) { startRepairRuntime(threads); }
+                        });
             }
         });
         Button cancel = new MinecraftUi.McButton(activity, "取消");
@@ -520,7 +526,7 @@ public class DeploySectionView extends LinearLayout {
         }
     }
 
-    private void startRepairRuntime() {
+    private void startRepairRuntime(final int threads) {
         DeployManager.setRepairingRuntime(true);
         startDeploy(I18n.t("修复运行环境"), new Task() {
             @Override public void run(DeployManager.Progress p) throws Exception {
@@ -533,7 +539,7 @@ public class DeploySectionView extends LinearLayout {
                 handler.post(new Runnable() {
                     @Override public void run() { refresh(); }
                 });
-                Box64Installer.install(activity, tail(p, 10), 1);
+                Box64Installer.install(activity, tail(p, 10), threads);
             }
         }, new Runnable() {
             @Override public void run() {
@@ -543,67 +549,49 @@ public class DeploySectionView extends LinearLayout {
         });
     }
 
-    private void showBox64Install() {
+    private interface Pick {
+        void on(int threads);
+    }
+
+    /** 部署/修复共用的线程数选择对话框：-j1 ~ -j8。 */
+    private void showThreadDialog(String title, String desc, final Pick pick) {
         final Dialog dialog = new Dialog(activity);
         dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
         LinearLayout wrap = new LinearLayout(activity);
         wrap.setOrientation(VERTICAL);
         wrap.setPadding(dp(14), dp(14), dp(14), dp(14));
 
-        LinearLayout panel = MinecraftUi.panel(activity, "部署 Box64 运行环境");
-        TextView text = MinecraftUi.text(activity,
-                I18n.t("将按文档在 App 内从零部署：\n\n")
-                        + I18n.t("1. 下载 Ubuntu 24.04.5 ARM64 rootfs\n")
-                        + I18n.t("2. 配置 DNS 和清华软件源\n")
-                        + I18n.t("3. 安装编译工具与 x86_64 运行库\n")
-                        + I18n.t("4. 下载 Box64 源码\n")
-                        + I18n.t("5. 单线程编译并安装 Box64\n\n")
-                        + I18n.t("仅依赖内置工具链与 Box64；需要 Shizuku。\n")
-                        + I18n.t("编译约 20–40 分钟，请保持 App 在前台并连接网络。"),
-                10, MinecraftUi.PANEL_TEXT, false);
-        panel.addView(text);
+        LinearLayout panel = MinecraftUi.panel(activity, title);
+        panel.addView(MinecraftUi.text(activity, desc, 10, MinecraftUi.PANEL_TEXT, false));
 
-        Button j1 = new MinecraftUi.McButton(activity, "-j1 单线程 · 稳定");
-        j1.setTextSize(13.5f);
-        LinearLayout.LayoutParams j1lp = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, dp(46));
-        j1lp.topMargin = dp(8);
-        panel.addView(j1, j1lp);
-        j1.setOnClickListener(new OnClickListener() {
-            @Override public void onClick(View v) {
-                dialog.dismiss();
-                startBox64Install(1);
-            }
-        });
-
-        Button j2 = new MinecraftUi.McButton(activity, "-j2 双线程 · 较快");
-        j2.setTextSize(13.5f);
-        LinearLayout.LayoutParams j2lp = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, dp(46));
-        j2lp.topMargin = dp(5);
-        panel.addView(j2, j2lp);
-        j2.setOnClickListener(new OnClickListener() {
-            @Override public void onClick(View v) {
-                dialog.dismiss();
-                startBox64Install(2);
-            }
-        });
-
-        Button j4 = new MinecraftUi.McButton(activity, "-j4 四线程 · 高风险");
-        j4.setTextSize(13.5f);
-        LinearLayout.LayoutParams j4lp = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, dp(46));
-        j4lp.topMargin = dp(5);
-        panel.addView(j4, j4lp);
-        j4.setOnClickListener(new OnClickListener() {
-            @Override public void onClick(View v) {
-                dialog.dismiss();
-                startBox64Install(4);
-            }
-        });
+        final String[] labels = {
+                "-j1 单线程 · 稳定",
+                "-j2 双线程 · 较快",
+                "-j4 四线程 · 高风险",
+                "-j6 六线程 · 极易失败",
+                "-j8 八线程 · 不推荐"
+        };
+        final int[] values = {1, 2, 4, 6, 8};
+        for (int i = 0; i < labels.length; i++) {
+            final int threads = values[i];
+            Button b = new MinecraftUi.McButton(activity, labels[i]);
+            b.setTextSize(13.5f);
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, dp(46));
+            lp.topMargin = dp(i == 0 ? 8 : 5);
+            panel.addView(b, lp);
+            b.setOnClickListener(new OnClickListener() {
+                @Override public void onClick(View v) {
+                    dialog.dismiss();
+                    pick.on(threads);
+                }
+            });
+        }
 
         TextView warn = MinecraftUi.text(activity,
-                "线程越多编译越快，但内存峰值和发热越高；8GB 手机建议 -j1 或 -j2。",
+                "线程越多编译越快，但内存峰值、发热与失败风险同步升高。\n"
+                        + "8GB 内存建议 -j1 / -j2；12GB 可尝试 -j4；\n"
+                        + "-j6 / -j8 需散热与内存充足，中途被杀会留下不完整环境，需再次“修复运行环境”。",
                 8.5f, MinecraftUi.PANEL_MUTED, false);
         warn.setPadding(0, dp(6), 0, 0);
         panel.addView(warn);
@@ -620,6 +608,21 @@ public class DeploySectionView extends LinearLayout {
         wrap.addView(panel);
         dialog.setContentView(wrap);
         dialog.show();
+    }
+
+    private void showBox64Install() {
+        showThreadDialog(I18n.t("部署 Box64 运行环境"),
+                I18n.t("将按文档在 App 内从零部署：\n\n")
+                        + I18n.t("1. 下载 Ubuntu 24.04.5 ARM64 rootfs\n")
+                        + I18n.t("2. 配置 DNS 和清华软件源\n")
+                        + I18n.t("3. 安装编译工具与 x86_64 运行库\n")
+                        + I18n.t("4. 下载 Box64 源码\n")
+                        + I18n.t("5. 选择线程数，编译并安装 Box64\n\n")
+                        + I18n.t("仅依赖内置工具链与 Box64；需要 Shizuku。\n")
+                        + I18n.t("编译约 20–40 分钟，请保持 App 在前台并连接网络。"),
+                new Pick() {
+                    @Override public void on(int threads) { startBox64Install(threads); }
+                });
     }
 
     private void startBox64Install(final int threads) {
