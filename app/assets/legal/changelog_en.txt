@@ -1,5 +1,17 @@
 Bedrock Forge Changelog
 
+0.2.1 (2026-11-22)
+
+New
+
+· Deploy runtime now offers -j6 / -j8
+· Repair runtime now offers -j1 / -j2 / -j4 / -j6 / -j8
+
+Improved
+
+· Server load metrics now refresh more often
+· Closing the app now stops the server by default, preventing save corruption from an abnormal shutdown
+
 0.2 (2026-11-14)
 
 What's new:
@@ -16,6 +28,8 @@ What's new:
 · Fixed several display issues: Simplified characters inside the AI system prompt, unreadable chat bubbles in the Minimal theme, untranslated input hints, "1 players" style plurals in English, and wrong brackets on the About page
 · The About page no longer shows the "tested with BDS…" line, and Testing & feedback now credits SKJSLCY
 · Version bumped to 0.2.0
+
+· Fixed: -j6 / -j8 were internally clamped to -j4; the chosen thread count is now used
 
 0.1 (2026-11-13)
 

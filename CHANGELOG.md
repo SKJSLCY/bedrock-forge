@@ -4,6 +4,33 @@
 
 ---
 
+## 0.2.1 — 2026-11-22
+
+> 主题：**负荷监测可信化 + 退出即停服 + 编译线程选项**
+
+版本信息：`versionName 0.2.1` / `versionCode 3` / 与 0.2.0 相同包名与签名（可覆盖升级）
+
+### 新增
+
+- 部署运行环境新增 **-j6 / -j8** 线程选项（此前安装器内部 `Math.min(4, threads)` 会把线程数钳成 4，选 -j6/-j8 实际仍以 `make -j4` 编译，已改为 `Math.min(8, threads)`）
+- 「修复运行环境」不再固定 `-j1`：确认删除后弹出同一套线程选择（-j1 / -j2 / -j4 / -j6 / -j8），选完才重建
+- 退出应用自动停服：`onDestroy`（返回退出）、`onTaskRemoved`（划掉任务）、前台服务销毁三处均调用 `stopAndWait(120)`，向 BDS 发送 `stop` 并等待保存退出
+- 强杀兜底看门狗：启动时在 Shizuku shell 挂一个守护进程，检测到应用进程消失后向 `bedrock_server` 发送 `SIGINT`，BDS 正常保存退出
+
+### 修复
+
+- **停止无效**：`detectExternal()` 用 `pgrep -f bedrock_server` 会命中 proot 包装进程（其 cmdline 含该词），导致 `externalPid` 永不清零、`isRunning()` 恒真、负荷持续刷新且停止按钮无效。改为精确进程名（`pidof bedrock_server` / `ps -A -o PID,NAME | awk '$2=="bedrock_server"'`）+ `kill -0` 二次存活校验
+- **玩家在线不显示**：`serverReady` 仅由 `/v1/join` 返回 JSON 决定，而该接口实测恒返回 `200` + 空 body；改为事件驱动解析 BDS stdout（`There are X/Y players online`、`Player connected/disconnected`），并以日志增量（`logStartOffset` + `tail -c`）兜底，避免读到上一轮的旧人数
+- 应用重启后接管残留服务端进程，状态不再跳到「已关闭」
+- 修复 `readyFallback` 每 3 秒清空 `fbPlayers` 导致人数被抹回「连接中…」的竞争
+
+### 性能
+
+- 设备 CPU / 内存 / 网络采样：2 s → **1 s**，并移出主线程
+- TPS 查询：10 s → **3 s**（同时把采样窗口判定从 `sec >= 5` 放宽到 `sec >= 2.5`，否则 3 s 采样永远算不出值）
+- 移除每 3 s 一次的 `/v1/join` 请求（1.4 s 超时，会挤占采样线程）
+- `server.properties` 读取缓存 30 s；`onPause` 停止轮询、`onResume` 恢复
+
 ## 0.2.0 — 2026-11-14
 
 > 主题：**三语言界面 + 苔石主题按 Ore UI 重做 + 按钮三态 + 屏幕常亮独立页**

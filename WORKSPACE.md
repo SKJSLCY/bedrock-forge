@@ -1,0 +1,386 @@
+# 工作区准则
+
+> 工作区：`Q:\MC BDS APP`
+> 建立：2026-11-17 ｜ **本版：2026-11-22（按 `Q:\MRZH\game\工作区准则.md` 的结构全面重写）**
+> 适用：一切后续在本工作区内的操作（改代码、改文档、构建、装机、发版）
+> 配套：`docs\project-structure.md`（架构与逐类职责）、`docs\i18n.md`（词表机制）、`ACHIEVEMENTS.md`（成果与指标）
+> **本文管「什么是真的、怎么跑、什么不许碰」；那几份管「具体怎么实现」；冲突以本文为准。**
+
+---
+
+## 零、北极星（先看这个）
+
+### 0.1 最终目的
+
+> **在 Android 手机上把官方基岩版专用服务器跑到「可正常游玩」，并让全套管理操作看得懂、摸得着。**
+
+**拆成可判定的四条：**
+
+1. **能跑起来** —— 一键部署 Box64 + proot + Ubuntu，BDS 启动成功，玩家可进服
+2. **能管得住** —— 服务端/玩家/世界/addons/备份/设置，全部可视化操作，不需要敲命令
+3. **看得懂** —— 三语言界面（简体 / 繁體 / English），四套主题随喜好切换，文案零遗漏
+4. **发得出去** —— 每个版本可构建、可回归、可发布为 GitHub Release（APK 作附件）
+
+**⚠️ 「看得懂」包括所有边角**：报错、Toast、输入框提示、拼接片段、英文复数、时长单位。少一处就算没达成。
+
+### 0.2 当前进度与北极星的距离
+
+```
+部署环境 → 启动BDS → 进服游玩 → 管理与编辑 → 三语言 → 四主题 → 发布
+   ✅        ✅         ✅          ✅          ✅       ✅      ✅ 0.2.0
+```
+
+**⇒ 四条已全部达成（0.2.0 已发布）。剩下的不是功能缺口，是「质量与分发」：界面截图进 Release、文档站、一键冒烟验证。**
+
+---
+
+## 一、三条红线
+
+**1. 不改用户写的文字与已定的布局**
+
+用户明确说过的话就是规格：
+
+| 场景 | 规则 |
+|---|---|
+| 「不要改动原来的布局，只需要改动风格主题」 | 只调样式，不碰结构/顺序/分组 |
+| 「帮我优化使用说明的排版，但不要改里面的文字内容」 | 只加标题层级/列表/分隔线，逐句原文保留 |
+| 「暂时不改软件，先给效果图」 | 先渲染 `.tooling/mockups/`，确认后动代码 |
+
+违反方式往往很隐蔽：重写一句话、删一个逗号、把 `1、` 改成 `1.`、把三行并成一段——**都算改文字**。
+
+**2. 没实测过的结论必须标「假设」**
+
+本工作区最大的时间浪费全部来自「凭印象当事实」：
+
+| 误判 | 真相 | 代价 |
+|---|---|---|
+| 「Ore UI 就是圆角卡片 + 1px 描边」 | 实机是直角 + 4px 黑框 + 上左高光 + 下右暗边 | 1 轮重做 |
+| 「再加个四周亮框 + 渐变就有立体感了」 | 形状就错了，实机根本没有四周亮框和渐变 | 1 轮重做 |
+| 「颜色照 app 里现有的 `#383838` 就行」 | 实机内容底是 `#48494B`，整体偏亮 | 1 轮返工 |
+| 「按钮按下换个颜色就够」 | 需要斜面翻转 + 下沉 2dp 才读得出来 | 1 轮 |
+
+**⇒ 界面类结论一律先量：截图取样 → 出规格表 → 再实现。**
+
+**3. 构建产物与临时文件永不入库**
+
+`app/build/`、`.tooling/`、`*.apk`、`*.keystore`、`hs_err_pid*.log`、`提示词.txt`、`新建 文本文档*.txt` 一律 gitignore。
+APK 只作 Release 附件（GitHub 单文件上限 100 MB，本包 277 MB）。
+
+---
+
+## 二、目录职责
+
+| 目录 | 职责 | 是否入库 | 可删性 |
+|---|---|---|---|
+| `app/src/com/skjslcy/bedrockforge/` | 全部 Java 源码（58 类，全程序化 UI） | ✅ | ❌ 不可删 |
+| `app/assets/i18n/` | 界面词表 + 玩家数据词典（双语） | ✅ | ❌ |
+| `app/assets/legal/` | 协议、更新日志（三语言） | ✅ | ❌ |
+| `app/res/` | 仅 `values` / `values-en` / `values-zh-rTW` 与图标 | ✅ | ❌ |
+| `docs/` | 工程文档（结构、i18n、UI 方案、成果） | ✅ | ❌ |
+| `README.md` / `help.md` / `CHANGELOG.md` / `WORKSPACE.md` / `ACHIEVEMENTS.md` | 门户与规范 | ✅ | ❌ |
+| `app/build/`、`app/gen/` | 构建产物 | ❌ | ✅ 可重建 |
+| `.tooling/` | i18n 脚本、mockup 渲染、截图、临时 SDK | ❌ | ✅ 可重建 |
+| `design/` | 早期设计稿 | ✅ | ⚠️ 保留 |
+
+**⚠️ `.tooling/i18n/` 与 `.tooling/mockups/` 是「可重建但不便宜」的资产**：词表生成链、效果图渲染脚本都在里面，删了要重写。建议定期把脚本本体复制进 `docs/` 或提交到独立仓库。
+
+---
+
+## 三、构建与设备环境
+
+### 3.1 唯一构建入口
+
+```powershell
+.\app\build.ps1        # aapt2 → javac → d8 → 打包 → zipalign → apksigner → verify
+# 产物：app\build\app-debug.apk（约 277 MB）
+```
+
+**没有 Gradle、没有 AGP、不引入第三方依赖。** 新增 `.java` 文件不需要改配置，`build.ps1` 递归收集 `app/src`。
+
+### 3.2 手动编译自检（比 build.ps1 快，用于定位语法错）
+
+```powershell
+$jdk='C:\Program Files\Eclipse Adoptium\jdk-17.0.20.101-hotspot'
+$cp='Q:\MC BDS APP\.tooling\android-sdk\platforms\android-35\android.jar;' + ((Get-ChildItem app\libs -Filter *.jar).FullName -join ';')
+$srcs=@(); $srcs+= (Get-ChildItem app\src -Recurse -Filter *.java).FullName
+& "$jdk\bin\javac.exe" -source 8 -target 8 -encoding UTF-8 -classpath $cp -d .tooling\out\javac $srcs
+```
+
+**⚠️ 自检时若漏掉 `app/gen`/`app/gen-aidl`，会报一堆「找不到符号」的假错误**（Shizuku AIDL 生成类），别被误导。
+
+### 3.3 设备
+
+```
+adb:  .tooling\android-sdk\platform-tools\adb.exe
+设备:  5d71ad10（Redmi M2000J3SC / apollo，Android 17，1080×2400）
+```
+
+**每次改完必须走完：**
+
+```powershell
+.\app\build.ps1
+& $adb install -r app\build\app-debug.apk
+& $adb shell am force-stop com.skjslcy.bedrockforge
+& $adb shell am start -n com.skjslcy.bedrockforge/.SplashActivity
+Start-Sleep 4
+& $adb exec-out screencap -p > .tooling\shots\<编号>_<说明>.png
+```
+
+**⚠️ 界面是否变化不能靠「看起来一样」，要取像素：**
+
+```powershell
+# 选中态 / 按下态差异只有几像素高的边带，必须逐点取色
+(Image.open(shot)).getpixel((540, 448))   # 期望 #1C4C12（未按下） / #5E8E50（按下）
+```
+
+**⚠️ 截图时机：** 按住态要用 `Start-Process adb ... input swipe x y x y 2000` 后台长按，再 `screencap`；直接用 `input motionevent DOWN` 常抓不到按下帧。
+
+---
+
+## 四、测试规则
+
+### 4.1 走查清单（改动落在哪就跑哪）
+
+| 改动面 | 必查页面 | 通过判据 |
+|---|---|---|
+| i18n | 设置→语言（三选项）、主页、控制台、AI、关于 | 切到繁體/English 后无简体残留、无 `xxx（当前）` 混排 |
+| 主题 | 主题页、主页、服务端实例、开关/滑块 | 三态可分辨（选中/未选中/按下） |
+| 功能 | 对应分区页 | 操作成功 + Toast 文本正确 + 无崩溃 |
+| 文档 | GitHub 渲染 | 标题层级正常、链接可达、无裸 `使用说明`（缺扩展名不渲染） |
+
+### 4.2 三态像素基线（苔石主题，实测值）
+
+| 状态 | 面色 | 底部暗边 |
+|---|---|---|
+| 选中 · 未按下 | `#3B8526` | `#1C4C12` |
+| 选中 · 按下 | `#316F1F` | `#5E8E50`（翻亮） |
+| 未选中 · 未按下 | `#D0D1D5` | `#575758` |
+| 未选中 · 按下 | `#AFAFB2` | — |
+
+### 4.3 i18n 校验
+
+```powershell
+& $py '.tooling\i18n\final_sync.py'    # 期望 missing=0
+```
+
+**⚠️ 词条数量会随清理变化（1419 → 1408），以脚本报告为准，不要凭记忆说数字。**
+
+### 4.4 不可作为证据的东西
+
+- 「文件大小差不多」—— `Get-Item x.png | Select Length` 不能证明界面变了
+- 「编译过了」—— 只证明语法对，不证明逻辑对
+- 「我记得实机是这样」—— 见红线 2
+
+---
+
+## 五、记录与归档规则
+
+### 5.1 文档命名
+
+`docs/<语义名>.md`，**标题写结论而非主题**：
+
+- ✅ `docs/project-structure.md`、`docs/i18n.md`（本仓库现状）
+- ❌ 历史遗留：`docs/app-v1.md`、`docs/poc-2026-11-09.md`（保留，不追改）
+
+新增文档必须在 `README.md` 的「文档」表登记一行，否则视为未完成。
+
+### 5.2 文档必含内容（工程类）
+
+```markdown
+# 标题（结论式）
+## 1. 一句话
+## 2. 证据 / 数据（可复现）
+## 3. 排除清单（试过什么、为什么不行）
+## 4. 标注为「假设」的部分
+```
+
+**「排除清单」最有价值**——它能防下一次重复踩坑。
+
+### 5.3 发布归档
+
+| 项 | 规则 |
+|---|---|
+| 标签 | `v<major>.<minor>.<patch>`，附注标签（`git tag -a`） |
+| 附件名 | `BedrockForge-<version>-arm64.apk` |
+| Release 说明 | 更新要点（通俗）+ 安装步骤 + 兼容性 + `CHANGELOG.md`/`help.md` 链接 + APK SHA-256 |
+| 双轨日志 | `CHANGELOG.md`（完整/技术口径）↔ `app/assets/legal/changelog*.txt`（应用内/通俗/三语言），发版后必须口径一致 |
+
+---
+
+## 六、工具使用规则（每条都是踩过的坑）
+
+### 6.1 代码清理：别把资源删了留引用
+
+```
+✗ 删 app/res/raw/*.wav 但忘记删 R.raw.xxx 引用 → javac 报错，build.ps1 直接 failed
+✓ 先删代码引用 → 再删资源 → 再构建
+```
+
+### 6.2 正则批量改代码：改完必查重复定义
+
+```
+✗ 用 regex 删方法块，边界算错 → McButton 里出现两个 onTouchEvent → javac「已在类中定义」
+✓ 改完先 javac 单文件自检，再 build.ps1
+```
+
+### 6.3 分支名：不能带空格
+
+```
+✗ git branch -m "Bderock Forge"  → fatal: not a valid branch name
+✓ Bedrock-Forge（或 bedrock-forge / Bedrock_Forge）
+```
+
+改名要连带：本地 `-m` → `push -u` → **网页 Settings 改默认分支** → 才能删旧分支。
+
+### 6.4 Markdown 没扩展名 = 不渲染
+
+推上去的 `使用说明`（无后缀）在 GitHub 显示成纯文本；必须 `help.md` 这样的 `.md`。
+
+### 6.5 没有 `gh` 时的 Release 发布
+
+本机未装 GitHub CLI，**用 git 已存的凭据调 API**：
+
+```powershell
+$out = "protocol=https`nhost=github.com`n`n" | git credential fill
+$pass = (($out | Select-String '^password=') -replace '^password=','').Trim()
+$hdr = @{ Authorization="token $pass"; 'User-Agent'='bedrock-forge-release'; Accept='application/vnd.github+json' }
+# 1) 建 release
+Invoke-RestMethod -Method Post -Uri 'https://api.github.com/repos/SKJSLCY/bedrock-forge/releases' `
+  -Headers $hdr -ContentType 'application/json; charset=utf-8' -Body (@{tag_name='v0.2.0';name='…';body='…'} | ConvertTo-Json -Depth 3)
+# 2) 传附件（大文件必须用 curl，Invoke-RestMethod 会吃内存）
+curl.exe -X POST -H "Authorization: token $pass" -H "Content-Type: application/octet-stream" `
+  --data-binary "@app\build\app-debug.apk" `
+  "https://uploads.github.com/repos/SKJSLCY/bedrock-forge/releases/<id>/assets?name=BedrockForge-0.2.0-arm64.apk"
+```
+
+**⚠️ 凭据只在内存里用，不要打印、不要写进文件。**
+
+### 6.6 i18n 词表：禁止只手改 `lang_*.json`
+
+```
+✓ 改 .tooling/i18n/extra.json（人工译文）→ final_sync.py 生成
+✗ 直接编辑 app/assets/i18n/ui/lang_zh_TW.json  → 下次同步被覆盖
+```
+
+### 6.7 adb 输入：按住态用后台长按
+
+```
+✗ adb shell input motionevent DOWN 540 400  → 常常抓不到 pressed 帧
+✓ Start-Process adb 'shell','input','swipe','540','400','540','400','2000' → 等 700ms → screencap
+```
+
+### 6.8 主题改色只能在 `MinecraftUi` 里改
+
+```
+✗ 页面里 new GradientDrawable().setColor(0xFF383838)
+✓ MinecraftUi.panelDrawable() / oreBtn() / OreBlock
+```
+
+---
+
+## 七、关键常量
+
+### 7.1 版本与包
+
+```
+package      com.skjslcy.bedrockforge
+versionName  0.2.0        versionCode 2
+minSdk 26 (Android 8.0)   targetSdk 28   arm64 only
+APK          app\build\app-debug.apk ≈ 277 MB
+Release      v0.2.0 / BedrockForge-0.2.0-arm64.apk
+SHA-256      5dd1c8371840e5292e300d6469cd394b2dd28fa3a41a413e784bfa565b7e0570
+```
+
+### 7.2 苔石（Ore UI）色板（实机取样）
+
+```
+内容   #48494B    面板 #454648    槽位 #313234    外框 #1D1D1E
+浅控件 #D0D1D5（高光 #EDEDEF / 暗边 #575758）
+绿     #3B8526（高光 #5F9F4E / 暗边 #1C4C12）
+红     #CA3636    紫   #7345E5    文字 #FFFFFF / 次要 #B4B5B7
+尺寸：外框 4px · 上左高光 5px · 下右暗边 10px · 直角
+```
+
+### 7.3 i18n 结构
+
+```
+app/assets/i18n/ui/lang_zh_TW.json   1408 条
+app/assets/i18n/ui/lang_en.json      1408 条
+app/assets/i18n/{zh_TW,en}/fields.json      129
+app/assets/i18n/{zh_TW,en}/effects.json      30
+app/assets/i18n/{zh_TW,en}/enchants.json     42
+app/assets/i18n/{zh_TW,en}/attributes.json   20
+app/assets/i18n/{zh_TW,en}/item_names.tsv  1997
+```
+
+### 7.4 主题常量（`MinecraftUi`）
+
+```
+ORE_*        苔石色板与绘制（OreBlock / OreFrame）
+MCButton     oreStyle(0 浅灰可选中 / 1 绿 / 2 红 / 3 紫)
+三态         state_selected + state_pressed（StateListDrawable + ColorStateList）
+按下位移     setTranslationY(0.7dp)
+```
+
+---
+
+## 八、常见误判清单（血泪表）
+
+| 误判 | 真相 |
+|---|---|
+| Ore UI 是圆角卡片 | **直角，4px 黑框**，只有顶部栏是浅色 |
+| 立体感靠「四周亮框 + 渐变」 | **上左高光 / 下右暗边**，无渐变 |
+| 按钮面色 `#3D8B2F` 就行 | 实机 **`#3B8526`**，红是 **`#CA3636`** 不是我用的 `#B33A3A` |
+| app 里现有的 `#383838` 就是 Ore 底色 | 实机 **`#48494B`** |
+| `setLang()` 用 `apply()` 也一样 | **异步写可能丢**，切完再进又变回原语言 ⇒ 用 `commit()` |
+| `tl()` 按 `(?<=\n)` 切段够用 | **以 `\n\n` 结尾的段查不到** ⇒ 四层查找（整体→`\n\n`→`\n`→单行） |
+| 气泡文字白色直接设就行 | 会被 `ThemeManager.mapTextColor` 映射成深色 ⇒ 必须 `text()` 之后再 `setTextColor` |
+| 输入框 hint 自动跟随主题 | **hint 也要 `I18n.t()`**，否则永远是原文 |
+| 「（当前）」只是装饰 | 是**词条**，不翻译会混排；0.2.0 已改成按钮选中态 |
+| 英文 `1 players` 无伤大雅 | 必须 `I18n.n(count, one, many)` |
+| 删资源文件不影响编译 | **残留 `R.raw.*` 引用直接 javac 失败** |
+| 分支名可以带空格 | **git 直接判非法** |
+| Markdown 没扩展名照样渲染 | **GitHub 按纯文本显示** |
+| APK 可以提交进仓库 | **超过 100 MB 单文件上限**，只能走 Release |
+| 装了 `gh` 才能发 Release | **git 凭据 + REST API 即可**（见 6.5） |
+
+---
+
+## 九、当前状态（2026-11-22）
+
+| 层 | 状态 |
+|---|---|
+| 运行环境（Box64 + proot + Ubuntu） | ✅ 一键部署可用 |
+| 服务端（下载 / 导入 / 多实例 / 启停） | ✅ |
+| 控制台 / 终端 / 日志 | ✅ |
+| 玩家（权限 / 数据查看编辑 / 备份 / 踢出） | ✅ |
+| 世界 / addons / 备份 | ✅ |
+| 服务器设置（server.properties 可视化） | ✅ |
+| AI 助手 / AI 智能体 | ✅（Key 失效时返回 401，属预期） |
+| 三语言界面 | ✅ 1408×2 词条，`missing=0` |
+| 四主题 / 五外观 + 按钮三态 | ✅ |
+| 屏幕常亮二级页 + 风险提示 | ✅ |
+| 文档（README/help/CHANGELOG/WORKSPACE/ACHIEVEMENTS/docs） | ✅ |
+| 发布（v0.2.0 Release + APK 附件） | ✅ |
+| Release 页面配界面截图 | ❌ 未做 |
+| 文档站（GitHub Pages） | ❌ 未做 |
+| 一键冒烟验证脚本 | ❌ 未做 |
+| 仓库根目录临时文件清理（`提示词.txt`、`新建 文本文档*.txt`、`Box64_MC.docx`） | ⚠️ 已 gitignore，未删除 |
+
+---
+
+## 十、下一步（按与北极星的距离排序）
+
+| # | 动作 | 判据 |
+|---|---|---|
+| **1** | 清掉根目录临时文件（`提示词.txt`、`新建 文本文档*.txt`、`Box64_MC.docx`、`hs_err_pid*.log`） | `git status` 干净、根目录只留正式文件 |
+| **2** | 把 `WORKSPACE.md` / `ACHIEVEMENTS.md` 提交推送 | 远端 `main` 可见，README 索引可达 |
+| **3** | Release 页面补界面截图（三语言 × 四主题） | 附件区或正文能看到截图 |
+| **4** | 写 `tools/smoke.ps1`：构建 → 装机 → 关键页截图 → 抛异常即失败 | 一条命令给出通过/失败 |
+| **5** | 开 GitHub Pages（`docs/` 作站点），`docs/README.md` 作首页 | 文档站可访问 |
+
+---
+
+## 附：一句话总结
+
+**界面问题先量再画，文字问题先查词表再改，发布问题先想 100 MB 限制——其余交给构建脚本和真机截图。**
