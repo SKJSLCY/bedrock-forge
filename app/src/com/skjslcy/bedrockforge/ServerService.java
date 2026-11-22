@@ -110,9 +110,25 @@ public class ServerService extends Service {
     }
 
     @Override
+    public void onTaskRemoved(Intent rootIntent) {
+        // 用户划掉任务：后台线程优雅停服（BDS 会保存世界）
+        new Thread(new Runnable() {
+            @Override public void run() {
+                ServerManager.get().stopAndWait(120);
+                stopSelf();
+            }
+        }, "bds-taskremoved").start();
+        super.onTaskRemoved(rootIntent);
+    }
+
+    @Override
     public void onDestroy() {
         if (ServerManager.get().isRunning()) {
-            ServerManager.get().stop();
+            new Thread(new Runnable() {
+                @Override public void run() {
+                    ServerManager.get().stopAndWait(120);
+                }
+            }, "bds-servicedestroy").start();
         }
         super.onDestroy();
     }

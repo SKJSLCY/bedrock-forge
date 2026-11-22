@@ -172,13 +172,139 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
     private long lastGametimeAt = 0L;
     private int tps = 0;
 
+    private long lastDeviceSampleAt = 0;
+    private long lastPlayersProbeAt = 0;
+    private long lastExternalCheckAt = 0;
+    /** 本次启动时日志文件的字节位置：只解析这之后的行，避免读到上一轮的在线人数。 */
+    private volatile long logStartOffset = -1;
+    private long lastPropsAt = 0;
+
+    private long fbAt = 0;
+    private boolean fbReady = false;
+    private int fbPlayers = -1;
+    private int fbMax = -1;
+
+    /**
+     * 服务端就绪兜底：/v1/join 不可用（返回空体）时，用日志与运行时长判断，
+     * 并从 "There are X/Y players online" 行解析在线人数。结果缓存 3 秒。
+     */
+    private boolean readyFallback(ServerManager m) {
+        long now = System.currentTimeMillis();
+        if (now - fbAt < 3000) return fbReady;
+        fbAt = now;
+        fbReady = false;
+        // 外部遗留进程：应用重启后拿不到它的 stdout，直接按“运行中”处理
+        if (m.isExternal()) {
+            fbReady = true;
+            return true;
+        }
+        // 注意：不要在这里清空 fbPlayers —— 日志探针会把解析结果写进同一对字段
+        String[] logs = m.getLogs();
+        int from = Math.max(0, logs.length - 300);
+        java.util.regex.Pattern p = java.util.regex.Pattern
+                .compile("THERE ARE (\\d+)/(\\d+) PLAYERS ONLINE");
+        for (int i = logs.length - 1; i >= from; i--) {
+            String u = logs[i] == null ? "" : logs[i].toUpperCase(java.util.Locale.US);
+            if (u.contains("SERVER STARTED")) fbReady = true;
+            java.util.regex.Matcher mt = p.matcher(u);
+            if (mt.find()) {
+                fbReady = true;
+                try {
+                    fbPlayers = Integer.parseInt(mt.group(1));
+                    fbMax = Integer.parseInt(mt.group(2));
+                } catch (Throwable ignored) {
+                }
+                break;
+            }
+        }
+        if (!fbReady) {
+            long start = m.getStartTime();
+            fbReady = start > 0 && now - start > 60000;
+        }
+        return fbReady;
+    }
+
+    /** /v1/join 失效时的在线人数兜底：每 5 秒读一次实例日志尾部。 */
+    private void probePlayers(boolean running) {
+        long now = System.currentTimeMillis();
+        if (!running || now - lastPlayersProbeAt < 3000) return;
+        lastPlayersProbeAt = now;
+        io.execute(new Runnable() {
+            @Override public void run() {
+                String out;
+                try {
+                    String path = DeployManager.SERVER_DIR + "/Dedicated_Server.txt";
+                    String range = logStartOffset > 0
+                            ? ("tail -c +" + (logStartOffset + 1)) : "tail -n 200";
+                    out = ShizukuShell.sh(range + " '" + path + "' 2>/dev/null");
+                } catch (Throwable t) {
+                    return;
+                }
+                if (out == null) return;
+                java.util.regex.Matcher mt = java.util.regex.Pattern
+                        .compile("There are (\\d+)/(\\d+) players online").matcher(out);
+                int pl = -1, mx = -1;
+                while (mt.find()) {
+                    try {
+                        pl = Integer.parseInt(mt.group(1));
+                        mx = Integer.parseInt(mt.group(2));
+                    } catch (Throwable ignored) {
+                    }
+                }
+                if (pl < 0) return;
+                final int fp = pl, fmx = mx;
+                runOnUiThread(new Runnable() {
+                    @Override public void run() {
+                        fbPlayers = fp;
+                        fbMax = fmx;
+                        if (!serverReady && playersValue != null) {
+                            playersValue.setText(fp + "/" + fmx);
+                            playersValue.setTextColor(MinecraftUi.GREEN);
+                        }
+                    }
+                });
+            }
+        });
+    }
+
+    private void markLogStart() {
+        io.execute(new Runnable() {
+            @Override public void run() {
+                try {
+                    String out = ShizukuShell.sh("stat -c %s '"
+                            + DeployManager.SERVER_DIR + "/Dedicated_Server.txt' 2>/dev/null || echo 0");
+                    logStartOffset = Long.parseLong(out.trim());
+                } catch (Throwable t) {
+                    logStartOffset = -1;
+                }
+            }
+        });
+    }
+
     private final Runnable poll = new Runnable() {
         @Override
         public void run() {
             long now = System.currentTimeMillis();
-            DeviceMonitor.get().sample(MainActivity.this);
+            // 设备指标：IO 线程采样，2 秒一次，避免主线程每秒读 /proc
+            if (now - lastDeviceSampleAt >= 1000) {
+                lastDeviceSampleAt = now;
+                io.execute(new Runnable() {
+                    @Override public void run() {
+                        DeviceMonitor.get().sample(MainActivity.this);
+                    }
+                });
+            }
             sampleTps(now);
             updateState();
+            probePlayers(ServerManager.get().isRunning());
+            if (now - lastExternalCheckAt > 5000) {
+                lastExternalCheckAt = now;
+                io.execute(new Runnable() {
+                    @Override public void run() {
+                        ServerManager.get().detectExternal();
+                    }
+                });
+            }
             updateLogs();
             int deployVersion = DeployState.completionVersion();
             if (deployVersion != lastDeployVersion) {
@@ -195,6 +321,7 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
                 ScreenOnManager.apply(MainActivity.this);
             }
             if (nowRunning && !lastServerRunning) {
+                markLogStart();
                 io.execute(new Runnable() {
                     @Override public void run() {
                         PlayerMapping.refreshBaseline(MainActivity.this);
@@ -202,6 +329,8 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
                 });
             }
             if (lastServerRunning && !nowRunning) {
+                fbPlayers = -1;
+                fbMax = -1;
                 io.execute(new Runnable() {
                     @Override public void run() {
                         try {
@@ -258,6 +387,16 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
     protected void onDestroy() {
         handler.removeCallbacksAndMessages(null);
         io.shutdownNow();
+        // 用户真正退出应用：优雅停服，避免世界数据未落盘
+        if (isFinishing() && ServerManager.get().isRunning()) {
+            final boolean wasRunning = ServerManager.get().isRunning();
+            new Thread(new Runnable() {
+                @Override public void run() {
+                    ServerManager.get().stopAndWait(120);
+                }
+            }, "bds-exit-stop").start();
+            toast(I18n.t("正在保存并停止服务端…"));
+        }
         super.onDestroy();
     }
 
@@ -266,6 +405,14 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
         super.onResume();
         if (activePermissionView != null) activePermissionView.refresh();
         ScreenOnManager.apply(this);
+        handler.removeCallbacks(poll);
+        handler.post(poll);
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        handler.removeCallbacks(poll);
     }
 
     @Override
@@ -3112,7 +3259,7 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
 
     private void sampleTps(long now) {
         ServerManager m = ServerManager.get();
-        if (!m.isRunning() || !serverReady) {
+        if (!m.isRunning() || !(serverReady || readyFallback(m))) {
             tps = 0;
             lastGametimeTicks = -1;
             lastGametimeAt = 0;
@@ -3122,7 +3269,7 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
         }
         if (now >= nextTpsQuery) {
             m.send("time query gametime");
-            nextTpsQuery = now + 10000;
+            nextTpsQuery = now + 3000;
             pendingTpsAt = now;
         }
         if (pendingTpsAt == 0) return;
@@ -3140,7 +3287,7 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
             if (ticks == lastGametimeTicks) break;
             if (lastGametimeTicks >= 0 && lastGametimeAt > 0) {
                 double sec = (now - lastGametimeAt) / 1000.0;
-                if (sec >= 5 && sec <= 20) {
+                if (sec >= 2.5 && sec <= 20) {   // 查询周期已降到 3s
                     int v = (int) Math.round((ticks - lastGametimeTicks) / sec);
                     tps = Math.max(0, Math.min(20, v));
                 }
@@ -3171,7 +3318,7 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
         ServerManager m = ServerManager.get();
         boolean running = m.isRunning();
         boolean stopping = m.isStopping();
-        boolean ready = serverReady;
+        boolean ready = serverReady || (running && readyFallback(m));
         if (uptimeValue != null) {
             if (running && m.getStartTime() > 0) {
                 uptimeValue.setText(formatDuration(System.currentTimeMillis() - m.getStartTime()));
@@ -3221,8 +3368,13 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
             }
             serverReady = false;
         } else if (!ready && playersValue != null) {
-            playersValue.setText(I18n.t("连接中…"));
-            playersValue.setTextColor(MinecraftUi.AMBER);
+            if (fbPlayers >= 0) {
+                playersValue.setText(fbPlayers + "/" + fbMax);
+                playersValue.setTextColor(MinecraftUi.GREEN);
+            } else {
+                playersValue.setText(I18n.t("连接中…"));
+                playersValue.setTextColor(MinecraftUi.AMBER);
+            }
         }
 
         boolean shizuku;
@@ -3276,7 +3428,9 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
             worldValue.setText(port + " · " + level);
         }
 
-        boolean showMetrics = running && ready;
+        // 设备 CPU/内存/网络只依赖“是否运行”，不再被服务端就绪判定连坐
+        boolean showMetrics = running;
+        boolean tpsReady = running && ready && tps > 0;
         DeviceMonitor dm = DeviceMonitor.get();
         if (cpuValue != null) cpuValue.setText(showMetrics ? dm.cpuPercent + "%" : "--");
         if (memValue != null) {
@@ -3288,7 +3442,20 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
                     ? String.format(Locale.US, "↑%.1f ↓%.1f", dm.txMbps, dm.rxMbps)
                     : "↑--  ↓--");
         }
-        if (tpsValue != null) tpsValue.setText(showMetrics && tps > 0 ? String.valueOf(tps) : "--");
+        if (tpsValue != null) tpsValue.setText(tpsReady ? String.valueOf(tps) : "--");
+        // 在线人数：优先用 BDS stdout 的实时事件，其次日志探针
+        if (playersValue != null && running) {
+            int sp = ServerManager.get().getPlayers();
+            if (sp >= 0 && System.currentTimeMillis() - ServerManager.get().getPlayersAt() < 120000) {
+                int smx = ServerManager.get().getMaxPlayers();
+                playersValue.setText(sp + "/" + (smx > 0 ? smx : 10));
+                playersValue.setTextColor(MinecraftUi.GREEN);
+            }
+        }
+        if (playersValue != null && running && fbPlayers >= 0) {
+            playersValue.setText(fbPlayers + "/" + fbMax);
+            playersValue.setTextColor(MinecraftUi.GREEN);
+        }
         if (cpuBar != null) cpuBar.set(10, showMetrics ? Math.min(10, dm.cpuPercent / 10) : 0);
         if (memBar != null) {
             int memSeg = showMetrics && dm.memoryTotal > 0
@@ -3296,9 +3463,9 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
             memBar.set(10, memSeg);
         }
         if (tpsBar != null) {
-            int tpsColor = !showMetrics || tps <= 0 ? 0xFF7B7B7B
+            int tpsColor = !tpsReady ? 0xFF7B7B7B
                     : (tps >= 15 ? MinecraftUi.GREEN_BRIGHT : (tps >= 8 ? MinecraftUi.AMBER : MinecraftUi.RED));
-            tpsBar.set(10, showMetrics ? Math.min(10, tps / 2) : 0);
+            tpsBar.set(10, tpsReady ? Math.min(10, tps / 2) : 0);
             tpsBar.setColor(tpsColor);
             if (tpsValue != null) tpsValue.setTextColor(MinecraftUi.MINIMAL ? MinecraftUi.PANEL_TEXT : 0xFF111111);
         }
@@ -3378,7 +3545,10 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
                 int cfgPort = port;
                 String cfgWorld = worldName;
                 boolean cfgOnline = true;
-                if (ShizukuGate.isRunning()) {
+                long nowMs = System.currentTimeMillis();
+                boolean needProps = nowMs - lastPropsAt > 30000 || !running;
+                if (ShizukuGate.isRunning() && needProps) {
+                    lastPropsAt = nowMs;
                     try {
                         String props = ShizukuShell.read(ShizukuShell.PROPERTIES);
                         for (String line : props.split("\n")) {
@@ -3414,11 +3584,8 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
                     }
                 });
                 if (!running) return;
+                // /v1/join 实测恒返回 200 + 空体，且每次 1.4s 超时会拖慢采样，直接停用
                 String json = null;
-                try {
-                    json = httpGet("http://127.0.0.1:" + finalPort + "/v1/join", 1400);
-                } catch (Throwable ignored) {
-                }
                 final String body = json;
                 runOnUiThread(new Runnable() {
                     @Override
