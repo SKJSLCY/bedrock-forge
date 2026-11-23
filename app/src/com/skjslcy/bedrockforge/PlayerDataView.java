@@ -110,11 +110,71 @@ final class PlayerDataView {
                     (int) (activity.getResources().getDisplayMetrics().heightPixels * 0.82f));
         }
 
+        // 读取进度条（首次读取 2GB 存档时会持续数分钟，必须有可感知的进度）
+        final LinearLayout loadingRow = new LinearLayout(activity);
+        loadingRow.setOrientation(LinearLayout.HORIZONTAL);
+        loadingRow.setGravity(android.view.Gravity.CENTER_VERTICAL);
+        final android.widget.ProgressBar pb = MinecraftUi.themedProgress(activity);
+        final TextView ptxt = MinecraftUi.text(activity, I18n.t("准备读取…"), 8.5f,
+                MinecraftUi.PANEL_MUTED, false);
+        LinearLayout.LayoutParams pblp = new LinearLayout.LayoutParams(0, dp(activity, 10), 1f);
+        loadingRow.addView(pb, pblp);
+        LinearLayout.LayoutParams ptlp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        ptlp.leftMargin = dp(activity, 8);
+        loadingRow.addView(ptxt, ptlp);
+        Button cancelRead = new MinecraftUi.McButton(activity, I18n.t("取消"));
+        cancelRead.setTextSize(10);
+        LinearLayout.LayoutParams crlp = new LinearLayout.LayoutParams(dp(activity, 72), dp(activity, 34));
+        crlp.leftMargin = dp(activity, 8);
+        loadingRow.addView(cancelRead, crlp);
+        cancelRead.setOnClickListener(v -> {
+            OfflinePlayerData.requestCancel();
+            ptxt.setText(I18n.t("正在取消…"));
+            dialog.dismiss();
+            if (back != null) back.run();
+        });
+        LinearLayout.LayoutParams lrlp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        lrlp.topMargin = dp(activity, 6);
+        panel.addView(loadingRow, lrlp);
+        close.setVisibility(android.view.View.GONE);
+
+        final android.animation.ValueAnimator[] scanAnim = {null};
         new Thread(() -> {
-            final OfflinePlayerData.Snapshot s = OfflinePlayerData.load(activity);
+            final OfflinePlayerData.Snapshot s = OfflinePlayerData.load(activity,
+                    new OfflinePlayerData.Progress() {
+                        private long lastAt = 0;
+
+                        @Override public void onProgress(int done, int total, long bytes,
+                                                         long totalBytes) {
+                            long now = System.currentTimeMillis();
+                            if (now - lastAt < 120 && done < total) return;
+                            lastAt = now;
+                            final int pct = totalBytes > 0
+                                    ? (int) Math.min(100, bytes * 100 / totalBytes)
+                                    : (total > 0 ? done * 100 / total : 0);
+                            final boolean finished = done >= total && total > 0;
+                            final String txt = finished
+                                    ? I18n.t("正在解析玩家数据…")
+                                    : I18n.t("读取数据库 ") + done + "/" + total
+                                    + I18n.t(" 文件 · ") + pct + "%";
+                            activity.runOnUiThread(() -> {
+                                if (finished) {
+                                    if (scanAnim[0] == null) scanAnim[0] = MinecraftUi.scanAnimation(pb);
+                                } else {
+                                    pb.setProgress(pct * 10);
+                                }
+                                ptxt.setText(txt);
+                            });
+                        }
+                    });
             final String bound = PlayerMapping.msaForName(activity, p.name);
             activity.runOnUiThread(() -> {
                 if (!dialog.isShowing()) return;
+                if (scanAnim[0] != null) scanAnim[0].cancel();
+                if (loadingRow.getParent() == panel) panel.removeView(loadingRow);
+                close.setVisibility(android.view.View.VISIBLE);
                 if (bound != null && !bound.isEmpty() && s.error == null) {
                     for (OfflinePlayerData.Record r : s.records) {
                         if (bound.equalsIgnoreCase(r.msaId)) {

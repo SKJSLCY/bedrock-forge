@@ -607,6 +607,8 @@ public class DeploySectionView extends LinearLayout {
 
         wrap.addView(panel);
         dialog.setContentView(wrap);
+        Window _w = dialog.getWindow();
+        if (_w != null) _w.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
         dialog.show();
     }
 

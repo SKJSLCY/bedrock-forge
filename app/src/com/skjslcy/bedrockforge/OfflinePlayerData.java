@@ -95,7 +95,27 @@ final class OfflinePlayerData {
         return "'" + s.replace("'", "'\\''") + "'";
     }
 
+    private static volatile boolean cancelRequested = false;
+
+    static void requestCancel() { cancelRequested = true; }
+    static void clearCancel() { cancelRequested = false; }
+
+    /** 保存阶段回调（备份 / 写入 / 校验）。 */
+    interface Stage {
+        void onStage(String text);
+    }
+
+    /** 读取进度：done/total 为文件数，bytes/totalBytes 为字节数。 */
+    interface Progress {
+        void onProgress(int done, int total, long bytes, long totalBytes);
+    }
+
     static Snapshot load(Context ctx) {
+        return load(ctx, null);
+    }
+
+    static Snapshot load(Context ctx, Progress prog) {
+        cancelRequested = false;
         Snapshot out = new Snapshot();
         try {
             Translations.ensureLoaded(ctx);
@@ -109,21 +129,55 @@ final class OfflinePlayerData {
             deleteTree(local);
             if (!local.mkdirs()) throw new Exception(I18n.t("无法创建临时目录"));
 
-            String list = ShizukuShell.sh("ls -1 " + q(dbDir) + " 2>/dev/null || true");
-            int copied = 0;
+            // 增量拷贝 + 进度：文件大小来自 ls -l，未变化的文件直接复用缓存
+            String list = ShizukuShell.sh("ls -l " + q(dbDir) + " 2>/dev/null || true");
+            java.util.List<String[]> files = new java.util.ArrayList<>();
+            long totalBytes = 0;
             for (String line : list.split("\n")) {
-                String name = line.trim();
-                if (name.isEmpty()) continue;
+                String t = line.trim();
+                if (t.isEmpty() || t.startsWith("total ")) continue;
+                String[] parts = t.split("\\s+");
+                if (parts.length < 8) continue;
+                String name = parts[parts.length - 1];
                 if (!(name.equals("CURRENT") || name.startsWith("MANIFEST")
                         || name.endsWith(".ldb") || name.endsWith(".sst") || name.endsWith(".log"))) {
                     continue;
                 }
+                long size;
+                try { size = Long.parseLong(parts[4]); } catch (Throwable bad) { continue; }
                 File target = new File(local, name);
-                try {
-                    ShizukuShell.copyOut(dbDir + "/" + name, target, null);
+                boolean fresh = target.exists() && target.length() == size;
+                files.add(new String[]{name, String.valueOf(size), fresh ? "1" : "0"});
+                totalBytes += size;
+            }
+            if (files.isEmpty()) throw new Exception(I18n.t("未能复制任何数据库文件"));
+            int copied = 0;
+            long doneBytes = 0;
+            final int totalFiles = files.size();
+            for (String[] f : files) {
+                if (cancelRequested) throw new Exception(I18n.t("已取消读取"));
+                String name = f[0];
+                long size = Long.parseLong(f[1]);
+                if ("1".equals(f[2])) {
                     copied++;
+                    doneBytes += size;
+                    if (prog != null) prog.onProgress(copied, totalFiles, doneBytes, totalBytes);
+                    continue;
+                }
+                final long[] fileDone = {0};
+                try {
+                    ShizukuShell.copyOut(dbDir + "/" + name, new File(local, name),
+                            new ShizukuShell.CopyProgress() {
+                                @Override public void onProgress(long copiedNow, long total) {
+                                    fileDone[0] = copiedNow;
+                                }
+                            });
+                    copied++;
+                    doneBytes += size;
                 } catch (Throwable ignored) {
                 }
+                if (prog != null) prog.onProgress(copied, totalFiles,
+                        Math.min(totalBytes, doneBytes + fileDone[0]), totalBytes);
             }
             if (copied == 0) throw new Exception(I18n.t("未能复制任何数据库文件"));
 
@@ -355,13 +409,22 @@ final class OfflinePlayerData {
     static String applyPlayer(Context ctx, String instanceDir, String world,
                               String msaId, String serverId, byte[] stub, byte[] data)
             throws Exception {
+        return applyPlayer(ctx, instanceDir, world, msaId, serverId, stub, data, null);
+    }
+
+    static String applyPlayer(Context ctx, String instanceDir, String world,
+                              String msaId, String serverId, byte[] stub, byte[] data,
+                              Stage stage) throws Exception {
+        if (stage != null) stage.onStage(I18n.t("1/3 备份中…"));
         String dbDir = instanceDir + "/worlds/" + world + "/db";
         String bak = DeployManager.BACKUPS_DIR + "/playerapply-" + System.currentTimeMillis()
                 + ".tar.gz";
         ShizukuShell.sh("mkdir -p " + q(DeployManager.BACKUPS_DIR)
                 + "; tar -czf " + q(bak) + " -C " + q(instanceDir + "/worlds")
                 + " " + q(world) + " 2>/dev/null || true");
+        if (stage != null) stage.onStage(I18n.t("2/3 读取数据库…"));
         File local = copyDbAt(ctx, "papply", dbDir);
+        if (stage != null) stage.onStage(I18n.t("2/3 写入数据…"));
         String oldSid = "";
         byte[] oldStub = LevelDbReader.value(local, "player_" + msaId);
         if (oldStub != null) {
@@ -382,6 +445,7 @@ final class OfflinePlayerData {
         File log = LevelDbWriter.newestLog(local);
         if (log == null) throw new Exception(I18n.t("找不到可写回的日志文件"));
         ShizukuShell.copyIn(log, dbDir + "/" + log.getName(), null);
+        if (stage != null) stage.onStage(I18n.t("3/3 校验写入…"));
         File verify = copyDbAt(ctx, "pverify", dbDir);
         if (LevelDbReader.value(verify, "player_" + msaId) == null) {
             throw new Exception(I18n.t("写入后账号桩不存在"));
@@ -406,19 +470,59 @@ final class OfflinePlayerData {
 
     private static File copyDbAt(Context ctx, String name, String dbDir) throws Exception {
         File local = new File(ctx.getCacheDir(), name);
-        deleteTree(local);
-        if (!local.mkdirs()) throw new Exception(I18n.t("无法创建临时目录"));
-        String list = ShizukuShell.sh("ls -1 " + q(dbDir) + " 2>/dev/null || true");
+        if (!local.exists() && !local.mkdirs()) throw new Exception(I18n.t("无法创建临时目录"));
+        // 大存档优化：只拷贝新增/变化的文件，未变化的复用上次缓存，
+        // 避免每次读取都重新搬运整个 LevelDB（几百 MB 时非常慢）。
+        String list = ShizukuShell.sh("ls -l " + q(dbDir) + " 2>/dev/null || true");
         int copied = 0;
+        java.util.Set<String> seen = new java.util.HashSet<>();
         for (String line : list.split("\n")) {
-            String n = line.trim();
-            if (n.isEmpty()) continue;
+            String t = line.trim();
+            if (t.isEmpty() || t.startsWith("total ")) continue;
+            // ls -l 的列数不固定：近期文件 8 列（无年份），老文件 9 列（带年份）
+            String[] parts = t.split("\\s+");
+            if (parts.length < 8) continue;
+            String n = parts[parts.length - 1];
+            long size;
+            try {
+                size = Long.parseLong(parts[4]);
+            } catch (Throwable bad) {
+                continue;
+            }
             if (!(n.equals("CURRENT") || n.startsWith("MANIFEST")
                     || n.endsWith(".ldb") || n.endsWith(".sst") || n.endsWith(".log"))) continue;
+            seen.add(n);
+            File dst = new File(local, n);
+            if (dst.exists() && dst.length() == size) {
+                copied++;
+                continue;
+            }
             try {
-                ShizukuShell.copyOut(dbDir + "/" + n, new File(local, n), null);
+                ShizukuShell.copyOut(dbDir + "/" + n, dst, null);
                 copied++;
             } catch (Throwable ignored) {
+            }
+        }
+        File[] olds = local.listFiles();
+        if (olds != null) {
+            for (File f : olds) {
+                if (!seen.contains(f.getName())) deleteTree(f);
+            }
+        }
+        if (copied == 0) {
+            // 兜底：目录列表格式异常时，退回按文件名逐个拷贝
+            String names = ShizukuShell.sh("ls -1 " + q(dbDir) + " 2>/dev/null || true");
+            for (String line : names.split("\n")) {
+                String n = line.trim();
+                if (n.isEmpty()) continue;
+                if (!(n.equals("CURRENT") || n.startsWith("MANIFEST")
+                        || n.endsWith(".ldb") || n.endsWith(".sst") || n.endsWith(".log"))) continue;
+                seen.add(n);
+                try {
+                    ShizukuShell.copyOut(dbDir + "/" + n, new File(local, n), null);
+                    copied++;
+                } catch (Throwable ignored) {
+                }
             }
         }
         if (copied == 0) throw new Exception(I18n.t("未能复制数据库文件"));
@@ -427,25 +531,7 @@ final class OfflinePlayerData {
 
     private static File copyDb(Context ctx, String name) throws Exception {
         String world = currentWorld();
-        String dbDir = DeployManager.SERVER_DIR + "/worlds/" + world + "/db";
-        File local = new File(ctx.getCacheDir(), name);
-        deleteTree(local);
-        if (!local.mkdirs()) throw new Exception(I18n.t("无法创建临时目录"));
-        String list = ShizukuShell.sh("ls -1 " + q(dbDir) + " 2>/dev/null || true");
-        int copied = 0;
-        for (String line : list.split("\n")) {
-            String n = line.trim();
-            if (n.isEmpty()) continue;
-            if (!(n.equals("CURRENT") || n.startsWith("MANIFEST")
-                    || n.endsWith(".ldb") || n.endsWith(".sst") || n.endsWith(".log"))) continue;
-            try {
-                ShizukuShell.copyOut(dbDir + "/" + n, new File(local, n), null);
-                copied++;
-            } catch (Throwable ignored) {
-            }
-        }
-        if (copied == 0) throw new Exception(I18n.t("未能复制数据库文件"));
-        return local;
+        return copyDbAt(ctx, name, DeployManager.SERVER_DIR + "/worlds/" + world + "/db");
     }
 
     private static String currentWorld() throws Exception {

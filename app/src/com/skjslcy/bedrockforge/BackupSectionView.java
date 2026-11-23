@@ -381,7 +381,29 @@ public class BackupSectionView extends ScrollView {
                 byte[] data = OfflinePlayerData.backupMember(activity, name, "data.nbt");
                 byte[] stub = OfflinePlayerData.backupMember(activity, name, "stub.bin");
                 byte[] reduced = OfflinePlayerData.filtered(data, withPosition);
-                OfflinePlayerData.applyPlayer(activity, instDir, world, msa, sid, stub, reduced);
+                final android.app.Dialog wait = new android.app.Dialog(activity);
+                wait.requestWindowFeature(android.view.Window.FEATURE_NO_TITLE);
+                LinearLayout wp = MinecraftUi.panel(activity, I18n.t("正在导入玩家数据"));
+                final TextView stageText = MinecraftUi.text(activity, I18n.t("准备中…"), 9,
+                        MinecraftUi.PANEL_MUTED, false);
+                wp.addView(stageText);
+                android.widget.ProgressBar wpb = MinecraftUi.themedProgress(activity);
+                final android.animation.ValueAnimator wanim = MinecraftUi.scanAnimation(wpb);
+                LinearLayout.LayoutParams wlp = new LinearLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT, dp(10));
+                wlp.topMargin = dp(8);
+                wp.addView(wpb, wlp);
+                wait.setContentView(wp);
+                handler.post(() -> wait.show());
+                try {
+                    OfflinePlayerData.applyPlayer(activity, instDir, world, msa, sid, stub, reduced,
+                            text -> handler.post(() -> stageText.setText(text)));
+                } finally {
+                    handler.post(() -> {
+                        try { wanim.cancel(); } catch (Throwable ignored) { }
+                        try { wait.dismiss(); } catch (Throwable ignored) { }
+                    });
+                }
                 handler.post(() -> {
                     toast(I18n.t("导入完成：") + world);
                     refreshList();

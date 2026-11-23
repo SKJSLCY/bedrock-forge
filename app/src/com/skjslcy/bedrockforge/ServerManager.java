@@ -41,6 +41,37 @@ public final class ServerManager {
     private volatile int maxPlayers = -1;
     private volatile long playersAt = 0;
 
+    /** 玩家加入/离开回调（供白名单等模块使用，回调在 stdout 线程上执行）。 */
+    interface PlayerWatch {
+        void onJoin(String name);
+        /** 玩家真正进入世界（BDS 输出 "Player Spawned"）——此时 kick 才有效。 */
+        void onSpawn(String name);
+        void onLeave(String name);
+    }
+
+    private volatile PlayerWatch playerWatch;
+    private final java.util.Set<String> onlineNames =
+            java.util.Collections.newSetFromMap(new java.util.concurrent.ConcurrentHashMap<String, Boolean>());
+
+    public void setPlayerWatch(PlayerWatch w) {
+        playerWatch = w;
+    }
+
+    public java.util.Set<String> getOnlineNames() {
+        return onlineNames;
+    }
+
+    /** 通过控制台踢人；名字含空格会被加引号。 */
+    public boolean kick(String name, String reason) {
+        if (name == null) return false;
+        String n = name.trim();
+        if (n.isEmpty()) return false;
+        // 防御：绝不把命令回显（"> list" 等）当作玩家名发给服务端
+        if (n.startsWith(">") || n.startsWith("[") || n.contains("\"")) return false;
+        String cmd = "kick \"" + n.replace("\"", "") + "\" " + (reason == null ? "" : reason);
+        return send(cmd);
+    }
+
     public int getPlayers() {
         return players;
     }
@@ -279,12 +310,50 @@ public final class ServerManager {
                     return;
                 }
             }
-            if (line.contains("Player connected")) {
-                players = Math.max(0, players) + 1;
-                playersAt = System.currentTimeMillis();
-            } else if (line.contains("Player disconnected")) {
-                players = Math.max(0, players - 1);
-                playersAt = System.currentTimeMillis();
+            int ci = line.indexOf("Player connected: ");
+            if (ci >= 0) {
+                String rest = line.substring(ci + "Player connected: ".length());
+                int comma = rest.indexOf(',');
+                String nm = (comma > 0 ? rest.substring(0, comma) : rest).trim();
+                if (!nm.isEmpty()) {
+                    onlineNames.add(nm);
+                    players = Math.max(players, onlineNames.size());
+                    playersAt = System.currentTimeMillis();
+                    PlayerWatch w = playerWatch;
+                    if (w != null) {
+                        try { w.onJoin(nm); } catch (Throwable ignored) { }
+                    }
+                }
+                return;
+            }
+            int si = line.indexOf("Player Spawned: ");
+            if (si >= 0) {
+                String rest = line.substring(si + "Player Spawned: ".length());
+                int xi = rest.indexOf(" xuid:");
+                String nm = (xi > 0 ? rest.substring(0, xi) : rest).trim();
+                if (!nm.isEmpty()) {
+                    PlayerWatch w = playerWatch;
+                    if (w != null) {
+                        try { w.onSpawn(nm); } catch (Throwable ignored) { }
+                    }
+                }
+                return;
+            }
+            int di = line.indexOf("Player disconnected: ");
+            if (di >= 0) {
+                String rest = line.substring(di + "Player disconnected: ".length());
+                int comma = rest.indexOf(',');
+                String nm = (comma > 0 ? rest.substring(0, comma) : rest).trim();
+                if (!nm.isEmpty()) {
+                    onlineNames.remove(nm);
+                    players = Math.max(0, onlineNames.size());
+                    playersAt = System.currentTimeMillis();
+                    PlayerWatch w = playerWatch;
+                    if (w != null) {
+                        try { w.onLeave(nm); } catch (Throwable ignored) { }
+                    }
+                }
+                return;
             }
         } catch (Throwable ignored) {
         }

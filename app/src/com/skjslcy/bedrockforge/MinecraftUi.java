@@ -629,6 +629,52 @@ public final class MinecraftUi {
 
     // ---------------------------------------------------------------- widgets
 
+    /** 主题配色进度条：槽位底 + 强调色填充（简约圆角，其余直角）。 */
+    public static android.widget.ProgressBar themedProgress(Context c) {
+        android.widget.ProgressBar pb = new android.widget.ProgressBar(c, null,
+                android.R.attr.progressBarStyleHorizontal);
+        pb.setMax(1000);
+        int radius = MINIMAL ? dp(c, 4) : 0;
+        android.graphics.drawable.GradientDrawable track =
+                new android.graphics.drawable.GradientDrawable();
+        track.setColor(SLOT);
+        track.setStroke(Math.max(1, dp(c, 1)), BORDER);
+        track.setCornerRadius(radius);
+        android.graphics.drawable.GradientDrawable bar =
+                new android.graphics.drawable.GradientDrawable(
+                        android.graphics.drawable.GradientDrawable.Orientation.LEFT_RIGHT,
+                        new int[]{GREEN_BRIGHT, ACCENT});
+        bar.setCornerRadius(radius);
+        android.graphics.drawable.ClipDrawable clip =
+                new android.graphics.drawable.ClipDrawable(bar, Gravity.LEFT,
+                        android.graphics.drawable.ClipDrawable.HORIZONTAL);
+        android.graphics.drawable.LayerDrawable ld =
+                new android.graphics.drawable.LayerDrawable(
+                        new android.graphics.drawable.Drawable[]{track, clip});
+        ld.setId(0, android.R.id.background);
+        ld.setId(1, android.R.id.progress);
+        pb.setProgressDrawable(ld);
+        return pb;
+    }
+
+    /** 主题化的“处理中”动画：强调色色块来回扫描（不用系统蓝色不确定动画）。 */
+    public static android.animation.ValueAnimator scanAnimation(
+            final android.widget.ProgressBar pb) {
+        pb.setIndeterminate(false);
+        pb.setProgress(0);
+        android.animation.ValueAnimator va = android.animation.ValueAnimator.ofInt(0, 1000);
+        va.setDuration(900);
+        va.setRepeatMode(android.animation.ValueAnimator.REVERSE);
+        va.setRepeatCount(android.animation.ValueAnimator.INFINITE);
+        va.addUpdateListener(new android.animation.ValueAnimator.AnimatorUpdateListener() {
+            @Override public void onAnimationUpdate(android.animation.ValueAnimator a) {
+                pb.setProgress((Integer) a.getAnimatedValue());
+            }
+        });
+        va.start();
+        return va;
+    }
+
     public static class McButton extends Button {
         public McButton(Context c, String label) {
             super(c);

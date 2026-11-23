@@ -108,6 +108,25 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
     private View lampDot;
     private TextView oreTitle;
     private TextView oreBack;
+    /** 直接切到「玩家管理」分区（守护系统返回用，绕过准入判定）。 */
+    private void backToPlayerSection() {
+        subPageBack = null;
+        if (settingsPage != null) settingsPage.setVisibility(View.GONE);
+        for (View pg : pages) if (pg != null) pg.setVisibility(View.GONE);
+        if (managePage != null) managePage.setVisibility(View.VISIBLE);
+        manageSectionOpen = true;
+        if (manageTitle != null) manageTitle.setText(I18n.t("玩家管理"));
+        if (oreBack != null) oreBack.setVisibility(View.VISIBLE);
+        if (manageHost != null) {
+            manageHost.removeAllViews();
+            manageHost.addView(new PlayerSectionView(this), new android.widget.FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        }
+        setHotbarActive(0);
+    }
+
+    /** 设置类子页的返回目标；null 表示回设置首页。 */
+    private Runnable subPageBack;
     private static final int REQ_WALLPAPER = 993;
     private String pendingStyle;
     private String pendingMode;
@@ -178,6 +197,20 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
 
     private long lastDeviceSampleAt = 0;
     private long lastPlayersProbeAt = 0;
+    private long lastWhitelistSweepAt = 0;
+    /** 已判定违规、等待玩家真正进入世界后再踢的名字。 */
+    private final java.util.Set<String> pendingKick =
+            java.util.Collections.newSetFromMap(new java.util.concurrent.ConcurrentHashMap<String, Boolean>());
+
+    /** 守护系统页内控件引用（用于原地刷新，避免整页重建）。 */
+    private Button[] guardModeButtons;
+    private LinearLayout guardListBox;
+    private TextView guardListTitle;
+
+    /** 控制台已渲染到的日志下标（增量追加用）。 */
+    private int consoleRenderedCount = 0;
+    /** 上次读到的 online-mode，供属性缓存命中时复用。 */
+    private boolean lastCfgOnline = false;
     private long lastExternalCheckAt = 0;
     /** 本次启动时日志文件的字节位置：只解析这之后的行，避免读到上一轮的在线人数。 */
     private volatile long logStartOffset = -1;
@@ -301,6 +334,10 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
             sampleTps(now);
             updateState();
             probePlayers(ServerManager.get().isRunning());
+            if (now - lastWhitelistSweepAt > 2000) {
+                lastWhitelistSweepAt = now;
+                if (AppWhitelist.mode(MainActivity.this) != AppWhitelist.OFF) sweepWhitelist();
+            }
             if (now - lastExternalCheckAt > 5000) {
                 lastExternalCheckAt = now;
                 io.execute(new Runnable() {
@@ -376,6 +413,43 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
         buildUi();
         if (savedInstanceState == null) showSplash();
         AppLog.add(I18n.t("App 启动"));
+        ServerManager.get().setPlayerWatch(new ServerManager.PlayerWatch() {
+            @Override public void onJoin(final String name) {
+                // 只登记，不立刻踢：此时玩家还没进入世界，kick 会被服务端忽略
+                if (!plausibleName(name)) return;
+                if (AppWhitelist.mode(MainActivity.this) == AppWhitelist.OFF) return;
+                if (AppWhitelist.isAllowed(MainActivity.this, name)) return;
+                pendingKick.add(name);
+                // 兜底：万一没收到 Spawned，隔几秒再试
+                for (int delay : new int[]{2500, 5000}) {
+                    handler.postDelayed(new Runnable() {
+                        @Override public void run() {
+                            if (!pendingKick.contains(name)) return;
+                            ServerManager.get().kick(name,
+                                    AppWhitelist.kickReason(MainActivity.this, name));
+                        }
+                    }, delay);
+                }
+            }
+            @Override public void onSpawn(final String name) {
+                // 玩家已进入世界：这一刻踢出才真正生效
+                if (!plausibleName(name)) return;
+                if (AppWhitelist.mode(MainActivity.this) == AppWhitelist.OFF) return;
+                if (AppWhitelist.isAllowed(MainActivity.this, name)) return;
+                long t0 = System.currentTimeMillis();
+                ServerManager.get().kick(name, AppWhitelist.kickReason(MainActivity.this, name));
+                android.util.Log.i("BFJOIN", "spawn-kick " + name + " in "
+                        + (System.currentTimeMillis() - t0) + "ms");
+                pendingKick.remove(name);
+                io.execute(new Runnable() {
+                    @Override public void run() {
+                        AppWhitelist.logKick(MainActivity.this, name);
+                        AppLog.add(I18n.t("[白名单] 已拦截 ") + name);
+                    }
+                });
+            }
+            @Override public void onLeave(String name) { pendingKick.remove(name); }
+        });
         loadConfig();
         requestNotificationPermission();
         showPage(0);
@@ -607,6 +681,12 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
 
     @Override
     public void onBackPressed() {
+        if (subPageBack != null) {
+            Runnable r = subPageBack;
+            subPageBack = null;
+            r.run();
+            return;
+        }
         if (currentPage == 4) {
             if (manageSectionOpen) {
                 showManageList();
@@ -943,6 +1023,12 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
             row.addView(back, backLp);
             back.setVisibility(View.GONE);
             back.setOnClickListener(v -> {
+                if (subPageBack != null) {
+                    Runnable r = subPageBack;
+                    subPageBack = null;
+                    r.run();
+                    return;
+                }
                 if (settingsPage != null && settingsPage.getVisibility() == View.VISIBLE) {
                     showPage(3);
                 } else if (managePage != null && managePage.getVisibility() == View.VISIBLE) {
@@ -2698,6 +2784,672 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
         return sv;
     }
 
+    // ---------------------------------------------------------------- 白名单（按玩家名）
+
+    /** 玩家名合法性：排除命令回显、日志行、带引号/空格的伪名字。 */
+    private static boolean plausibleName(String n) {
+        if (n == null) return false;
+        String t = n.trim();
+        if (t.isEmpty() || t.length() > 32) return false;
+        if (t.startsWith(">") || t.startsWith("[") || t.startsWith("#")) return false;
+        if (t.contains("\"") || t.contains("'") || t.contains(" ")) return false;
+        // 只允许字母、数字、下划线、连字符与中日韩字符
+        return t.matches("[A-Za-z0-9_\\-\\u4e00-\\u9fff]+");
+    }
+
+    private void sweepWhitelist() {
+        final java.util.Set<String> online =
+                new java.util.LinkedHashSet<>(ServerManager.get().getOnlineNames());
+        String[] logs = ServerManager.get().getLogs();
+        java.util.regex.Pattern pOnline = java.util.regex.Pattern
+                .compile("There are (\\d+)/(\\d+) players online");
+        // 找到最后一条 "There are N/M players online"，名字在其**后面**若干行
+        int lastCount = -1, need = 0;
+        for (int i = logs.length - 1; i >= 0; i--) {
+            String l = logs[i] == null ? "" : logs[i];
+            java.util.regex.Matcher m = pOnline.matcher(l);
+            if (m.find()) {
+                lastCount = i;
+                try { need = Integer.parseInt(m.group(1)); } catch (Throwable ignored) { }
+                break;
+            }
+        }
+        if (lastCount >= 0 && need > 0) {
+            for (int i = lastCount + 1; i < logs.length && need > 0; i++) {
+                String t = logs[i] == null ? "" : logs[i].trim();
+                if (t.isEmpty()) continue;
+                if (!plausibleName(t)) continue;
+                online.add(t);
+                need--;
+            }
+        }
+        android.util.Log.i("BFGUARD", "sweep mode=" + AppWhitelist.mode(this)
+                + " online=" + online);
+        if (online.isEmpty()) return;
+        io.execute(new Runnable() {
+            @Override public void run() {
+                for (String n : online) {
+                    if (!plausibleName(n)) continue;      // 再挡一层，绝不踢回显/命令行
+                    if (AppWhitelist.isAllowed(MainActivity.this, n)) continue;
+                    ServerManager.get().kick(n, AppWhitelist.kickReason(MainActivity.this, n));
+                    AppWhitelist.logKick(MainActivity.this, n);
+                }
+            }
+        });
+    }
+
+    /** 玩家管理页的「守护系统」入口。 */
+    public void openGuardPage() {
+        showSettingsSubPage(I18n.t("守护系统"), buildGuardPage(), new Runnable() {
+            @Override public void run() { backToPlayerSection(); }
+        });
+    }
+
+    private java.util.List<String> vanillaAllowNames() {
+        java.util.List<String> out = new java.util.ArrayList<>();
+        try {
+            String raw = ShizukuShell.read(DeployManager.SERVER_DIR + "/allowlist.json");
+            org.json.JSONArray arr = new org.json.JSONArray(raw);
+            for (int i = 0; i < arr.length(); i++) {
+                org.json.JSONObject o = arr.optJSONObject(i);
+                if (o == null) continue;
+                String n = o.optString("name", "").trim();
+                if (!n.isEmpty()) out.add(n);
+            }
+        } catch (Throwable ignored) {
+        }
+        return out;
+    }
+
+    private boolean vanillaAllowEnabled() {
+        try {
+            String props = ShizukuShell.read(DeployManager.SERVER_DIR + "/server.properties");
+            for (String line : props.split("\n")) {
+                String t = line.trim();
+                if (t.startsWith("allow-list=")) {
+                    return "true".equalsIgnoreCase(t.substring("allow-list=".length()).trim());
+                }
+            }
+        } catch (Throwable ignored) {
+        }
+        return false;
+    }
+
+    private void promptAddVanilla() {
+        final android.app.Dialog d = new android.app.Dialog(this);
+        d.requestWindowFeature(android.view.Window.FEATURE_NO_TITLE);
+        LinearLayout wrap = new LinearLayout(this);
+        wrap.setOrientation(LinearLayout.VERTICAL);
+        wrap.setPadding(dp(14), dp(14), dp(14), dp(14));
+        LinearLayout panel = MinecraftUi.panel(this, I18n.t("添加原版白名单"));
+        panel.addView(MinecraftUi.text(this, I18n.t("按名字添加到服务端 allowlist.json（需在线模式生效）："),
+                9, MinecraftUi.PANEL_MUTED, false));
+        final EditText input = MinecraftUi.terminalInput(this, I18n.t("玩家名"));
+        LinearLayout.LayoutParams ilp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(46));
+        ilp.topMargin = dp(6);
+        panel.addView(input, ilp);
+        Button ok = new MinecraftUi.McButton(this, I18n.t("添加"));
+        panel.addView(ok, dialogBtnLp(8));
+        ok.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                String name = input.getText().toString().trim();
+                if (name.isEmpty()) {
+                    toast(I18n.t("请输入玩家名"));
+                    return;
+                }
+                ServerManager.get().send("allowlist add \"" + name + "\"");
+                toast(I18n.t("已发送原版添加：") + name);
+                d.dismiss();
+                handler.postDelayed(new Runnable() {
+                    @Override public void run() {
+                        openGuardPage();
+                    }
+                }, 600);
+            }
+        });
+        Button cancel = new MinecraftUi.McButton(this, I18n.t("取消"));
+        panel.addView(cancel, dialogBtnLp(5));
+        cancel.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) { d.dismiss(); }
+        });
+        wrap.addView(panel);
+        d.setContentView(wrap);
+        android.view.Window _w = d.getWindow();
+        if (_w != null) _w.setBackgroundDrawable(
+                new android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT));
+        d.show();
+        android.view.Window w = d.getWindow();
+        if (w != null) {
+            w.setLayout((int) (getResources().getDisplayMetrics().widthPixels * 0.92f),
+                    ViewGroup.LayoutParams.WRAP_CONTENT);
+        }
+    }
+
+    /** 只重建名单区域，不动整页（添加/删除后立即生效）。 */
+    private void renderGuardList() {
+        if (guardListBox == null) return;
+        guardListBox.removeAllViews();
+        java.util.List<String> names = AppWhitelist.names(this);
+        if (names.isEmpty()) {
+            guardListBox.addView(MinecraftUi.text(this, I18n.t("暂无名单"), 9,
+                    MinecraftUi.PANEL_MUTED, false));
+            return;
+        }
+        for (final String n : names) {
+            LinearLayout row = new LinearLayout(this);
+            row.setOrientation(LinearLayout.HORIZONTAL);
+            TextView tv = MinecraftUi.text(this, n, 10, MinecraftUi.PANEL_TEXT, false);
+            row.addView(tv, new LinearLayout.LayoutParams(0, dp(40), 1f));
+            Button del = new MinecraftUi.McButton(this, I18n.t("移除"));
+            del.setTextSize(11);
+            row.addView(del, new LinearLayout.LayoutParams(dp(84), dp(40)));
+            del.setOnClickListener(new View.OnClickListener() {
+                @Override public void onClick(View v) {
+                    AppWhitelist.remove(MainActivity.this, n);
+                    renderGuardList();
+                    lastWhitelistSweepAt = 0;
+                    sweepWhitelist();
+                }
+            });
+            LinearLayout.LayoutParams rlp = new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            rlp.topMargin = dp(5);
+            guardListBox.addView(row, rlp);
+        }
+    }
+
+    /** 拦截记录独立页：搜索（名字 / 时间 / 模式）+ 导入导出。 */
+    private String guardLogQuery = "";
+    private int guardLogMode = -1;   // -1 全部，1 白名单，2 黑名单
+    private LinearLayout guardLogBox;
+
+    private View buildGuardLogsPage() {
+        ScrollView sv = new ScrollView(this);
+        LinearLayout col = new LinearLayout(this);
+        col.setOrientation(LinearLayout.VERTICAL);
+        col.setPadding(dp(2), 0, dp(2), 0);
+
+        LinearLayout panel = MinecraftUi.panel(this, null);
+        addPanel(col, panel);
+        panel.addView(MinecraftUi.text(this,
+                I18n.t("按玩家名、时间（年-月-日 时:分:秒）或理由搜索。"),
+                8.5f, MinecraftUi.PANEL_MUTED, false));
+        final EditText search = MinecraftUi.terminalInput(this, I18n.t("搜索"));
+        search.setText(guardLogQuery);
+        LinearLayout.LayoutParams slp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(46));
+        slp.topMargin = dp(6);
+        panel.addView(search, slp);
+
+        final String[] labels = {I18n.t("全部"), I18n.t("白名单"), I18n.t("黑名单")};
+        final int[] values = {-1, 1, 2};
+        LinearLayout modeRow = new LinearLayout(this);
+        modeRow.setOrientation(LinearLayout.HORIZONTAL);
+        final Button[] mbtns = new Button[3];
+        for (int i = 0; i < 3; i++) {
+            final Button b = new MinecraftUi.McButton(this, labels[i]);
+            b.setTextSize(11);
+            b.setSelected(values[i] == guardLogMode);
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, dp(42), 1f);
+            if (i > 0) lp.leftMargin = dp(4);
+            modeRow.addView(b, lp);
+            mbtns[i] = b;
+            final int v = values[i];
+            b.setOnClickListener(new View.OnClickListener() {
+                @Override public void onClick(View view) {
+                    guardLogMode = v;
+                    for (int k = 0; k < mbtns.length; k++) mbtns[k].setSelected(values[k] == v);
+                    renderGuardLogs();
+                }
+            });
+        }
+        LinearLayout.LayoutParams mrLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        mrLp.topMargin = dp(6);
+        panel.addView(modeRow, mrLp);
+
+        Button apply = new MinecraftUi.McButton(this, I18n.t("搜索"));
+        LinearLayout.LayoutParams alp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(44));
+        alp.topMargin = dp(6);
+        col.addView(apply, alp);
+        apply.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                guardLogQuery = search.getText().toString().trim();
+                renderGuardLogs();
+            }
+        });
+
+        Button export = new MinecraftUi.McButton(this, I18n.t("导出记录"));
+        LinearLayout.LayoutParams elp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(44));
+        elp.topMargin = dp(6);
+        col.addView(export, elp);
+        export.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) { exportGuardLogs(); }
+        });
+
+        Button importBtn = new MinecraftUi.McButton(this, I18n.t("导入记录"));
+        LinearLayout.LayoutParams ilp2 = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(44));
+        ilp2.topMargin = dp(6);
+        col.addView(importBtn, ilp2);
+        importBtn.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) { importGuardLogs(); }
+        });
+
+        Button clear = new MinecraftUi.McButton(this, I18n.t("清空记录"));
+        LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(44));
+        clp.topMargin = dp(6);
+        col.addView(clear, clp);
+        clear.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                AppWhitelist.clearLogs(MainActivity.this);
+                renderGuardLogs();
+                toast(I18n.t("已清空拦截记录"));
+            }
+        });
+
+        LinearLayout listPanel = MinecraftUi.panel(this, I18n.t("记录"));
+        addPanel(col, listPanel);
+        guardLogBox = new LinearLayout(this);
+        guardLogBox.setOrientation(LinearLayout.VERTICAL);
+        listPanel.addView(guardLogBox);
+
+        sv.addView(col);
+        renderGuardLogs();
+        return sv;
+    }
+
+    private void renderGuardLogs() {
+        if (guardLogBox == null) return;
+        guardLogBox.removeAllViews();
+        java.util.List<String[]> logs = AppWhitelist.logs(this);
+        java.text.SimpleDateFormat fmt = new java.text.SimpleDateFormat(
+                "yyyy-MM-dd HH:mm:ss", java.util.Locale.getDefault());
+        String q = guardLogQuery == null ? "" : guardLogQuery.toLowerCase(java.util.Locale.ROOT);
+        int shown = 0;
+        for (String[] e : logs) {
+            if (guardLogMode == 1 && !"1".equals(e[3])) continue;
+            if (guardLogMode == 2 && !"2".equals(e[3])) continue;
+            long ts = 0;
+            try { ts = Long.parseLong(e[1]); } catch (Throwable ignored) { }
+            String time = fmt.format(new java.util.Date(ts));
+            String modeName = "2".equals(e[3]) ? I18n.t("黑名单") : I18n.t("白名单");
+            if (!q.isEmpty()) {
+                String hay = (e[0] + " " + time + " " + modeName + " " + e[2])
+                        .toLowerCase(java.util.Locale.ROOT);
+                if (!hay.contains(q)) continue;
+            }
+            LinearLayout row = MinecraftUi.slot(this);
+            row.setOrientation(LinearLayout.VERTICAL);
+            row.setPadding(dp(9), dp(7), dp(9), dp(7));
+            row.addView(MinecraftUi.text(this, e[0] + "   ·   " + modeName,
+                    10, MinecraftUi.RED, true));
+            row.addView(MinecraftUi.text(this, time, 8.5f, MinecraftUi.PANEL_MUTED, false));
+            if (!e[2].isEmpty()) {
+                row.addView(MinecraftUi.text(this, e[2], 8.5f, MinecraftUi.PANEL_MUTED, false));
+            }
+            LinearLayout.LayoutParams rlp = new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            rlp.topMargin = dp(5);
+            guardLogBox.addView(row, rlp);
+            if (++shown >= 200) break;
+        }
+        if (shown == 0) {
+            guardLogBox.addView(MinecraftUi.text(this, I18n.t("暂无记录"), 9,
+                    MinecraftUi.PANEL_MUTED, false));
+        }
+    }
+
+    private java.io.File guardLogFile() {
+        java.io.File dir = getExternalFilesDir(null);
+        if (dir == null) dir = getFilesDir();
+        return new java.io.File(dir, "guard_logs.json");
+    }
+
+    private void exportGuardLogs() {
+        try {
+            org.json.JSONArray arr = new org.json.JSONArray();
+            for (String[] e : AppWhitelist.logs(this)) {
+                org.json.JSONObject o = new org.json.JSONObject();
+                o.put("n", e[0]);
+                o.put("t", Long.parseLong(e[1].isEmpty() ? "0" : e[1]));
+                o.put("r", e[2]);
+                o.put("m", Integer.parseInt(e[3].isEmpty() ? "0" : e[3]));
+                arr.put(o);
+            }
+            java.io.File f = guardLogFile();
+            java.io.FileWriter w = new java.io.FileWriter(f, false);
+            w.write(arr.toString());
+            w.close();
+            toast(I18n.t("已导出到：") + f.getAbsolutePath());
+        } catch (Throwable t) {
+            toast(I18n.t("导出失败：") + t.getMessage());
+        }
+    }
+
+    private void importGuardLogs() {
+        try {
+            java.io.File f = guardLogFile();
+            if (!f.exists()) {
+                toast(I18n.t("未找到导出文件：") + f.getAbsolutePath());
+                return;
+            }
+            java.io.BufferedReader r = new java.io.BufferedReader(new java.io.FileReader(f));
+            StringBuilder sb = new StringBuilder();
+            String line;
+            while ((line = r.readLine()) != null) sb.append(line);
+            r.close();
+            org.json.JSONArray arr = new org.json.JSONArray(sb.toString());
+            int n = 0;
+            for (int i = 0; i < arr.length(); i++) {
+                org.json.JSONObject o = arr.optJSONObject(i);
+                if (o == null) continue;
+                AppWhitelist.importLog(this, o.optString("n", ""), o.optLong("t", 0),
+                        o.optString("r", ""), o.optInt("m", 0));
+                n++;
+            }
+            renderGuardLogs();
+            toast(I18n.t("已导入 ") + n + I18n.t(" 条记录"));
+        } catch (Throwable t) {
+            toast(I18n.t("导入失败：") + t.getMessage());
+        }
+    }
+
+    /** 编辑白/黑名单的踢出提示语，支持 § 颜色符号。 */
+    private void promptEditMessage(final int mode) {
+        final android.app.Dialog d = new android.app.Dialog(this);
+        d.requestWindowFeature(android.view.Window.FEATURE_NO_TITLE);
+        LinearLayout wrap = new LinearLayout(this);
+        wrap.setOrientation(LinearLayout.VERTICAL);
+        wrap.setPadding(dp(14), dp(14), dp(14), dp(14));
+        LinearLayout panel = MinecraftUi.panel(this,
+                mode == AppWhitelist.BLACKLIST ? I18n.t("黑名单提示语") : I18n.t("白名单提示语"));
+        panel.addView(MinecraftUi.text(this,
+                I18n.t("玩家被拦截时看到的文字。"),
+                9, MinecraftUi.PANEL_MUTED, false));
+        final EditText input = MinecraftUi.terminalInput(this, I18n.t("提示语"));
+        input.setText(AppWhitelist.message(this, mode));
+        LinearLayout.LayoutParams ilp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(46));
+        ilp.topMargin = dp(6);
+        panel.addView(input, ilp);
+
+        Button ok = new MinecraftUi.McButton(this, I18n.t("保存"));
+        panel.addView(ok, dialogBtnLp(8));
+        ok.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                AppWhitelist.setMessage(MainActivity.this, mode,
+                        input.getText().toString().trim());
+                d.dismiss();
+                toast(I18n.t("已保存提示语"));
+                openGuardPage();
+            }
+        });
+        Button reset = new MinecraftUi.McButton(this, I18n.t("恢复默认"));
+        panel.addView(reset, dialogBtnLp(5));
+        reset.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                AppWhitelist.setMessage(MainActivity.this, mode, "");
+                d.dismiss();
+                openGuardPage();
+            }
+        });
+        Button cancel = new MinecraftUi.McButton(this, I18n.t("取消"));
+        panel.addView(cancel, dialogBtnLp(5));
+        cancel.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) { d.dismiss(); }
+        });
+        wrap.addView(panel);
+        d.setContentView(wrap);
+        android.view.Window _w = d.getWindow();
+        if (_w != null) _w.setBackgroundDrawable(
+                new android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT));
+        d.show();
+        android.view.Window w = d.getWindow();
+        if (w != null) {
+            w.setLayout((int) (getResources().getDisplayMetrics().widthPixels * 0.94f),
+                    ViewGroup.LayoutParams.WRAP_CONTENT);
+        }
+    }
+
+    private void promptAddWhitelist() {
+        final android.app.Dialog d = new android.app.Dialog(this);
+        d.requestWindowFeature(android.view.Window.FEATURE_NO_TITLE);
+        LinearLayout wrap = new LinearLayout(this);
+        wrap.setOrientation(LinearLayout.VERTICAL);
+        wrap.setPadding(dp(14), dp(14), dp(14), dp(14));
+        LinearLayout panel = MinecraftUi.panel(this, I18n.t("添加玩家"));
+        panel.addView(MinecraftUi.text(this, I18n.t("输入玩家名（不区分大小写）："), 9,
+                MinecraftUi.PANEL_MUTED, false));
+        final EditText input = MinecraftUi.terminalInput(this, I18n.t("玩家名"));
+        LinearLayout.LayoutParams ilp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(46));
+        ilp.topMargin = dp(6);
+        panel.addView(input, ilp);
+        Button ok = new MinecraftUi.McButton(this, I18n.t("添加"));
+        panel.addView(ok, dialogBtnLp(8));
+        ok.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                String name = input.getText().toString().trim();
+                if (name.isEmpty()) {
+                    toast(I18n.t("请输入玩家名"));
+                    return;
+                }
+                boolean added = AppWhitelist.add(MainActivity.this, name);
+                if (!added) toast(I18n.t("该玩家已在名单中"));
+                else toast(I18n.t("已加入名单"));
+                d.dismiss();
+                renderGuardList();
+                lastWhitelistSweepAt = 0;
+                sweepWhitelist();
+            }
+        });
+        Button cancel = new MinecraftUi.McButton(this, I18n.t("取消"));
+        panel.addView(cancel, dialogBtnLp(5));
+        cancel.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) { d.dismiss(); }
+        });
+        wrap.addView(panel);
+        d.setContentView(wrap);
+        android.view.Window _w = d.getWindow();
+        if (_w != null) _w.setBackgroundDrawable(
+                new android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT));
+        d.show();
+        android.view.Window w = d.getWindow();
+        if (w != null) {
+            w.setLayout((int) (getResources().getDisplayMetrics().widthPixels * 0.92f),
+                    ViewGroup.LayoutParams.WRAP_CONTENT);
+        }
+    }
+
+    /** 设置 → 白名单：模式切换 + 名单管理 + 拦截记录。 */
+    private View buildGuardPage() {
+        ScrollView sv = new ScrollView(this);
+        LinearLayout col = new LinearLayout(this);
+        col.setOrientation(LinearLayout.VERTICAL);
+        col.setPadding(dp(2), 0, dp(2), 0);
+
+        LinearLayout modePanel = MinecraftUi.panel(this, null);
+        addPanel(col, modePanel);
+        modePanel.addView(MinecraftUi.text(this,
+                I18n.t("按玩家名匹配（不区分大小写）。离线模式无法验证身份，改名可绕过，仅用于防误入。"),
+                9, MinecraftUi.PANEL_MUTED, false));
+        final int cur = AppWhitelist.mode(this);
+        final int[] modes = {AppWhitelist.OFF, AppWhitelist.WHITELIST, AppWhitelist.BLACKLIST};
+        final String[] labels = {
+                I18n.t("关闭"),
+                I18n.t("白名单（仅名单内可进）"),
+                I18n.t("黑名单（名单内禁止进入）")
+        };
+        guardModeButtons = new Button[modes.length];
+        for (int i = 0; i < modes.length; i++) {
+            final Button b = new MinecraftUi.McButton(this, labels[i]);
+            b.setSelected(modes[i] == cur);
+            modePanel.addView(b, dialogBtnLp(6));
+            guardModeButtons[i] = b;
+            final int m = modes[i];
+            b.setOnClickListener(new View.OnClickListener() {
+                @Override public void onClick(View v) {
+                    // 原地切换，不重建页面（原来重建会触发 Shizuku 读配置，感觉很慢）
+                    AppWhitelist.setMode(MainActivity.this, m);
+                    if (guardModeButtons != null) {
+                        for (int k = 0; k < modes.length; k++) {
+                            guardModeButtons[k].setSelected(modes[k] == m);
+                        }
+                    }
+                    if (guardListTitle != null) {
+                        guardListTitle.setText(m == AppWhitelist.BLACKLIST
+                                ? I18n.t("黑名单名单") : I18n.t("白名单名单"));
+                    }
+                    renderGuardList();
+                    lastWhitelistSweepAt = 0;   // 立即触发一次监测
+                    sweepWhitelist();
+                }
+            });
+        }
+
+        final LinearLayout vanillaPanel = MinecraftUi.panel(this, I18n.t("原版白名单（服务端）"));
+        addPanel(col, vanillaPanel);
+        final LinearLayout vanillaBox = new LinearLayout(this);
+        vanillaBox.setOrientation(LinearLayout.VERTICAL);
+        vanillaPanel.addView(vanillaBox);
+        io.execute(new Runnable() {
+            @Override public void run() {
+                final boolean on = vanillaAllowEnabled();
+                final java.util.List<String> list = vanillaAllowNames();
+                runOnUiThread(new Runnable() {
+                    @Override public void run() {
+                        vanillaBox.removeAllViews();
+                        vanillaPanel.setVisibility(on ? View.VISIBLE : View.GONE);
+                        if (!on) return;
+                        if (list.isEmpty()) {
+                            vanillaBox.addView(MinecraftUi.text(MainActivity.this,
+                                    I18n.t("原版名单为空"), 9, MinecraftUi.PANEL_MUTED, false));
+                        } else {
+                            for (final String n : list) {
+                                LinearLayout row = new LinearLayout(MainActivity.this);
+                                row.setOrientation(LinearLayout.HORIZONTAL);
+                                TextView tv = MinecraftUi.text(MainActivity.this, n, 10,
+                                        MinecraftUi.PANEL_TEXT, false);
+                                row.addView(tv, new LinearLayout.LayoutParams(0, dp(40), 1f));
+                                Button rev = new MinecraftUi.McButton(MainActivity.this, I18n.t("撤销"));
+                                rev.setTextSize(11);
+                                row.addView(rev, new LinearLayout.LayoutParams(dp(84), dp(40)));
+                                rev.setOnClickListener(new View.OnClickListener() {
+                                    @Override public void onClick(View v) {
+                                        ServerManager.get().send("allowlist remove \"" + n + "\"");
+                                        toast(I18n.t("已发送撤销：") + n);
+                                        handler.postDelayed(new Runnable() {
+                                            @Override public void run() { openGuardPage(); }
+                                        }, 600);
+                                    }
+                                });
+                                LinearLayout.LayoutParams rlp = new LinearLayout.LayoutParams(
+                                        ViewGroup.LayoutParams.MATCH_PARENT,
+                                        ViewGroup.LayoutParams.WRAP_CONTENT);
+                                rlp.topMargin = dp(5);
+                                vanillaBox.addView(row, rlp);
+                            }
+                        }
+                        Button addVanilla = new MinecraftUi.McButton(MainActivity.this,
+                                I18n.t("添加原版白名单"));
+                        LinearLayout.LayoutParams alp = new LinearLayout.LayoutParams(
+                                ViewGroup.LayoutParams.MATCH_PARENT, dp(44));
+                        alp.topMargin = dp(6);
+                        vanillaBox.addView(addVanilla, alp);
+                        addVanilla.setOnClickListener(new View.OnClickListener() {
+                            @Override public void onClick(View v) { promptAddVanilla(); }
+                        });
+                    }
+                });
+            }
+        });
+
+        Button logsBtn = new MinecraftUi.McButton(this, I18n.t("拦截记录"));
+        LinearLayout.LayoutParams logLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(48));
+        logLp.topMargin = dp(8);
+        col.addView(logsBtn, logLp);
+        logsBtn.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                showSettingsSubPage(I18n.t("拦截记录"), buildGuardLogsPage(), new Runnable() {
+                    @Override public void run() { openGuardPage(); }
+                });
+            }
+        });
+
+        Button msgWhite = new MinecraftUi.McButton(this, I18n.t("白名单提示语"));
+        LinearLayout.LayoutParams mwLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(44));
+        mwLp.topMargin = dp(6);
+        col.addView(msgWhite, mwLp);
+        msgWhite.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                promptEditMessage(AppWhitelist.WHITELIST);
+            }
+        });
+
+        Button msgBlack = new MinecraftUi.McButton(this, I18n.t("黑名单提示语"));
+        LinearLayout.LayoutParams mbLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(44));
+        mbLp.topMargin = dp(6);
+        col.addView(msgBlack, mbLp);
+        msgBlack.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                promptEditMessage(AppWhitelist.BLACKLIST);
+            }
+        });
+
+        Button add = new MinecraftUi.McButton(this, I18n.t("添加玩家"));
+        LinearLayout.LayoutParams addLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(48));
+        addLp.topMargin = dp(8);
+        col.addView(add, addLp);
+        add.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) { promptAddWhitelist(); }
+        });
+
+        if (ServerManager.get().isRunning() && !ServerManager.get().getOnlineNames().isEmpty()) {
+            Button fromOnline = new MinecraftUi.McButton(this, I18n.t("从在线玩家添加"));
+            LinearLayout.LayoutParams fromLp = new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, dp(48));
+            fromLp.topMargin = dp(6);
+            col.addView(fromOnline, fromLp);
+            fromOnline.setOnClickListener(new View.OnClickListener() {
+                @Override public void onClick(View v) {
+                    for (String n : ServerManager.get().getOnlineNames()) {
+                        AppWhitelist.add(MainActivity.this, n);
+                    }
+                    toast(I18n.t("已同步在线玩家"));
+                    renderGuardList();
+                    lastWhitelistSweepAt = 0;
+                    sweepWhitelist();
+                }
+            });
+        }
+
+        LinearLayout listPanel = MinecraftUi.panel(this,
+                AppWhitelist.mode(this) == AppWhitelist.BLACKLIST
+                        ? I18n.t("黑名单名单") : I18n.t("白名单名单"));
+        addPanel(col, listPanel);
+        listPanel.addView(MinecraftUi.text(this, I18n.t("白名单与黑名单各自独立，互不同步。"),
+                8.5f, MinecraftUi.PANEL_MUTED, false));
+        if (listPanel.getChildAt(0) instanceof TextView) {
+            guardListTitle = (TextView) listPanel.getChildAt(0);
+        }
+        guardListBox = new LinearLayout(this);
+        guardListBox.setOrientation(LinearLayout.VERTICAL);
+        listPanel.addView(guardListBox);
+        renderGuardList();
+
+        sv.addView(col);
+        return sv;
+    }
+
     private View buildSettingsPage() {
         LinearLayout page = new LinearLayout(this);
         page.setOrientation(LinearLayout.VERTICAL);
@@ -2709,7 +3461,15 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
         Button back = new MinecraftUi.McButton(this, "← 返回");
         if (MinecraftUi.ORE) back.setVisibility(View.GONE);
         header.addView(back, new LinearLayout.LayoutParams(dp(84), dp(40)));
-        back.setOnClickListener(v -> showPage(3));
+        back.setOnClickListener(v -> {
+            if (subPageBack != null) {
+                Runnable r = subPageBack;
+                subPageBack = null;
+                r.run();
+                return;
+            }
+            showPage(3);
+        });
 
         settingsTitle = MinecraftUi.text(this, "设置", 18, Color.WHITE, true);
         if (!MinecraftUi.MINIMAL) settingsTitle.setShadowLayer(dp(2), dp(2), 0, 0xFF1A1A1A);
@@ -2732,6 +3492,11 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
     }
 
     private void showSettingsSubPage(String title, View content) {
+        showSettingsSubPage(title, content, null);
+    }
+
+    private void showSettingsSubPage(String title, View content, Runnable back) {
+        subPageBack = back;
         if (settingsPage == null) return;
         settingsTitle.setText(I18n.t(title));
         settingsHost.removeAllViews();
@@ -2757,6 +3522,12 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
         header.addView(back, blp);
         back.setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View v) {
+                if (subPageBack != null) {
+                    Runnable r = subPageBack;
+                    subPageBack = null;
+                    r.run();
+                    return;
+                }
                 if (manageSectionOpen) {
                     showManageList();
                 } else {
@@ -3489,19 +4260,22 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
     private void updateLogs() {
         if (consoleText == null) return;
         String[] logs = ServerManager.get().getLogs();
-        String tail = logs.length == 0 ? "" : logs[logs.length - 1];
-        if (logs.length == lastLogCount && tail.equals(lastLogTail)) return;
         long now = System.currentTimeMillis();
-        if (now - lastLogUpdateMs < 350) return;
+        if (now - lastLogUpdateMs < 200) return;
+
+        // 日志被裁剪/重启：整段重建一次
+        if (logs.length < consoleRenderedCount) {
+            lastLogUpdateMs = now;
+            consoleRenderedCount = 0;
+            consoleText.setText(I18n.t("等待服务端日志…"));
+        }
+        if (logs.length <= consoleRenderedCount) return;
+
         lastLogUpdateMs = now;
-        lastLogCount = logs.length;
-        lastLogTail = tail;
         boolean stick = isConsoleNearBottom();
-        int keepY = consoleScroll == null ? consoleUserScrollY : consoleUserScrollY;
-        int from = Math.max(0, logs.length - 500);
         SpannableStringBuilder sb = new SpannableStringBuilder();
         int[] listRemain = {-1};
-        for (int i = from; i < logs.length; i++) {
+        for (int i = consoleRenderedCount; i < logs.length; i++) {
             String line = logs[i];
             int onlineCnt = ListOutput.parseOnlineCount(line);
             if (onlineCnt >= 0) {
@@ -3510,39 +4284,21 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
             }
             if (ListOutput.isNameLine(line, listRemain)) continue;
             if (isGametimeNoise(line) && logColor(line) != MinecraftUi.RED) continue;
-            int start = sb.length();
+            int st = sb.length();
             sb.append(line).append('\n');
             sb.setSpan(new ForegroundColorSpan(
-                    ThemeManager.mapTextColor(logColor(line))), start, sb.length(),
+                    ThemeManager.mapTextColor(logColor(line))), st, sb.length(),
                     Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
         }
-        consoleText.setText(sb.length() == 0 ? I18n.t("等待服务端日志…") : sb);
-        if (consoleScroll != null) {
-            final boolean toBottom = stick;
-            final int restoreY = keepY;
-            // 必须等 TextView 重新布局后再恢复，否则会被布局归零覆盖（表现为“一直弹回顶部”）
-            consoleText.post(new Runnable() {
+        consoleRenderedCount = logs.length;
+        if (sb.length() == 0) return;
+        // 追加而不是整体 setText：追加不会重置 ScrollView 的滚动位置，
+        // 彻底消除“回弹顶部 / 抽搐”的观感。
+        consoleText.append(sb);
+        if (stick && consoleScroll != null) {
+            consoleScroll.post(new Runnable() {
                 @Override public void run() {
-                    consoleRestoring = true;
-                    if (toBottom) {
-                        consoleScroll.fullScroll(View.FOCUS_DOWN);
-                        consoleText.post(new Runnable() {
-                            @Override public void run() {
-                                consoleScroll.fullScroll(View.FOCUS_DOWN);
-                                consoleUserScrollY = consoleScroll.getScrollY();
-                                consoleRestoring = false;
-                            }
-                        });
-                    } else {
-                        consoleScroll.scrollTo(0, restoreY);
-                        consoleText.post(new Runnable() {
-                            @Override public void run() {
-                                consoleScroll.scrollTo(0, restoreY);
-                                consoleUserScrollY = restoreY;
-                                consoleRestoring = false;
-                            }
-                        });
-                    }
+                    consoleScroll.fullScroll(View.FOCUS_DOWN);
                 }
             });
         }
@@ -3566,9 +4322,9 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
                 lanIp = ip;
                 int cfgPort = port;
                 String cfgWorld = worldName;
-                boolean cfgOnline = true;
+                boolean cfgOnline = lastCfgOnline;   // 缓存命中时沿用上次读到的值，不能默认 true
                 long nowMs = System.currentTimeMillis();
-                boolean needProps = nowMs - lastPropsAt > 30000 || !running;
+                boolean needProps = nowMs - lastPropsAt > 2000 || !running;
                 if (ShizukuGate.isRunning() && needProps) {
                     lastPropsAt = nowMs;
                     try {
@@ -3592,6 +4348,7 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
                 }
                 final int finalPort = cfgPort;
                 final String finalWorld = cfgWorld;
+                lastCfgOnline = cfgOnline;
                 final boolean finalOnline = cfgOnline;
                 runOnUiThread(new Runnable() {
                     @Override public void run() {

@@ -114,15 +114,17 @@ public class PlayerSectionView extends ScrollView {
         col.addView(head, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
-        new Thread(() -> {
-            final boolean allow = isAllowListEnabled();
-            handler.post(() -> {
-                if (!allow) return;
-                whitelistPanel = buildWhitelistPanel();
-                col.addView(whitelistPanel, 1, new LinearLayout.LayoutParams(
-                        ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-            });
-        }, "allowlist-check").start();
+        Button guard = new MinecraftUi.McButton(activity, "守护系统");
+        guard.setTextSize(12.5f);
+        LinearLayout.LayoutParams glp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(46));
+        glp.topMargin = dp(6);
+        head.addView(guard, glp);
+        guard.setOnClickListener(v -> {
+            if (activity instanceof MainActivity) {
+                ((MainActivity) activity).openGuardPage();
+            }
+        });
         refresh();
     }
 
@@ -168,7 +170,6 @@ public class PlayerSectionView extends ScrollView {
 
     private void render(List<PlayerTracker.Player> list) {
         for (int i = col.getChildCount() - 1; i >= 1; i--) {
-            if (col.getChildAt(i) == whitelistPanel) continue;
             col.removeViewAt(i);
         }
         status.setText(I18n.t("共 ") + list.size()
@@ -514,20 +515,6 @@ public class PlayerSectionView extends ScrollView {
             showGameModeDialog(p, back);
         });
 
-        if (isAllowListEnabled()) {
-            final boolean whitelisted = isWhitelisted(p.name);
-            Button white = new MinecraftUi.McButton(activity,
-                    whitelisted ? "撤销白名单" : "恢复白名单");
-            LinearLayout.LayoutParams wlp = new LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT, dp(42));
-            wlp.topMargin = dp(5);
-            panel.addView(white, wlp);
-            white.setOnClickListener(v -> {
-                d.dismiss();
-                command("allowlist " + (whitelisted ? "remove" : "add") + " \"" + p.name + "\"");
-                back.run();
-            });
-        }
 
         Button xp = new MinecraftUi.McButton(activity, "设置等级");
         LinearLayout.LayoutParams xlp = new LinearLayout.LayoutParams(
