@@ -17,6 +17,9 @@ public final class ShizukuShell {
     /** shell 进程的 cwd 必须是已存在目录；新设备上 server 目录可能还不存在。 */
     public static final String WORK_DIR = "/data/local/tmp";
 
+    /** 直通拷贝用的缓冲区：1 MB 比 64 KB 少一个数量级的系统调用。 */
+    private static final int BUFFER = 1 << 20;
+
     private ShizukuShell() {
     }
 
@@ -46,7 +49,7 @@ public final class ShizukuShell {
                 env(), WORK_DIR);
         java.io.InputStream in = new java.io.FileInputStream(local);
         OutputStream out = p.getOutputStream();
-        byte[] buf = new byte[65536];
+        byte[] buf = new byte[BUFFER];
         long total = local.length();
         long copied = 0;
         int n;
@@ -75,7 +78,7 @@ public final class ShizukuShell {
                 env(), WORK_DIR);
         InputStream in = p.getInputStream();
         java.io.FileOutputStream out = new java.io.FileOutputStream(local);
-        byte[] buf = new byte[65536];
+        byte[] buf = new byte[BUFFER];
         long total = 0;
         long copied = 0;
         int n;
@@ -126,7 +129,7 @@ public final class ShizukuShell {
                 env(), WORK_DIR);
         java.io.RandomAccessFile in = new java.io.RandomAccessFile(local, "r");
         OutputStream out = p.getOutputStream();
-        byte[] buf = new byte[65536];
+        byte[] buf = new byte[BUFFER];
         long total = local.length() - from;
         long copied = 0;
         try {
@@ -163,6 +166,80 @@ public final class ShizukuShell {
         try {
             sh("sync");
         } catch (Throwable ignored) {
+        }
+    }
+
+    /**
+     * 直接把内容 URI 的字节流写进设备文件。
+     *
+     * <p>导入设备上的文件时不要先落到 App 缓存再拷一遍——那是两次完整 I/O。
+     * 这里从 ContentResolver 直接灌进 {@code cat > remote}，只走一趟。
+     */
+    public static void copyInStream(android.content.ContentResolver resolver,
+                                    android.net.Uri uri, long total, String remote,
+                                    CopyProgress cb) throws Exception {
+        if (!Shizuku.pingBinder()) throw new IOException(I18n.t("Shizuku 未运行"));
+        if (Shizuku.checkSelfPermission() != PackageManager.PERMISSION_GRANTED) {
+            throw new IOException(I18n.t("Shizuku 未授权"));
+        }
+        InputStream in = resolver.openInputStream(uri);
+        if (in == null) throw new IOException(I18n.t("无法读取文件"));
+        Process p = ShizukuProcess.start(new String[]{"sh", "-c", "cat > " + quote(remote)},
+                env(), WORK_DIR);
+        OutputStream out = p.getOutputStream();
+        byte[] buf = new byte[BUFFER];
+        long copied = 0;
+        int n;
+        try {
+            while ((n = in.read(buf)) > 0) {
+                out.write(buf, 0, n);
+                copied += n;
+                if (cb != null) cb.onProgress(copied, total > 0 ? total : copied);
+            }
+            out.flush();
+        } finally {
+            try { in.close(); } catch (Throwable ignored) { }
+            try { out.close(); } catch (Throwable ignored) { }
+        }
+        String err = readAll(p.getErrorStream());
+        int code = p.waitFor();
+        if (code != 0) throw new IOException(err.trim().isEmpty() ? (I18n.t("退出码 ") + code) : err.trim());
+    }
+
+    /** 按行回调命令输出（解压进度用；标准错误已合并到标准输出）。 */
+    public interface LineSink {
+        void onLine(String line);
+    }
+
+    public static int runLines(String command, LineSink sink) throws Exception {
+        if (!Shizuku.pingBinder()) throw new IOException(I18n.t("Shizuku 未运行"));
+        if (Shizuku.checkSelfPermission() != PackageManager.PERMISSION_GRANTED) {
+            throw new IOException(I18n.t("Shizuku 未授权"));
+        }
+        Process p = ShizukuProcess.start(new String[]{"sh", "-c", command + " 2>&1"}, env(), WORK_DIR);
+        java.io.BufferedReader reader = new java.io.BufferedReader(
+                new java.io.InputStreamReader(p.getInputStream(), "UTF-8"));
+        String line;
+        while ((line = reader.readLine()) != null) {
+            if (sink != null) sink.onLine(line);
+        }
+        try { reader.close(); } catch (Throwable ignored) { }
+        String err = readAll(p.getErrorStream());
+        int code = p.waitFor();
+        if (code != 0) throw new IOException(err.trim().isEmpty() ? (I18n.t("退出码 ") + code) : err.trim());
+        return code;
+    }
+
+    /** 估算压缩包条目数，用于解压进度；拿不到返回 0。 */
+    public static int countEntries(String remote) {
+        try {
+            String n = sh("case " + quote(remote) + " in "
+                    + "*.zip) unzip -l " + quote(remote)
+                    + " | awk 'NF>=4 && $1 ~ /^[0-9]+$/ {c++} END {print c+0}' ;; "
+                    + "*) tar -tzf " + quote(remote) + " 2>/dev/null | wc -l ;; esac").trim();
+            return Integer.parseInt(n);
+        } catch (Throwable t) {
+            return 0;
         }
     }
 

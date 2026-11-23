@@ -404,8 +404,8 @@ public class AddonsSectionView extends ScrollView {
             return;
         }
         host.pickFile(new DeploySectionView.PickCallback() {
-            @Override public void onPicked(File file) {
-                doImport(file);
+            @Override public void onPicked(ImportSource src) {
+                doImport(src);
             }
 
             @Override public void onCancel() {
@@ -413,28 +413,45 @@ public class AddonsSectionView extends ScrollView {
         });
     }
 
-    private void doImport(final File file) {
+    private void doImport(final ImportSource src) {
         if (busy) return;
         busy = true;
-        status.setText(I18n.t("正在导入 ") + file.getName() + " …");
+        status.setText(I18n.t("正在导入 ") + src.name + " …");
         new Thread(() -> {
             try {
                 String remote = "/data/local/tmp/mcbds/addon-import.zip";
                 final ProgressDialog.Holder pd = ProgressDialog.show(activity,
                     I18n.t("导入 addon"));
-            try {
-                ShizukuShell.copyIn(file, remote, new ShizukuShell.CopyProgress() {
-                    @Override public void onProgress(long copied, long total) {
-                        pd.set(copied, total, I18n.t("正在复制 addon"));
-                    }
-                });
-                pd.indeterminate(I18n.t("正在解压 addon…"));
-            } finally {
-                pd.dismiss();
-            }
-                String stage = DeployManager.BASE + "/tmp/addon-stage";
-                ShizukuShell.sh("rm -rf " + q(stage) + "; mkdir -p " + q(stage)
-                        + "; unzip -q -o " + q(remote) + " -d " + q(stage));
+                final String stage = DeployManager.BASE + "/tmp/addon-stage";
+                try {
+                    // 复制占前 55%，解压占后 45%，两段都有实时进度
+                    src.copyTo(remote, new ShizukuShell.CopyProgress() {
+                        @Override public void onProgress(long copied, long total) {
+                            pd.set(copied, total > 0 ? total : copied, I18n.t("正在复制 addon"));
+                        }
+                    });
+                    pd.set(55, 100, I18n.t("正在解压 addon…"));
+                    final int[] lastPct = {-1};
+                    ShizukuShell.sh("rm -rf " + q(stage) + "; mkdir -p " + q(stage));
+                    int total = ShizukuShell.countEntries(remote);
+                    final int[] done = {0};
+                    ShizukuShell.runLines("unzip -o " + q(remote) + " -d " + q(stage),
+                            line -> {
+                                String t = line == null ? "" : line.trim();
+                                if (!(t.startsWith("inflating:") || t.startsWith("extracting:")
+                                        || t.startsWith("creating:"))) return;
+                                done[0]++;
+                                int pct = 55 + (total > 0
+                                        ? (int) Math.min(45, done[0] * 45L / total) : 45);
+                                if (pct != lastPct[0]) {
+                                    lastPct[0] = pct;
+                                    pd.set(pct, 100, I18n.t("正在解压 addon…") + " "
+                                            + done[0] + "/" + (total > 0 ? total : done[0]));
+                                }
+                            });
+                } finally {
+                    pd.dismiss();
+                }
                 String find = ShizukuShell.sh("find " + q(stage) + " -maxdepth 3 -name manifest.json"
                         + " | head -n 1").trim();
                 if (find.isEmpty()) throw new Exception(I18n.t("压缩包里没有 manifest.json"));
@@ -444,7 +461,7 @@ public class AddonsSectionView extends ScrollView {
                 JSONObject header = m.optJSONObject("header");
                 String uuid = header == null ? "" : header.optString("uuid", "");
                 String packName = header == null ? "" : header.optString("name", "");
-                if (packName.isEmpty()) packName = file.getName().replaceAll("\\.[^.]+$", "");
+                if (packName.isEmpty()) packName = src.name.replaceAll("\\.[^.]+$", "");
                 JSONArray modules = m.optJSONArray("modules");
                 boolean resource = false;
                 boolean script = false;
@@ -466,9 +483,11 @@ public class AddonsSectionView extends ScrollView {
                 String safe = packName.replaceAll("[\\\\/:*?\"<>|]", "_").trim();
                 if (safe.isEmpty()) safe = "addon-" + System.currentTimeMillis();
                 String dest = DeployManager.SERVER_DIR + "/" + targetBase + "/" + safe;
-                ShizukuShell.sh("rm -rf " + q(dest) + "; mkdir -p " + q(dest)
-                        + "; cp -a " + q(root) + "/. " + q(dest) + "/");
-                ShizukuShell.sh("rm -f " + q(remote) + "; rm -rf " + q(stage));
+                // 同一分区：mv 只是改名，不再 cp -a 复制一份整个包
+                ShizukuShell.sh("rm -rf " + q(dest) + "; mkdir -p " + q(DeployManager.SERVER_DIR + "/" + targetBase)
+                        + "; mv " + q(root) + " " + q(dest) + " || { mkdir -p " + q(dest)
+                        + "; cp -a " + q(root) + "/. " + q(dest) + "/; }");
+                ShizukuShell.sh("rm -f " + q(remote) + "; rm -rf " + q(stage) + " " + q(root) + " 2>/dev/null || true");
                 final String msg = I18n.t("已导入 ") + packName
                         + (resource ? I18n.t("（资源包）") : (script ? I18n.t("（脚本行为包）") : I18n.t("（行为包）")))
                         + "\nUUID：" + uuid;

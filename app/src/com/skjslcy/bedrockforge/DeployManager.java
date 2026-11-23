@@ -558,22 +558,35 @@ public final class DeployManager {
 
     public static void installServer(Context context, File archive, String source, String version,
                                      Progress p) throws Exception {
-        installServer(context, archive, source, version, false, null, p);
+        installServer(context, ImportSource.ofFile(archive), source, version, false, null, null, p);
     }
 
     public static void installServer(Context context, File archive, String source, String version,
                                      boolean freshInstance, Progress p) throws Exception {
-        installServer(context, archive, source, version, freshInstance, null, p);
+        installServer(context, ImportSource.ofFile(archive), source, version, freshInstance, null, null, p);
     }
 
     public static void installServer(Context context, File archive, String source, String version,
                                      boolean freshInstance, String instanceName,
                                      Progress p) throws Exception {
-        installServer(context, archive, source, version, freshInstance, instanceName, null, p);
+        installServer(context, ImportSource.ofFile(archive), source, version, freshInstance,
+                instanceName, null, p);
     }
 
     public static void installServer(Context context, File archive, String source, String version,
                                      boolean freshInstance, String instanceName,
+                                     String sourceInstanceId, Progress p) throws Exception {
+        installServer(context, ImportSource.ofFile(archive), source, version, freshInstance,
+                instanceName, sourceInstanceId, p);
+    }
+
+    public static void installServer(Context context, ImportSource archive, String source,
+                                     String version, Progress p) throws Exception {
+        installServer(context, archive, source, version, false, null, null, p);
+    }
+
+    public static void installServer(Context context, ImportSource archive, String source,
+                                     String version, boolean freshInstance, String instanceName,
                                      String sourceInstanceId, Progress p) throws Exception {
         boolean box64 = exists(BOX64_ROOTFS + "/etc/os-release") && exists(BOX64_BIN);
         if (!box64) {
@@ -582,19 +595,26 @@ public final class DeployManager {
         ensureLayout();
         p.update(1, I18n.t("上传部署包…"));
         String remote = copyArchive(archive, p);
-        p.update(12, I18n.t("清理临时目录…"));
+        p.update(31, I18n.t("清理临时目录…"));
         ShizukuShell.sh("rm -rf " + q(BASE + "/tmp/server-stage") + "; mkdir -p " + q(BASE + "/tmp/server-stage"));
 
-        p.update(15, I18n.t("解压服务端包…"));
-        extract(remote, BASE + "/tmp/server-stage");
+        p.update(33, I18n.t("解压服务端包…"));
+        extract(remote, BASE + "/tmp/server-stage", new Progress() {
+            @Override public void update(int percent, String message) {
+                p.update(33 + percent * 42 / 100, message);
+            }
+        });
         String stage = BASE + "/tmp/server-stage";
 
-        p.update(55, I18n.t("定位 bedrock_server…"));
+        p.update(76, I18n.t("定位 bedrock_server…"));
         String b = ShizukuShell.sh("find " + q(stage) + " -name bedrock_server -type f 2>/dev/null | head -n 1 || true").trim();
         if (b.isEmpty()) throw new IOException(I18n.t("压缩包内没有 bedrock_server"));
         String dir = b.substring(0, b.lastIndexOf('/'));
         if (!dir.equals(stage)) {
-            ShizukuShell.sh("cp -a " + q(dir) + "/. " + q(stage) + "/");
+            // 同一分区内 mv 只是改名，不再复制一份 300 MB
+            ShizukuShell.sh("mv " + q(dir) + " " + q(BASE + "/tmp/server-flat")
+                    + " && rm -rf " + q(stage) + " && mv " + q(BASE + "/tmp/server-flat")
+                    + " " + q(stage));
         }
         if (!exists(stage + "/bedrock_server")) {
             throw new IOException(I18n.t("解压后缺少 bedrock_server"));
@@ -631,7 +651,7 @@ public final class DeployManager {
         ShizukuShell.sh("rm -f " + q(remote));
         String known = id.matches("\\d.*") ? id : "未知";
         if (known.isEmpty() || "未知".equals(known)) {
-            known = detectImportedVersion(target, archive.getName());
+            known = detectImportedVersion(target, archive.name);
         }
         ShizukuShell.sh("printf '%s' " + q(known) + " > " + q(target + "/.mcbds_version")
                 + "; printf '%s' " + q(source) + " > " + q(target + "/.mcbds_source"));
@@ -658,36 +678,62 @@ public final class DeployManager {
             return "未知";
         }
     }
-    private static String copyArchive(File archive, Progress p) throws Exception {
+    private static String copyArchive(ImportSource archive, Progress p) throws Exception {
         ShizukuShell.sh("mkdir -p " + q(TMP));
-        String name = archive.getName().toLowerCase();
+        String name = archive.name.toLowerCase();
         String suffix = name.endsWith(".tar.gz") ? ".tar.gz" : (name.endsWith(".tgz") ? ".tgz" : ".zip");
         String remote = TMP + "/upload-" + System.currentTimeMillis() + suffix;
         final int[] last = {-1};
-        ShizukuShell.copyIn(archive, remote, new ShizukuShell.CopyProgress() {
+        archive.copyTo(remote, new ShizukuShell.CopyProgress() {
             @Override
             public void onProgress(long copied, long total) {
-                int percent = total > 0 ? (int) (copied * 9 / total) : 0;
+                int percent = total > 0 ? (int) (copied * 29 / total) : 0;
                 if (percent != last[0]) {
                     last[0] = percent;
-                    p.update(2 + percent, I18n.t("上传部署包 ") + percent + "%");
+                    p.update(1 + percent, I18n.t("上传部署包 ") + (total > 0
+                            ? (int) (copied * 100 / total) : 0) + "%");
                 }
             }
         });
         return remote;
     }
 
-    private static void extract(String remote, String dest) throws Exception {
-        String name = remote.toLowerCase();
-        if (name.endsWith(".zip")) {
-            ShizukuShell.sh("unzip -q -o " + q(remote) + " -d " + q(dest));
-        } else if (name.endsWith(".tar.gz") || name.endsWith(".tgz")) {
-            // -o: 不恢复 root 属主；Android /data 下 hardlink 被 SELinux 禁止，
-            // tar 对 hardlink 条目会报错，但目标文件通常已解出，忽略后由调用方校验。
-            ShizukuShell.sh("tar -xzof " + q(remote) + " -C " + q(dest) + " 2>/dev/null || true");
-        } else {
+    /**
+     * 解压并按条目数回报进度（zip 用 unzip 的逐条输出，tar 用 -v 的逐条输出）。
+     * 进度回调的 percent 是「解压阶段内部」的 0..100。
+     */
+    static void extract(String remote, String dest, final Progress inner) throws Exception {
+        String lower = remote.toLowerCase();
+        boolean zip = lower.endsWith(".zip");
+        if (!zip && !lower.endsWith(".tar.gz") && !lower.endsWith(".tgz")) {
             throw new IOException(I18n.t("只支持 .zip / .tar.gz 文件"));
         }
+        final int total = ShizukuShell.countEntries(remote);
+        if (inner != null) inner.update(0, I18n.t("解压 ") + "0/" + (total > 0 ? total : 1));
+        final int[] done = {0};
+        final int[] lastPct = {-1};
+        String cmd = zip
+                ? "unzip -o " + q(remote) + " -d " + q(dest)
+                : "tar -xzof " + q(remote) + " -C " + q(dest) + " -v 2>&1 || true";
+        ShizukuShell.runLines(cmd, new ShizukuShell.LineSink() {
+            @Override public void onLine(String line) {
+                if (line == null) return;
+                String t = line.trim();
+                boolean entry = zip
+                        ? (t.startsWith("inflating:") || t.startsWith("extracting:")
+                            || t.startsWith("creating:"))
+                        : (!t.isEmpty() && !t.startsWith("tar:"));
+                if (!entry) return;
+                done[0]++;
+                if (inner == null) return;
+                int pct = total > 0 ? (int) Math.min(100, done[0] * 100L / total) : 0;
+                if (pct != lastPct[0]) {
+                    lastPct[0] = pct;
+                    inner.update(pct, I18n.t("解压 ") + done[0] + "/" + (total > 0 ? total : done[0]));
+                }
+            }
+        });
+        if (inner != null) inner.update(100, I18n.t("解压完成"));
     }
 
     public static File download(Context context, String url, String fileName, Progress p) throws Exception {

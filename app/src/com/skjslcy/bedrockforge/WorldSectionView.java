@@ -441,12 +441,12 @@ public class WorldSectionView extends ScrollView {
     private void importWorld() {
         if (!ensureStopped()) return;
         host.pickFile(new DeploySectionView.PickCallback() {
-            @Override public void onPicked(File file) {
-                String name = MainActivity.lastPickedName;
-                if (name == null || name.isEmpty()) name = file.getName();
+            @Override public void onPicked(ImportSource src) {
+                String name = src.name == null ? "" : src.name;
                 int dot = name.lastIndexOf('.');
                 if (dot > 0) name = name.substring(0, dot);
-                name = name.replaceAll("^import_\\d+_", "");                name = name.replaceAll("[\\\\/:*?\"<>|]", "_").trim();
+                name = name.replaceAll("^import_\\d+_", "");
+                name = name.replaceAll("[\\\\/:*?\"<>|]", "_").trim();
                 if (name.isEmpty()) name = "Imported World";
                 if (name.length() > 32) name = name.substring(0, 32);
                 final String world = name;
@@ -457,9 +457,9 @@ public class WorldSectionView extends ScrollView {
                 } catch (Throwable ignored) {
                 }
                 if (exists) {
-                    confirmImport(file, world);
+                    confirmImport(src, world);
                 } else {
-                    doImport(file, world);
+                    doImport(src, world);
                 }
             }
 
@@ -469,7 +469,7 @@ public class WorldSectionView extends ScrollView {
         });
     }
 
-    private void confirmImport(final File file, final String world) {
+    private void confirmImport(final ImportSource src, final String world) {
         final android.app.Dialog d = new android.app.Dialog(activity);
         d.requestWindowFeature(android.view.Window.FEATURE_NO_TITLE);
         LinearLayout wrap = new LinearLayout(activity);
@@ -486,7 +486,7 @@ public class WorldSectionView extends ScrollView {
         panel.addView(ok, lp);
         ok.setOnClickListener(v -> {
             d.dismiss();
-            doImport(file, world);
+            doImport(src, world);
         });
         Button no = new MinecraftUi.McButton(activity, "取消");
         LinearLayout.LayoutParams lp2 = new LinearLayout.LayoutParams(
@@ -505,32 +505,53 @@ public class WorldSectionView extends ScrollView {
         }
     }
 
-    private void doImport(final File file, final String world) {
+    private void doImport(final ImportSource src, final String world) {
         new Thread(() -> {
             try {
                 String remote = "/data/local/tmp/mcbds/world-import.zip";
                 final ProgressDialog.Holder pd = ProgressDialog.show(activity,
                     I18n.t("导入存档"));
-            try {
-                ShizukuShell.copyIn(file, remote, new ShizukuShell.CopyProgress() {
-                    @Override public void onProgress(long copied, long total) {
-                        pd.set(copied, total, I18n.t("正在复制存档"));
-                    }
-                });
-                pd.indeterminate(I18n.t("正在解压存档…"));
-                String stage = DeployManager.BASE + "/tmp/world-import";
-                ShizukuShell.sh("rm -rf " + q(stage) + "; mkdir -p " + q(stage)
-                        + "; unzip -q -o " + q(remote) + " -d " + q(stage));
-                String find = ShizukuShell.sh("find " + q(stage) + " -name level.dat -type f | head -n 1").trim();
-                if (find.isEmpty()) throw new Exception(I18n.t("压缩包里没有 level.dat"));
-                String root = find.substring(0, find.lastIndexOf('/'));
+                final String stage = DeployManager.BASE + "/tmp/world-import";
+                String root;
+                try {
+                    // 复制占前 60%，解压占后 40%
+                    src.copyTo(remote, new ShizukuShell.CopyProgress() {
+                        @Override public void onProgress(long copied, long total) {
+                            pd.set(copied * 60 / Math.max(1, total > 0 ? total : copied), 100,
+                                    I18n.t("正在复制存档"));
+                        }
+                    });
+                    pd.set(60, 100, I18n.t("正在解压存档…"));
+                    ShizukuShell.sh("rm -rf " + q(stage) + "; mkdir -p " + q(stage));
+                    final int total = ShizukuShell.countEntries(remote);
+                    final int[] done = {0};
+                    final int[] lastPct = {-1};
+                    ShizukuShell.runLines("unzip -o " + q(remote) + " -d " + q(stage),
+                            line -> {
+                                String t = line == null ? "" : line.trim();
+                                if (!(t.startsWith("inflating:") || t.startsWith("extracting:")
+                                        || t.startsWith("creating:"))) return;
+                                done[0]++;
+                                int pct = 60 + (total > 0
+                                        ? (int) Math.min(40, done[0] * 40L / total) : 40);
+                                if (pct != lastPct[0]) {
+                                    lastPct[0] = pct;
+                                    pd.set(pct, 100, I18n.t("正在解压存档…") + " "
+                                            + done[0] + "/" + (total > 0 ? total : done[0]));
+                                }
+                            });
+                    String find = ShizukuShell.sh("find " + q(stage) + " -name level.dat -type f | head -n 1").trim();
+                    if (find.isEmpty()) throw new Exception(I18n.t("压缩包里没有 level.dat"));
+                    root = find.substring(0, find.lastIndexOf('/'));
+                } finally {
+                    pd.dismiss();
+                }
                 String dest = DeployManager.SERVER_DIR + "/worlds/" + world;
-                ShizukuShell.sh("rm -rf " + q(dest) + "; mkdir -p " + q(dest)
-                        + "; cp -a " + q(root) + "/. " + q(dest) + "/");
-                ShizukuShell.sh("rm -f " + q(remote) + "; rm -rf " + q(stage));
-            } finally {
-                pd.dismiss();
-            }
+                // 同一分区：mv 即改名；失败才退回复制
+                ShizukuShell.sh("rm -rf " + q(dest) + "; mkdir -p " + q(DeployManager.SERVER_DIR + "/worlds")
+                        + "; mv " + q(root) + " " + q(dest) + " || { mkdir -p " + q(dest)
+                        + "; cp -a " + q(root) + "/. " + q(dest) + "/; }");
+                ShizukuShell.sh("rm -f " + q(remote) + "; rm -rf " + q(stage) + " 2>/dev/null || true");
                 AppLog.add(I18n.t("[存档] 导入 ") + world);
                 handler.post(() -> {
                     toast(I18n.t("已导入存档 ") + world + I18n.t("，可在列表里切换"));

@@ -31,7 +31,7 @@ public class DeploySectionView extends LinearLayout {
     }
 
     public interface PickCallback {
-        void onPicked(File file);
+        void onPicked(ImportSource src);
         void onCancel();
     }
 
@@ -941,9 +941,9 @@ public class DeploySectionView extends LinearLayout {
     private void pickLocal() {
         host.pickFile(new PickCallback() {
             @Override
-            public void onPicked(final File file) {
-                confirmDeploy(I18n.t("导入 ") + file.getName(), new Runnable() {
-                    @Override public void run() { startLocalDeploy(file, 0); }
+            public void onPicked(final ImportSource src) {
+                confirmDeploy(I18n.t("导入 ") + src.name, new Runnable() {
+                    @Override public void run() { startLocalDeploy(src, 0); }
                 });
             }
 
@@ -953,15 +953,15 @@ public class DeploySectionView extends LinearLayout {
             }
         });
     }
-    private void startLocalDeploy(final File file, final int loader) {
-        if (type == DeployManager.TYPE_SERVER && guessVersion(file).isEmpty()) {
-            askImportVersion(file, loader);
+    private void startLocalDeploy(final ImportSource src, final int loader) {
+        if (type == DeployManager.TYPE_SERVER && guessVersion(src.name).isEmpty()) {
+            askImportVersion(src, loader);
             return;
         }
-        installLocal(file, loader, type == DeployManager.TYPE_SERVER ? guessVersion(file) : "");
+        installLocal(src, loader, type == DeployManager.TYPE_SERVER ? guessVersion(src.name) : "");
     }
 
-    private void askImportVersion(final File file, final int loader) {
+    private void askImportVersion(final ImportSource src, final int loader) {
         final Dialog d = new Dialog(activity);
         d.requestWindowFeature(Window.FEATURE_NO_TITLE);
         LinearLayout wrap = new LinearLayout(activity);
@@ -992,7 +992,7 @@ public class DeploySectionView extends LinearLayout {
                     return;
                 }
                 d.dismiss();
-                installLocal(file, loader, ver);
+                installLocal(src, loader, ver);
             }
         });
         Button cancel = new MinecraftUi.McButton(activity, "取消");
@@ -1008,13 +1008,13 @@ public class DeploySectionView extends LinearLayout {
         d.show();
     }
 
-    private void installLocal(final File file, final int loader, final String version) {
-        startDeploy(I18n.t("导入 ") + file.getName(), new Task() {
+    private void installLocal(final ImportSource src, final int loader, final String version) {
+        startDeploy(I18n.t("导入 ") + src.name, new Task() {
             @Override public void run(DeployManager.Progress p) throws Exception {
                 if (type != DeployManager.TYPE_SERVER) {
                     throw new Exception(I18n.t("运行环境仅支持 Box64 部署"));
                 }
-                DeployManager.installServer(activity, file, I18n.t("设备导入"), version, p);
+                DeployManager.installServer(activity, src, I18n.t("设备导入"), version, p);
             }
         });
     }
@@ -1738,10 +1738,10 @@ public class DeploySectionView extends LinearLayout {
         return dialog;
     }
 
-    private String guessVersion(File file) {
+    private String guessVersion(String fileName) {
         java.util.regex.Matcher m = java.util.regex.Pattern
                 .compile("(\\d+\\.\\d+\\.\\d+(?:\\.\\d+)?)")
-                .matcher(file.getName());
+                .matcher(fileName == null ? "" : fileName);
         return m.find() ? m.group(1) : "";
     }
 

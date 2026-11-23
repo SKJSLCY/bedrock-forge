@@ -91,9 +91,8 @@ public class BackupSectionView extends ScrollView {
     private void importBackup() {
         if (busy) return;
         host.pickFile(new DeploySectionView.PickCallback() {
-            @Override public void onPicked(java.io.File file) {
-                String raw = MainActivity.lastPickedName;
-                if (raw == null || raw.isEmpty()) raw = file.getName();
+            @Override public void onPicked(ImportSource src) {
+                String raw = src.name == null ? "" : src.name;
                 if (!raw.endsWith(".tar.gz") && !raw.endsWith(".tgz")) {
                     toast(I18n.t("只支持 .tar.gz / .tgz"));
                     return;
@@ -102,9 +101,9 @@ public class BackupSectionView extends ScrollView {
                         .replaceAll("[^A-Za-z0-9._-]", "_");
                 String kind = kindFromName(clean);
                 if (kind.isEmpty()) {
-                    chooseImportType(file, clean);
+                    chooseImportType(src, clean);
                 } else {
-                    startImport(file, clean, kind);
+                    startImport(src, clean, kind);
                 }
             }
 
@@ -114,7 +113,7 @@ public class BackupSectionView extends ScrollView {
     }
 
     /** 文件名不带类型前缀时，让用户手动选择备份类型。 */
-    private void chooseImportType(final java.io.File file, final String original) {
+    private void chooseImportType(final ImportSource src, final String original) {
         final android.app.Dialog d = new android.app.Dialog(activity);
         d.requestWindowFeature(android.view.Window.FEATURE_NO_TITLE);
         LinearLayout wrap = new LinearLayout(activity);
@@ -137,7 +136,7 @@ public class BackupSectionView extends ScrollView {
                 d.dismiss();
                 String safe = original.replaceAll("\\.tar\\.gz$", "")
                         .replaceAll("\\.tgz$", "");
-                startImport(file, kind + "-imported-" + System.currentTimeMillis()
+                startImport(src, kind + "-imported-" + System.currentTimeMillis()
                         + "-" + safe + ".tar.gz", kind);
             });
         }
@@ -158,7 +157,7 @@ public class BackupSectionView extends ScrollView {
         }
     }
 
-    private void startImport(final java.io.File file, final String rawName, final String kind) {
+    private void startImport(final ImportSource src, final String rawName, final String kind) {
         if (busy) return;
         busy = true;
         status.setText(I18n.t("正在导入备份…"));
@@ -176,10 +175,10 @@ public class BackupSectionView extends ScrollView {
                 final ProgressDialog.Holder pd = ProgressDialog.show(activity,
                     I18n.t("导入备份"));
             try {
-                ShizukuShell.copyIn(file, DeployManager.BACKUPS_DIR + "/" + name,
+                src.copyTo(DeployManager.BACKUPS_DIR + "/" + name,
                         new ShizukuShell.CopyProgress() {
                             @Override public void onProgress(long copied, long total) {
-                                pd.set(copied, total, I18n.t("正在复制备份"));
+                                pd.set(copied, total > 0 ? total : copied, I18n.t("正在复制备份"));
                             }
                         });
             } finally {

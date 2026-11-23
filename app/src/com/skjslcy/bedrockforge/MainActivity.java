@@ -565,70 +565,47 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
         }
         if (requestCode != REQ_PICK_FILE) return;
         final DeploySectionView.PickCallback cb = pendingPick;
+        final int pickType = pendingPickType;
         pendingPick = null;
         if (resultCode != RESULT_OK || data == null || data.getData() == null) {
             if (cb != null) cb.onCancel();
             return;
         }
         final Uri uri = data.getData();
-        io.execute(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    String name = displayName(uri);
-                    int dot = name.lastIndexOf('.');
-                    String ext = dot >= 0 ? name.substring(dot) : ".bin";
-                    lastPickedName = name;
-                    File out = new File(getCacheDir(), "import_" + System.currentTimeMillis() + ext);
-                    InputStream in = getContentResolver().openInputStream(uri);
-                    if (in == null) throw new java.io.IOException(I18n.t("无法读取文件"));
-                    // 选完文件后先把它拷进缓存：大文件也要有进度，否则用户会以为没反应
-                    long totalSize = -1;
-                    try {
-                        android.database.Cursor cur = getContentResolver()
-                                .query(uri, new String[]{android.provider.OpenableColumns.SIZE},
-                                        null, null, null);
-                        if (cur != null) {
-                            if (cur.moveToFirst()) totalSize = cur.getLong(0);
-                            cur.close();
-                        }
-                    } catch (Throwable ignored) {
-                    }
-                    final ProgressDialog.Holder pickPd =
-                            ProgressDialog.show(MainActivity.this, I18n.t("读取所选文件"));
-                    FileOutputStream fos = new FileOutputStream(out);
-                    byte[] buf = new byte[65536];
-                    int n;
-                    long done = 0;
-                    try {
-                        while ((n = in.read(buf)) > 0) {
-                            fos.write(buf, 0, n);
-                            done += n;
-                            pickPd.set(done, totalSize > 0 ? totalSize : done,
-                                    I18n.t("正在读取所选文件"));
-                        }
-                    } finally {
-                        try { fos.close(); } catch (Throwable ignored) { }
-                        try { in.close(); } catch (Throwable ignored) { }
-                        pickPd.dismiss();
-                    }
-                    final File file = out;
-                    runOnUiThread(new Runnable() {
-                        @Override public void run() {
-                            if (cb != null) cb.onPicked(file);
-                            else orphanImport(file, pendingPickType);
-                        }
-                    });
-                } catch (final Throwable e) {
-                    runOnUiThread(new Runnable() {
-                        @Override public void run() {
-                            toast(I18n.t("导入文件失败：") + e.getMessage());
-                            if (cb != null) cb.onCancel();
-                        }
-                    });
-                }
+        // 不再把文件先拷进 App 缓存：直接把内容流交给各导入流程，一次 I/O 到位。
+        String pickedName = displayName(uri);
+        long pickedSize = -1;
+        try {
+            android.database.Cursor cur = getContentResolver()
+                    .query(uri, new String[]{android.provider.OpenableColumns.SIZE}, null, null, null);
+            if (cur != null) {
+                if (cur.moveToFirst()) pickedSize = cur.getLong(0);
+                cur.close();
             }
-        });
+        } catch (Throwable ignored) {
+        }
+        lastPickedName = pickedName;
+        final ImportSource src = ImportSource.ofUri(getContentResolver(), uri, pickedName, pickedSize);
+        if (cb != null) {
+            cb.onPicked(src);
+        } else {
+            io.execute(new Runnable() {
+                @Override public void run() {
+                    try {
+                        final File file = src.materialize(MainActivity.this);
+                        runOnUiThread(new Runnable() {
+                            @Override public void run() { orphanImport(file, pickType); }
+                        });
+                    } catch (final Throwable e) {
+                        runOnUiThread(new Runnable() {
+                            @Override public void run() {
+                                toast(I18n.t("导入文件失败：") + e.getMessage());
+                            }
+                        });
+                    }
+                }
+            });
+        }
     }
 
     static volatile String lastPickedName = "";
