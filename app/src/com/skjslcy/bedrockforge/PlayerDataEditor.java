@@ -365,18 +365,21 @@ final class PlayerDataEditor {
                 pd.indeterminate(I18n.t("1/3 备份数据库…"));
                 applyBasic();
                 byte[] out = NbtCodec.write(root);
-                if (out.length > 65000) throw new Exception(I18n.t("数据过大，写回被拒绝"));
-                String world = OfflinePlayerData.currentWorldForEdit(activity);
+                // 记录按 LevelDB 语义分片写入，体积不再受单块 32 KB 限制；
+                // 这里只保留一个防 OOM 的上限。
+                if (out.length > (8 << 20)) {
+                    throw new Exception(I18n.t("数据过大（") + out.length + I18n.t(" 字节），写回被拒绝"));
+                }
+                String world = OfflinePlayerData.currentWorldStrict();
                 String key = "player_server_" + record.serverId;
                 String backup = backupDb(world);
                 pd.indeterminate(I18n.t("2/3 写入数据…"));
                 try {
-                    long seq = OfflinePlayerData.writeBack(activity, key, out);
+                    OfflinePlayerData.WriteResult wr = OfflinePlayerData.writeBack(activity, key, out);
                     pd.indeterminate(I18n.t("3/3 校验写入…"));
-                    String verify = OfflinePlayerData.verifyWritten(activity, key);
-                    if (!"ok".equals(verify)) throw new Exception(I18n.t("写入校验失败"));
+                    OfflinePlayerData.verifyWritten(activity, key, out, wr);
                     handler.post(() -> {
-                        toast(I18n.t("已写入（sequence ") + seq + I18n.t("），启动服务端后生效"));
+                        toast(I18n.t("已写入（sequence ") + wr.seq + I18n.t("），启动服务端后生效"));
                         if (onDone != null) onDone.run();
                     });
                 } catch (Throwable e) {

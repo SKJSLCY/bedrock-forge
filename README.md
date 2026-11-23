@@ -169,4 +169,5 @@ Minecraft、Minecraft Bedrock Edition 及相关商标归其权利人所有。
 | [界面语言](docs/i18n.md) | 简体 / 繁體 / English 词表结构、用法与校验脚本 |
 | [UI 设计 v2](docs/ui-design-v2.md) | 三套界面方案的取舍 |
 | [方案 C 实装](docs/ui-c-implemented.md) | Minecraft GUI 方案的落地清单 |
+| [大存档玩家数据写回](docs/large-world-player-write.md) | WAL 记录分片、sequence 口径、写后回验的证据与排除清单 |
 

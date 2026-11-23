@@ -97,43 +97,9 @@ final class LevelDbReader {
     }
 
     private static void scanLogAll(File file, String prefix,
-                                   java.util.LinkedHashMap<String, byte[]> out,
-                                   java.util.HashMap<String, Long> seqs) throws Exception {
-        try (RandomAccessFile raf = new RandomAccessFile(file, "r")) {
-            long len = raf.length();
-            byte[] block = new byte[32768];
-            long pos = 0;
-            java.io.ByteArrayOutputStream pending = null;
-            while (pos < len) {
-                int blockLen = (int) Math.min(32768, len - pos);
-                raf.seek(pos);
-                raf.readFully(block, 0, blockLen);
-                int p = 0;
-                while (p + 7 <= blockLen) {
-                    int length = (block[p + 4] & 0xFF) | ((block[p + 5] & 0xFF) << 8);
-                    int type = block[p + 6] & 0xFF;
-                    p += 7;
-                    if (type == 0 || length == 0) break;
-                    if (p + length > blockLen) break;
-                    if (type == 1) {
-                        batchAll(block, p, length, prefix, out, seqs);
-                        pending = null;
-                    } else if (type == 2) {
-                        pending = new java.io.ByteArrayOutputStream();
-                        pending.write(block, p, length);
-                    } else if (type == 3 && pending != null) {
-                        pending.write(block, p, length);
-                    } else if (type == 4 && pending != null) {
-                        pending.write(block, p, length);
-                        byte[] full = pending.toByteArray();
-                        batchAll(full, 0, full.length, prefix, out, seqs);
-                        pending = null;
-                    }
-                    p += length;
-                }
-                pos += blockLen;
-            }
-        }
+                                   final java.util.LinkedHashMap<String, byte[]> out,
+                                   final java.util.HashMap<String, Long> seqs) throws Exception {
+        eachRecord(file, (type, payload) -> batchAll(payload, 0, payload.length, prefix, out, seqs));
     }
 
     private static void batchAll(byte[] buf, int off, int len, String prefix,
@@ -222,75 +188,121 @@ final class LevelDbReader {
         return r.value;
     }
 
-    /** 扫描整个数据库，取当前最大 sequence（用于追加 WAL）。 */
+    /**
+     * 取当前最大 sequence（用于追加 WAL）。
+     *
+     * <p>口径：MANIFEST 的 {@code last_sequence} 与所有 .log 里分片记录的最大 seq 取大。
+     * MANIFEST 每次 {@code LogAndApply}（落盘/压缩）都会写入当时的 LastSequence，
+     * 它必然 ≥ 已在 .ldb 里的任何条目，所以不必再全量扫 .ldb（旧实现要扫 2 GB，
+     * 且漏掉分片记录会把 sequence 算小，导致新记录被更"新"的旧记录压住）。
+     */
     static long lastSequence(File dbDir) throws Exception {
-        final long[] max = {-1};
+        long max = 0;
+        Manifest man = Manifest.read(dbDir);
+        if (man.lastSequence > max) max = man.lastSequence;
         File[] files = dbDir.listFiles();
-        if (files == null) return 0;
+        if (files == null) return max;
+        Arrays.sort(files, (a, b) -> a.getName().compareTo(b.getName()));
         for (File f : files) {
-            String n = f.getName();
+            if (!f.getName().endsWith(".log")) continue;
+            final long[] logMax = {0};
             try {
-                if (n.endsWith(".ldb") || n.endsWith(".sst")) {
-                    try (RandomAccessFile raf = new RandomAccessFile(f, "r")) {
-                        long len = raf.length();
-                        if (len < 48) continue;
-                        byte[] footer = new byte[48];
-                        raf.seek(len - 48);
-                        raf.readFully(footer);
-                        int[] p = {0};
-                        readVarLong(footer, p);
-                        readVarLong(footer, p);
-                        long idxOff = readVarLong(footer, p);
-                        long idxSize = readVarLong(footer, p);
-                        if (idxOff <= 0 || idxSize <= 0) continue;
-                        byte[] idx = readBlock(raf, idxOff, idxSize, len);
-                        List<long[]> handles = new ArrayList<>();
-                        parseBlockEntries(idx, (k, v) -> {
-                            int[] q = {0};
-                            handles.add(new long[]{readVarLong(v, q), readVarLong(v, q)});
-                        }, 0, 0);
-                        for (long[] h : handles) {
-                            byte[] block = readBlock(raf, h[0], h[1], len);
-                            parseBlockEntries(block, (k, v) -> {
-                                if (k.length < 8) return;
-                                long seq = readLongLE(k, k.length - 8) >>> 8;
-                                if (seq > max[0]) max[0] = seq;
-                            }, 0, 0);
-                        }
-                    }
-                } else if (n.endsWith(".log")) {
-                    try (RandomAccessFile raf = new RandomAccessFile(f, "r")) {
-                        long len = raf.length();
-                        byte[] block = new byte[32768];
-                        long pos = 0;
-                        while (pos < len) {
-                            int bl = (int) Math.min(32768, len - pos);
-                            raf.seek(pos);
-                            raf.readFully(block, 0, bl);
-                            int p = 0;
-                            while (p + 7 <= bl) {
-                                int length = (block[p + 4] & 0xFF) | ((block[p + 5] & 0xFF) << 8);
-                                int type = block[p + 6] & 0xFF;
-                                p += 7;
-                                if (type == 0 || length == 0) break;
-                                if (p + length > bl) break;
-                                if (type == 1 && length >= 12) {
-                                    long seq = readLongLE(block, p);
-                                    int count = readIntLE(block, p + 8);
-                                    if (count > 0 && seq + count - 1 > max[0]) {
-                                        max[0] = seq + count - 1;
-                                    }
-                                }
-                                p += length;
-                            }
-                            pos += bl;
-                        }
-                    }
-                }
+                eachRecord(f, (type, payload) -> {
+                    if (payload.length < 12) return;
+                    long seq = readLongLE(payload, 0);
+                    int count = readIntLE(payload, 8);
+                    if (count > 0 && seq + count - 1 > logMax[0]) logMax[0] = seq + count - 1;
+                });
             } catch (Throwable ignored) {
             }
+            if (logMax[0] > max) max = logMax[0];
         }
-        return max[0] < 0 ? 0 : max[0];
+        return max;
+    }
+
+    // ------------------------------------------------------------- MANIFEST
+
+    /** MANIFEST 里真正影响写回的几个字段（VersionEdit 语义）。 */
+    static final class Manifest {
+        long logNumber = -1;
+        long prevLogNumber = -1;
+        long nextFileNumber = -1;
+        long lastSequence = -1;
+        String comparator = "";
+        boolean ok;
+
+        static Manifest read(File dbDir) {
+            Manifest m = new Manifest();
+            try {
+                File current = new File(dbDir, "CURRENT");
+                if (!current.exists()) return m;
+                String name = new String(readAll(current), "UTF-8").trim();
+                if (name.isEmpty()) return m;
+                File man = new File(dbDir, name);
+                if (!man.exists()) return m;
+                eachRecord(man, (type, payload) -> m.apply(payload));
+                m.ok = true;
+            } catch (Throwable ignored) {
+                m.ok = false;
+            }
+            return m;
+        }
+
+        private void apply(byte[] r) {
+            if (r.length < 12) return;
+            int[] p = {0};
+            while (p[0] < r.length) {
+                long tag = readVarLong(r, p);
+                if (tag == 1) {                                   // comparator
+                    long n = readVarLong(r, p);
+                    if (n < 0 || p[0] + n > r.length) return;
+                    try {
+                        comparator = new String(r, p[0], (int) n, "UTF-8");
+                    } catch (Throwable ignored) {
+                    }
+                    p[0] += (int) n;
+                } else if (tag == 2) {                            // log_number
+                    logNumber = readVarLong(r, p);
+                } else if (tag == 3) {                            // next_file_number
+                    nextFileNumber = readVarLong(r, p);
+                } else if (tag == 4) {                            // last_sequence
+                    lastSequence = readVarLong(r, p);
+                } else if (tag == 5) {                            // compact_pointer
+                    readVarLong(r, p);
+                    skipSlice(r, p);
+                } else if (tag == 6) {                            // deleted_file
+                    readVarLong(r, p);
+                    readVarLong(r, p);
+                } else if (tag == 7) {                            // new_file
+                    readVarLong(r, p);
+                    readVarLong(r, p);
+                    readVarLong(r, p);
+                    skipSlice(r, p);
+                    skipSlice(r, p);
+                } else if (tag == 9) {                            // prev_log_number
+                    prevLogNumber = readVarLong(r, p);
+                } else {
+                    return;
+                }
+            }
+        }
+
+        private static void skipSlice(byte[] r, int[] p) {
+            long n = readVarLong(r, p);
+            if (n < 0 || p[0] + n > r.length) {
+                p[0] = r.length;
+                return;
+            }
+            p[0] += (int) n;
+        }
+    }
+
+    private static byte[] readAll(File f) throws Exception {
+        try (RandomAccessFile raf = new RandomAccessFile(f, "r")) {
+            byte[] b = new byte[(int) raf.length()];
+            raf.readFully(b);
+            return b;
+        }
     }
     // ---------------------------------------------------------------- SST
 
@@ -416,8 +428,22 @@ final class LevelDbReader {
 
     // ---------------------------------------------------------------- WAL
 
-    private static void scanLog(File file, byte[] key, Result best) throws Exception {
-        try (RandomAccessFile raf = new RandomAccessFile(file, "r")) {
+    private static void scanLog(File file, byte[] key, final Result best) throws Exception {
+        final String source = file.getName();
+        eachRecord(file, (type, payload) ->
+                handleBatch(payload, 0, payload.length, key, best, source));
+    }
+
+    interface RecordSink {
+        void accept(int type, byte[] payload) throws Exception;
+    }
+
+    /**
+     * 按 LevelDB 的读法遍历日志里的逻辑记录：跳过零填充，拼接 FIRST/MIDDLE/LAST 分片。
+     * 记录长度越界即停止（与服务端恢复时的行为一致）。
+     */
+    static void eachRecord(File log, RecordSink sink) throws Exception {
+        try (RandomAccessFile raf = new RandomAccessFile(log, "r")) {
             long len = raf.length();
             byte[] block = new byte[32768];
             long pos = 0;
@@ -428,17 +454,15 @@ final class LevelDbReader {
                 raf.readFully(block, 0, blockLen);
                 int p = 0;
                 while (p + 7 <= blockLen) {
-                    long crc = readUInt32LE(block, p);
                     int length = (block[p + 4] & 0xFF) | ((block[p + 5] & 0xFF) << 8);
                     int type = block[p + 6] & 0xFF;
                     p += 7;
-                    if (type == 0 || length == 0) {
-                        p = blockLen;
-                        break;
-                    }
+                    if (type == 0 || length == 0) break;
                     if (p + length > blockLen) break;
                     if (type == 1) {
-                        handleBatch(block, p, length, key, best, file.getName());
+                        byte[] payload = new byte[length];
+                        System.arraycopy(block, p, payload, 0, length);
+                        sink.accept(type, payload);
                         pending = null;
                     } else if (type == 2) {
                         pending = new java.io.ByteArrayOutputStream();
@@ -447,8 +471,7 @@ final class LevelDbReader {
                         pending.write(block, p, length);
                     } else if (type == 4 && pending != null) {
                         pending.write(block, p, length);
-                        byte[] full = pending.toByteArray();
-                        handleBatch(full, 0, full.length, key, best, file.getName());
+                        sink.accept(type, pending.toByteArray());
                         pending = null;
                     }
                     p += length;
@@ -556,7 +579,7 @@ final class LevelDbReader {
         return result;
     }
 
-    private static int readIntLE(byte[] b, int off) {
+    static int readIntLE(byte[] b, int off) {
         return (b[off] & 0xFF) | ((b[off + 1] & 0xFF) << 8)
                 | ((b[off + 2] & 0xFF) << 16) | ((b[off + 3] & 0xFF) << 24);
     }
@@ -565,7 +588,7 @@ final class LevelDbReader {
         return readIntLE(b, off) & 0xFFFFFFFFL;
     }
 
-    private static long readLongLE(byte[] b, int off) {
+    static long readLongLE(byte[] b, int off) {
         long v = 0;
         for (int i = 0; i < 8; i++) v |= ((long) (b[off + i] & 0xFF)) << (8 * i);
         return v;

@@ -399,9 +399,9 @@ final class PlayerDataView {
             deleteBtn.setEnabled(false);
             new Thread(() -> {
                 try {
-                    String backup = I18n.t("已自动备份数据库");
-                    OfflinePlayerData.deletePlayerData(activity, r.msaId, r.serverId);
-                    String verify = OfflinePlayerData.verifyDeleted(activity, r.msaId, r.serverId);
+                    OfflinePlayerData.WriteResult wr =
+                            OfflinePlayerData.deletePlayerData(activity, r.msaId, r.serverId);
+                    String verify = OfflinePlayerData.verifyDeleted(activity, r.msaId, r.serverId, wr);
                     if (!"ok".equals(verify)) throw new Exception(I18n.t("删除校验失败"));
                     activity.runOnUiThread(() -> {
                         Toast.makeText(activity, I18n.t("已删除，启动服务端后生效"), Toast.LENGTH_LONG).show();

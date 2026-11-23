@@ -125,61 +125,9 @@ final class OfflinePlayerData {
             if (!"1".equals(ShizukuShell.sh("test -d " + q(dbDir) + " && echo 1 || echo 0").trim())) {
                 throw new Exception(I18n.t("找不到世界数据库：") + world);
             }
-            File local = new File(ctx.getCacheDir(), "worlddb");
-            deleteTree(local);
-            if (!local.mkdirs()) throw new Exception(I18n.t("无法创建临时目录"));
-
-            // 增量拷贝 + 进度：文件大小来自 ls -l，未变化的文件直接复用缓存
-            String list = ShizukuShell.sh("ls -l " + q(dbDir) + " 2>/dev/null || true");
-            java.util.List<String[]> files = new java.util.ArrayList<>();
-            long totalBytes = 0;
-            for (String line : list.split("\n")) {
-                String t = line.trim();
-                if (t.isEmpty() || t.startsWith("total ")) continue;
-                String[] parts = t.split("\\s+");
-                if (parts.length < 8) continue;
-                String name = parts[parts.length - 1];
-                if (!(name.equals("CURRENT") || name.startsWith("MANIFEST")
-                        || name.endsWith(".ldb") || name.endsWith(".sst") || name.endsWith(".log"))) {
-                    continue;
-                }
-                long size;
-                try { size = Long.parseLong(parts[4]); } catch (Throwable bad) { continue; }
-                File target = new File(local, name);
-                boolean fresh = target.exists() && target.length() == size;
-                files.add(new String[]{name, String.valueOf(size), fresh ? "1" : "0"});
-                totalBytes += size;
-            }
-            if (files.isEmpty()) throw new Exception(I18n.t("未能复制任何数据库文件"));
-            int copied = 0;
-            long doneBytes = 0;
-            final int totalFiles = files.size();
-            for (String[] f : files) {
-                if (cancelRequested) throw new Exception(I18n.t("已取消读取"));
-                String name = f[0];
-                long size = Long.parseLong(f[1]);
-                if ("1".equals(f[2])) {
-                    copied++;
-                    doneBytes += size;
-                    if (prog != null) prog.onProgress(copied, totalFiles, doneBytes, totalBytes);
-                    continue;
-                }
-                final long[] fileDone = {0};
-                try {
-                    ShizukuShell.copyOut(dbDir + "/" + name, new File(local, name),
-                            new ShizukuShell.CopyProgress() {
-                                @Override public void onProgress(long copiedNow, long total) {
-                                    fileDone[0] = copiedNow;
-                                }
-                            });
-                    copied++;
-                    doneBytes += size;
-                } catch (Throwable ignored) {
-                }
-                if (prog != null) prog.onProgress(copied, totalFiles,
-                        Math.min(totalBytes, doneBytes + fileDone[0]), totalBytes);
-            }
-            if (copied == 0) throw new Exception(I18n.t("未能复制任何数据库文件"));
+            // 与写回共用一份缓存：只有变化的文件才重新拷贝（大小 + 时间戳比对），
+            // 换存档/回滚备份时按 CURRENT 归属整体重建，不会串档。
+            File local = syncDb(ctx, dbDir, "dbcache", false, prog);
 
             java.util.LinkedHashMap<String, byte[]> all = LevelDbReader.list(local, "player_");
             List<String> playerKeys = new ArrayList<>();
@@ -233,45 +181,124 @@ final class OfflinePlayerData {
         }
     }
 
+    /** 写回用的世界名：读不到就直接失败，绝不兜底成别的世界。 */
+    static String currentWorldStrict() throws Exception {
+        String props = ShizukuShell.read(DeployManager.SERVER_DIR + "/server.properties");
+        for (String line : props.split("\n")) {
+            String t = line.trim();
+            if (t.startsWith("level-name=")) {
+                String v = t.substring("level-name=".length()).trim();
+                if (!v.isEmpty()) return v;
+            }
+        }
+        throw new Exception(I18n.t("server.properties 里没有 level-name，已取消写入"));
+    }
+
     /** 读取指定玩家服务器的原始 NBT，用于编辑。 */
     static byte[] readServerData(Context ctx, String serverId) throws Exception {
         File local = copyDb(ctx, "editread");
         return LevelDbReader.value(local, "player_server_" + serverId);
     }
 
-    /** 追加 WAL 并写回设备，返回使用的 sequence。 */
-    static long writeBack(Context ctx, String key, byte[] value) throws Exception {
-        File local = copyDb(ctx, "editwrite");
-        long seq = LevelDbReader.lastSequence(local) + 1;
-        LevelDbWriter.append(local, seq, key.getBytes("UTF-8"), value);
-        File log = LevelDbWriter.newestLog(local);
-        if (log == null) throw new Exception(I18n.t("找不到可写回的日志文件"));
-        String remote = DeployManager.SERVER_DIR + "/worlds/" + currentWorld() + "/db/" + log.getName();
-        ShizukuShell.copyIn(log, remote, null);
-        return seq;
+    /** 写回结果：写后校验要用到的全部凭据。 */
+    static final class WriteResult {
+        long seq;
+        File localDb;
+        File localLog;
+        String remoteLog;
+        long logEnd;
     }
 
-    /** 写回后重新读取校验。 */
-    static String verifyWritten(Context ctx, String key) throws Exception {
-        File local = copyDb(ctx, "editverify");
-        byte[] v = LevelDbReader.value(local, key);
-        if (v == null) throw new Exception(I18n.t("写入后读不到玩家数据"));
-        NbtCodec.parse(v);
+    /**
+     * 追加 WAL 并写回设备，返回写入结果。
+     *
+     * <p>只同步 CURRENT / MANIFEST / *.log（几兆），不搬整个数据库；选日志时遵守
+     * MANIFEST 的 log_number 门限，没有可重放的日志就按 next_file_number 新建，
+     * 否则记录写了也不会被服务端重放。
+     */
+    static WriteResult writeBack(Context ctx, String key, byte[] value) throws Exception {
+        String world = currentWorldStrict();
+        String dbDir = DeployManager.SERVER_DIR + "/worlds/" + world + "/db";
+        File local = syncLogsOnly(ctx, dbDir);
+        LevelDbReader.Manifest man = LevelDbReader.Manifest.read(local);
+        if (!man.ok) throw new Exception(I18n.t("存档 MANIFEST 不存在或无法解析，已取消写入"));
+        File log = LevelDbWriter.ensureLog(local, man);
+        LevelDbWriter.checkedTail(log);
+        WriteResult r = new WriteResult();
+        r.localDb = local;
+        r.localLog = log;
+        r.remoteLog = dbDir + "/" + log.getName();
+        r.seq = LevelDbReader.lastSequence(local) + 1;
+        byte[] batch = LevelDbWriter.batch(r.seq, LevelDbWriter.Op.put(key, value));
+        long start = LevelDbWriter.appendBatch(log, batch);
+        r.logEnd = log.length();
+        ShizukuShell.appendTail(log, start, r.remoteLog);
+        return r;
+    }
+
+    /**
+     * 写回后校验：远端长度、日志里那条记录（分片 + CRC + 字节）、按读取语义读回的值。
+     * 旧实现只判断「读得到且能解析」，读回旧值也照样报 ok——这就是假阳性来源。
+     */
+    static String verifyWritten(Context ctx, String key, byte[] expected, WriteResult r)
+            throws Exception {
+        long remote = ShizukuShell.remoteSize(r.remoteLog);
+        if (remote != r.logEnd) {
+            throw new Exception(I18n.t("写回后远端日志长度不符（") + remote + "/" + r.logEnd
+                    + I18n.t("），可能被其他程序改动"));
+        }
+        if (!LevelDbWriter.containsBatch(r.localLog, r.seq, key, expected)) {
+            throw new Exception(I18n.t("写入校验失败：LevelDB 未接受该记录（分片或校验和不合法）"));
+        }
+        byte[] back = LevelDbReader.value(r.localDb, key);
+        if (back == null || !Arrays.equals(back, expected)) {
+            throw new Exception(I18n.t("写入校验失败：读回的数据与写入不一致"));
+        }
         return "ok";
     }
 
-    static long deletePlayerData(Context ctx, String msaId, String serverId) throws Exception {
-        File local = copyDb(ctx, "editdel");
-        long seq = LevelDbReader.lastSequence(local) + 1;
-        LevelDbWriter.appendDeletes(local, seq, "player_" + msaId, "player_server_" + serverId);
-        pushLog(local);
-        return seq;
+    static WriteResult deletePlayerData(Context ctx, String msaId, String serverId)
+            throws Exception {
+        String world = currentWorldStrict();
+        // 确认框里承诺了「应用会先自动备份数据库」，这里真的做一次整世界备份
+        String bak = DeployManager.BACKUPS_DIR + "/playerdelete-" + System.currentTimeMillis()
+                + ".tar.gz";
+        ShizukuShell.sh("mkdir -p " + q(DeployManager.BACKUPS_DIR)
+                + "; tar -czf " + q(bak) + " -C " + q(DeployManager.SERVER_DIR + "/worlds")
+                + " " + q(world) + " 2>/dev/null || true");
+        if (!"1".equals(ShizukuShell.sh("test -f " + q(bak) + " && echo 1 || echo 0").trim())) {
+            throw new Exception(I18n.t("自动备份失败，已取消写入"));
+        }
+        String dbDir = DeployManager.SERVER_DIR + "/worlds/" + world + "/db";
+        File local = syncLogsOnly(ctx, dbDir);
+        LevelDbReader.Manifest man = LevelDbReader.Manifest.read(local);
+        if (!man.ok) throw new Exception(I18n.t("存档 MANIFEST 不存在或无法解析，已取消写入"));
+        File log = LevelDbWriter.ensureLog(local, man);
+        LevelDbWriter.checkedTail(log);
+        WriteResult r = new WriteResult();
+        r.localDb = local;
+        r.localLog = log;
+        r.remoteLog = dbDir + "/" + log.getName();
+        r.seq = LevelDbReader.lastSequence(local) + 1;
+        String k1 = "player_" + msaId;
+        String k2 = "player_server_" + serverId;
+        long start = LevelDbWriter.appendBatch(log, LevelDbWriter.batch(r.seq,
+                LevelDbWriter.Op.delete(k1), LevelDbWriter.Op.delete(k2)));
+        r.logEnd = log.length();
+        ShizukuShell.appendTail(log, start, r.remoteLog);
+        return r;
     }
 
-    static String verifyDeleted(Context ctx, String msaId, String serverId) throws Exception {
-        File local = copyDb(ctx, "editdelv");
-        if (LevelDbReader.value(local, "player_" + msaId) != null) throw new Exception(I18n.t("账号桩仍存在"));
-        if (LevelDbReader.value(local, "player_server_" + serverId) != null) throw new Exception(I18n.t("玩家数据仍存在"));
+    static String verifyDeleted(Context ctx, String msaId, String serverId, WriteResult r)
+            throws Exception {
+        long remote = ShizukuShell.remoteSize(r.remoteLog);
+        if (remote != r.logEnd) {
+            throw new Exception(I18n.t("写回后远端日志长度不符（") + remote + "/" + r.logEnd + I18n.t("）"));
+        }
+        if (!LevelDbWriter.containsDeletes(r.localLog, r.seq,
+                "player_" + msaId, "player_server_" + serverId)) {
+            throw new Exception(I18n.t("删除校验失败：LevelDB 未接受该记录"));
+        }
         return "ok";
     }
 
@@ -304,13 +331,6 @@ final class OfflinePlayerData {
             throw new Exception(I18n.t("备份创建失败"));
         }
         return out;
-    }
-
-    private static void pushLog(File local) throws Exception {
-        File log = LevelDbWriter.newestLog(local);
-        if (log == null) throw new Exception(I18n.t("找不到可写回的日志文件"));
-        String remote = DeployManager.SERVER_DIR + "/worlds/" + currentWorld() + "/db/" + log.getName();
-        ShizukuShell.copyIn(log, remote, null);
     }
 
     private static void writeFile(File f, byte[] b) throws Exception {
@@ -437,20 +457,32 @@ final class OfflinePlayerData {
             } catch (Throwable ignored) {
             }
         }
-        long seq = LevelDbReader.lastSequence(local) + 1;
         String delKey = (!oldSid.isEmpty() && !oldSid.equals(serverId))
                 ? "player_server_" + oldSid : null;
-        LevelDbWriter.appendPlayerOps(local, seq, "player_" + msaId, stub,
-                "player_server_" + serverId, data, delKey);
-        File log = LevelDbWriter.newestLog(local);
-        if (log == null) throw new Exception(I18n.t("找不到可写回的日志文件"));
-        ShizukuShell.copyIn(log, dbDir + "/" + log.getName(), null);
+        LevelDbReader.Manifest man = LevelDbReader.Manifest.read(local);
+        File log = LevelDbWriter.ensureLog(local, man);
+        LevelDbWriter.checkedTail(log);
+        long seq = LevelDbReader.lastSequence(local) + 1;
+        LevelDbWriter.Op[] ops = delKey == null
+                ? new LevelDbWriter.Op[]{LevelDbWriter.Op.put("player_" + msaId, stub),
+                        LevelDbWriter.Op.put("player_server_" + serverId, data)}
+                : new LevelDbWriter.Op[]{LevelDbWriter.Op.put("player_" + msaId, stub),
+                        LevelDbWriter.Op.put("player_server_" + serverId, data),
+                        LevelDbWriter.Op.delete(delKey)};
+        long start = LevelDbWriter.appendBatch(log, LevelDbWriter.batch(seq, ops));
+        long end = log.length();
+        ShizukuShell.appendTail(log, start, dbDir + "/" + log.getName());
         if (stage != null) stage.onStage(I18n.t("3/3 校验写入…"));
-        File verify = copyDbAt(ctx, "pverify", dbDir);
-        if (LevelDbReader.value(verify, "player_" + msaId) == null) {
+        if (ShizukuShell.remoteSize(dbDir + "/" + log.getName()) != end) {
+            throw new Exception(I18n.t("写回后远端日志长度不符"));
+        }
+        if (!LevelDbWriter.contains(log, seq, ops)) {
+            throw new Exception(I18n.t("写入校验失败：LevelDB 未接受该记录"));
+        }
+        if (LevelDbReader.value(local, "player_" + msaId) == null) {
             throw new Exception(I18n.t("写入后账号桩不存在"));
         }
-        byte[] back = LevelDbReader.value(verify, "player_server_" + serverId);
+        byte[] back = LevelDbReader.value(local, "player_server_" + serverId);
         if (back == null) throw new Exception(I18n.t("写入后玩家数据不存在"));
         NbtCodec.parse(back);
         return "ok";
@@ -468,65 +500,174 @@ final class OfflinePlayerData {
         return 0;
     }
 
-    private static File copyDbAt(Context ctx, String name, String dbDir) throws Exception {
-        File local = new File(ctx.getCacheDir(), name);
-        if (!local.exists() && !local.mkdirs()) throw new Exception(I18n.t("无法创建临时目录"));
-        // 大存档优化：只拷贝新增/变化的文件，未变化的复用上次缓存，
-        // 避免每次读取都重新搬运整个 LevelDB（几百 MB 时非常慢）。
+    /** 缓存目录里的两个标记文件（不参与文件比对与清理）。 */
+    private static final String ID_FILE = ".bf_id";
+    private static final String SIG_FILE = ".bf_sig";
+
+    /** 数据库目录里需要同步的文件。 */
+    private static boolean accepted(String n) {
+        return n.equals("CURRENT") || n.startsWith("MANIFEST")
+                || n.endsWith(".ldb") || n.endsWith(".sst") || n.endsWith(".log");
+    }
+
+    private static boolean isLogName(String n) {
+        return n.equals("CURRENT") || n.startsWith("MANIFEST") || n.endsWith(".log");
+    }
+
+    /** ls -l → 文件名 → {大小, 时间戳}；列数不固定（老文件带年份）。 */
+    private static java.util.LinkedHashMap<String, String[]> remoteListing(String dbDir)
+            throws Exception {
+        java.util.LinkedHashMap<String, String[]> out = new java.util.LinkedHashMap<>();
         String list = ShizukuShell.sh("ls -l " + q(dbDir) + " 2>/dev/null || true");
-        int copied = 0;
-        java.util.Set<String> seen = new java.util.HashSet<>();
         for (String line : list.split("\n")) {
             String t = line.trim();
             if (t.isEmpty() || t.startsWith("total ")) continue;
-            // ls -l 的列数不固定：近期文件 8 列（无年份），老文件 9 列（带年份）
             String[] parts = t.split("\\s+");
             if (parts.length < 8) continue;
             String n = parts[parts.length - 1];
+            if (!accepted(n)) continue;
+            String time = parts[parts.length - 3] + " " + parts[parts.length - 2];
+            out.put(n, new String[]{parts[4], time});
+        }
+        return out;
+    }
+
+    private static File syncDb(Context ctx, String dbDir, String cacheName, boolean logsOnly,
+                               Progress prog) throws Exception {
+        purgeLegacyCaches(ctx);
+        File local = new File(ctx.getCacheDir(), cacheName);
+        if (!local.exists() && !local.mkdirs()) throw new Exception(I18n.t("无法创建临时目录"));
+        java.util.LinkedHashMap<String, String[]> listing = remoteListing(dbDir);
+        if (listing.isEmpty()) throw new Exception(I18n.t("未能复制数据库文件"));
+
+        // 缓存归属：世界/实例换过（CURRENT 指向的 MANIFEST 变了）就整体重建，
+        // 避免拿上一个存档的同名文件当本存档的数据。
+        String identity = dbDir + "|" + (logsOnly ? "logs" : "full") + "|"
+                + ShizukuShell.sh("cat " + q(dbDir + "/CURRENT") + " 2>/dev/null").trim();
+        File idf = new File(local, ID_FILE);
+        String prevId = idf.exists() ? new String(readAll(idf), "UTF-8") : "";
+        if (!prevId.equals(identity)) {
+            deleteTree(local);
+            if (!local.mkdirs()) throw new Exception(I18n.t("无法创建临时目录"));
+            writeFile(idf, identity.getBytes("UTF-8"));
+        }
+
+        java.util.HashMap<String, String> sigs = readSigs(new File(local, SIG_FILE));
+        int total = 0;
+        long totalBytes = 0;
+        for (Map.Entry<String, String[]> e : listing.entrySet()) {
+            if (logsOnly && !isLogName(e.getKey())) continue;
+            total++;
+            try {
+                totalBytes += Long.parseLong(e.getValue()[0]);
+            } catch (Throwable ignored) {
+            }
+        }
+        int done = 0;
+        long doneBytes = 0;
+        for (Map.Entry<String, String[]> e : listing.entrySet()) {
+            String n = e.getKey();
+            if (logsOnly && !isLogName(n)) continue;
+            if (cancelRequested) throw new Exception(I18n.t("已取消读取"));
             long size;
             try {
-                size = Long.parseLong(parts[4]);
+                size = Long.parseLong(e.getValue()[0]);
             } catch (Throwable bad) {
                 continue;
             }
-            if (!(n.equals("CURRENT") || n.startsWith("MANIFEST")
-                    || n.endsWith(".ldb") || n.endsWith(".sst") || n.endsWith(".log"))) continue;
-            seen.add(n);
+            String sig = size + "|" + e.getValue()[1];
             File dst = new File(local, n);
-            if (dst.exists() && dst.length() == size) {
-                copied++;
-                continue;
+            if (!(dst.exists() && dst.length() == size && sig.equals(sigs.get(n)))) {
+                try {
+                    ShizukuShell.copyOut(dbDir + "/" + n, dst, null);
+                    sigs.put(n, sig);
+                } catch (Throwable ignored) {
+                }
             }
-            try {
-                ShizukuShell.copyOut(dbDir + "/" + n, dst, null);
-                copied++;
-            } catch (Throwable ignored) {
-            }
+            done++;
+            doneBytes += size;
+            if (prog != null) prog.onProgress(done, total, doneBytes, totalBytes);
         }
         File[] olds = local.listFiles();
         if (olds != null) {
             for (File f : olds) {
-                if (!seen.contains(f.getName())) deleteTree(f);
+                String n = f.getName();
+                if (ID_FILE.equals(n) || SIG_FILE.equals(n)) continue;
+                if (!listing.containsKey(n)) deleteTree(f);
             }
         }
-        if (copied == 0) {
-            // 兜底：目录列表格式异常时，退回按文件名逐个拷贝
-            String names = ShizukuShell.sh("ls -1 " + q(dbDir) + " 2>/dev/null || true");
-            for (String line : names.split("\n")) {
-                String n = line.trim();
-                if (n.isEmpty()) continue;
-                if (!(n.equals("CURRENT") || n.startsWith("MANIFEST")
-                        || n.endsWith(".ldb") || n.endsWith(".sst") || n.endsWith(".log"))) continue;
-                seen.add(n);
-                try {
-                    ShizukuShell.copyOut(dbDir + "/" + n, new File(local, n), null);
-                    copied++;
-                } catch (Throwable ignored) {
-                }
-            }
-        }
-        if (copied == 0) throw new Exception(I18n.t("未能复制数据库文件"));
+        writeSigs(new File(local, SIG_FILE), sigs);
+        if (done == 0) throw new Exception(I18n.t("未能复制数据库文件"));
         return local;
+    }
+
+    /** 只同步 CURRENT / MANIFEST / *.log：写回只需要这几兆文件。 */
+    private static File syncLogsOnly(Context ctx, String dbDir) throws Exception {
+        return syncDb(ctx, dbDir, "dbsmall", true, null);
+    }
+
+    /**
+     * 老版本每个用途各存一份整库副本（worlddb / editread / editwrite / editverify …），
+     * 2 GB 的世界会占十几 GB。现在统一用 dbcache + dbsmall，顺手清掉这些历史目录。
+     */
+    private static void purgeLegacyCaches(Context ctx) {
+        String[] legacy = {"worlddb", "editread", "editwrite", "editverify", "editdel",
+                "papply", "pverify", "phas"};
+        for (String name : legacy) {
+            File f = new File(ctx.getCacheDir(), name);
+            if (f.exists()) deleteTree(f);
+        }
+    }
+
+    private static File copyDbAt(Context ctx, String name, String dbDir) throws Exception {
+        // 所有读路径共用一份缓存，换存档时由 identity 自动重建。
+        return syncDb(ctx, dbDir, "dbcache", false, null);
+    }
+
+    private static File copyDbAt(Context ctx, String name, String dbDir, Progress prog)
+            throws Exception {
+        return syncDb(ctx, dbDir, "dbcache", false, prog);
+    }
+
+    private static java.util.HashMap<String, String> readSigs(File f) {
+        java.util.HashMap<String, String> out = new java.util.HashMap<>();
+        try {
+            if (!f.exists()) return out;
+            for (String line : new String(readAll(f), "UTF-8").split("\n")) {
+                int tab = line.indexOf('\t');
+                if (tab <= 0) continue;
+                out.put(line.substring(0, tab), line.substring(tab + 1));
+            }
+        } catch (Throwable ignored) {
+        }
+        return out;
+    }
+
+    private static void writeSigs(File f, java.util.HashMap<String, String> sigs) {
+        try {
+            StringBuilder sb = new StringBuilder();
+            for (Map.Entry<String, String> e : sigs.entrySet()) {
+                sb.append(e.getKey()).append('\t').append(e.getValue()).append('\n');
+            }
+            writeFile(f, sb.toString().getBytes("UTF-8"));
+        } catch (Throwable ignored) {
+        }
+    }
+
+    private static byte[] readAll(File f) throws Exception {
+        java.io.FileInputStream in = new java.io.FileInputStream(f);
+        try {
+            byte[] b = new byte[(int) f.length()];
+            int off = 0;
+            while (off < b.length) {
+                int n = in.read(b, off, b.length - off);
+                if (n <= 0) break;
+                off += n;
+            }
+            return b;
+        } finally {
+            in.close();
+        }
     }
 
     private static File copyDb(Context ctx, String name) throws Exception {

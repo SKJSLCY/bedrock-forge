@@ -67,8 +67,7 @@ public final class ShizukuShell {
     }
 
     /** 从 shell 侧读取文件到 App 缓存。 */
-    public static void copyOut(String remote, java.io.File local, CopyProgress cb) throws Exception {
-        if (!Shizuku.pingBinder()) throw new IOException(I18n.t("Shizuku 未运行"));
+    public static void copyOut(String remote, java.io.File local, CopyProgress cb) throws Exception {        if (!Shizuku.pingBinder()) throw new IOException(I18n.t("Shizuku 未运行"));
         if (Shizuku.checkSelfPermission() != PackageManager.PERMISSION_GRANTED) {
             throw new IOException(I18n.t("Shizuku 未授权"));
         }
@@ -94,6 +93,65 @@ public final class ShizukuShell {
         String err = readAll(p.getErrorStream());
         int code = p.waitFor();
         if (code != 0) throw new IOException(err.trim().isEmpty() ? (I18n.t("退出码 ") + code) : err.trim());
+    }
+
+    /** 远端文件大小；不存在返回 -1。 */
+    public static long remoteSize(String remote) throws Exception {
+        String out = sh("stat -c %s " + quote(remote) + " 2>/dev/null || echo -1").trim();
+        try {
+            return Long.parseLong(out);
+        } catch (Throwable t) {
+            return -1;
+        }
+    }
+
+    /**
+     * 只把本地文件从 {@code from} 起的尾部<b>追加</b>到远端。
+     *
+     * <p>不能用 {@code cat > remote}：那会先截断远端 WAL，中途失败就留下半个日志。
+     * 这里先核对远端长度，再用 {@code cat >>} 追加，最后 sync 落盘。
+     */
+    public static void appendTail(java.io.File local, long from, String remote) throws Exception {
+        if (!Shizuku.pingBinder()) throw new IOException(I18n.t("Shizuku 未运行"));
+        if (Shizuku.checkSelfPermission() != PackageManager.PERMISSION_GRANTED) {
+            throw new IOException(I18n.t("Shizuku 未授权"));
+        }
+        long remoteLen = remoteSize(remote);
+        boolean missing = remoteLen < 0;
+        if (missing ? from != 0 : remoteLen != from) {
+            throw new IOException(I18n.t("远端日志已被改动（") + (missing ? -1 : remoteLen)
+                    + "/" + from + I18n.t("），已取消写入"));
+        }
+        Process p = ShizukuProcess.start(new String[]{"sh", "-c", "cat >> " + quote(remote)},
+                env(), WORK_DIR);
+        java.io.RandomAccessFile in = new java.io.RandomAccessFile(local, "r");
+        OutputStream out = p.getOutputStream();
+        byte[] buf = new byte[65536];
+        long total = local.length() - from;
+        long copied = 0;
+        try {
+            in.seek(from);
+            while (copied < total) {
+                int n = in.read(buf, 0, (int) Math.min(buf.length, total - copied));
+                if (n <= 0) break;
+                out.write(buf, 0, n);
+                copied += n;
+            }
+            out.flush();
+        } finally {
+            try { in.close(); } catch (Throwable ignored) { }
+            try { out.close(); } catch (Throwable ignored) { }
+        }
+        String err = readAll(p.getErrorStream());
+        int code = p.waitFor();
+        if (code != 0) {
+            throw new IOException(err.trim().isEmpty() ? (I18n.t("退出码 ") + code) : err.trim());
+        }
+        if (copied != total) throw new IOException(I18n.t("追加不完整"));
+        try {
+            sh("sync");
+        } catch (Throwable ignored) {
+        }
     }
 
     public static String exec(String[] cmd, String[] env, String dir, String stdin) throws Exception {        if (!Shizuku.pingBinder()) throw new IOException(I18n.t("Shizuku 未运行"));
