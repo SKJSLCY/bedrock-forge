@@ -83,6 +83,33 @@ public final class ServerManager {
     public long getPlayersAt() {
         return playersAt;
     }
+
+    /**
+     * 兜底播种在线人数（日志探针 / 控制台历史用）。
+     *
+     * <p>只在「当前人数未知」时采用：日志里的 "There are X/Y" 是旧快照，
+     * 玩家进服/离服的实时事件才是准的，旧快照不能回头覆盖它——
+     * 否则玩家一退服，探针就会把人数刷回上一次 list 的旧值。
+     */
+    public void seedCount(int n, int max) {
+        if (n < 0) return;
+        synchronized (this) {
+            if (players >= 0) return;
+            players = n;
+            if (max > 0) maxPlayers = max;
+            playersAt = System.currentTimeMillis();
+        }
+    }
+
+    /** 重置为未知（服务端启动/停止时调用），让下一次播种生效。 */
+    public void resetCount() {
+        synchronized (this) {
+            players = -1;
+            maxPlayers = -1;
+            playersAt = 0;
+            onlineNames.clear();
+        }
+    }
     private int port = 19134;
     private String serverName = "Phone12662";
 
@@ -163,8 +190,7 @@ public final class ServerManager {
             process = p;
             stdin = new BufferedWriter(new OutputStreamWriter(p.getOutputStream(), "UTF-8"));
             running = true;
-            players = -1;
-            maxPlayers = -1;
+            resetCount();
             startTime = System.currentTimeMillis();
             Thread reader = new Thread(new Runnable() {
                 @Override public void run() { readLoop(); }
@@ -316,8 +342,13 @@ public final class ServerManager {
                 int comma = rest.indexOf(',');
                 String nm = (comma > 0 ? rest.substring(0, comma) : rest).trim();
                 if (!nm.isEmpty()) {
-                    onlineNames.add(nm);
-                    players = Math.max(players, onlineNames.size());
+                    boolean added = onlineNames.add(nm);
+                    // 同断开：以权威人数 + 1 为准，重复的 connected 行不重复计数
+                    if (players >= 0) {
+                        if (added) players = players + 1;
+                    } else {
+                        players = onlineNames.size();
+                    }
                     playersAt = System.currentTimeMillis();
                     PlayerWatch w = playerWatch;
                     if (w != null) {
@@ -345,8 +376,16 @@ public final class ServerManager {
                 int comma = rest.indexOf(',');
                 String nm = (comma > 0 ? rest.substring(0, comma) : rest).trim();
                 if (!nm.isEmpty()) {
-                    onlineNames.remove(nm);
-                    players = Math.max(0, onlineNames.size());
+                    boolean known = onlineNames.remove(nm);
+                    // 以「上一次权威人数 - 1」为准：list 输出给出的人数不受本进程见过谁影响，
+                    // 用 onlineNames.size() 会在「应用中途重启」时把人数算成 0。
+                    if (players > 0) {
+                        players = players - 1;
+                    } else if (known) {
+                        players = onlineNames.size();
+                    } else {
+                        players = 0;
+                    }
                     playersAt = System.currentTimeMillis();
                     PlayerWatch w = playerWatch;
                     if (w != null) {

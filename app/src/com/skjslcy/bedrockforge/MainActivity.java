@@ -222,8 +222,8 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
 
     private long fbAt = 0;
     private boolean fbReady = false;
-    private int fbPlayers = -1;
-    private int fbMax = -1;
+    /** 上一次写进「玩家在线」的文本，值没变就不动 UI，避免闪烁。 */
+    private String lastPlayersText = "";
 
     /**
      * 服务端就绪兜底：/v1/join 不可用（返回空体）时，用日志与运行时长判断，
@@ -239,7 +239,6 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
             fbReady = true;
             return true;
         }
-        // 注意：不要在这里清空 fbPlayers —— 日志探针会把解析结果写进同一对字段
         String[] logs = m.getLogs();
         int from = Math.max(0, logs.length - 300);
         java.util.regex.Pattern p = java.util.regex.Pattern
@@ -251,8 +250,7 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
             if (mt.find()) {
                 fbReady = true;
                 try {
-                    fbPlayers = Integer.parseInt(mt.group(1));
-                    fbMax = Integer.parseInt(mt.group(2));
+                    m.seedCount(Integer.parseInt(mt.group(1)), Integer.parseInt(mt.group(2)));
                 } catch (Throwable ignored) {
                 }
                 break;
@@ -276,7 +274,7 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
                 try {
                     String path = DeployManager.SERVER_DIR + "/Dedicated_Server.txt";
                     String range = logStartOffset > 0
-                            ? ("tail -c +" + (logStartOffset + 1)) : "tail -n 200";
+                            ? ("tail -c +" + (logStartOffset + 1) + " | tail -c 262144") : "tail -n 300";
                     out = ShizukuShell.sh(range + " '" + path + "' 2>/dev/null");
                 } catch (Throwable t) {
                     return;
@@ -293,15 +291,10 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
                     }
                 }
                 if (pl < 0) return;
-                final int fp = pl, fmx = mx;
+                ServerManager.get().seedCount(pl, mx);
                 runOnUiThread(new Runnable() {
                     @Override public void run() {
-                        fbPlayers = fp;
-                        fbMax = fmx;
-                        if (!serverReady && playersValue != null) {
-                            playersValue.setText(fp + "/" + fmx);
-                            playersValue.setTextColor(MinecraftUi.GREEN);
-                        }
+                        renderPlayers();
                     }
                 });
             }
@@ -374,8 +367,6 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
                 });
             }
             if (lastServerRunning && !nowRunning) {
-                fbPlayers = -1;
-                fbMax = -1;
                 io.execute(new Runnable() {
                     @Override public void run() {
                         try {
@@ -4160,21 +4151,8 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
         if (stopBtn != null) stopBtn.setAlpha(stopBtn.isEnabled() ? 1f : 0.5f);
         if (restartBtn != null) restartBtn.setAlpha(restartBtn.isEnabled() ? 1f : 0.5f);
 
-        if (!running) {
-            if (playersValue != null) {
-                playersValue.setText("--/--");
-                playersValue.setTextColor(MinecraftUi.MINIMAL ? MinecraftUi.PANEL_MUTED : 0xFF4A4A4A);
-            }
-            serverReady = false;
-        } else if (!ready && playersValue != null) {
-            if (fbPlayers >= 0) {
-                playersValue.setText(fbPlayers + "/" + fbMax);
-                playersValue.setTextColor(MinecraftUi.GREEN);
-            } else {
-                playersValue.setText(I18n.t("连接中…"));
-                playersValue.setTextColor(MinecraftUi.AMBER);
-            }
-        }
+        if (!running) serverReady = false;
+        renderPlayers();
 
         boolean shizuku;
         boolean granted = false;
@@ -4242,19 +4220,6 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
                     : "↑--  ↓--");
         }
         if (tpsValue != null) tpsValue.setText(tpsReady ? String.valueOf(tps) : "--");
-        // 在线人数：优先用 BDS stdout 的实时事件，其次日志探针
-        if (playersValue != null && running) {
-            int sp = ServerManager.get().getPlayers();
-            if (sp >= 0 && System.currentTimeMillis() - ServerManager.get().getPlayersAt() < 120000) {
-                int smx = ServerManager.get().getMaxPlayers();
-                playersValue.setText(sp + "/" + (smx > 0 ? smx : 10));
-                playersValue.setTextColor(MinecraftUi.GREEN);
-            }
-        }
-        if (playersValue != null && running && fbPlayers >= 0) {
-            playersValue.setText(fbPlayers + "/" + fbMax);
-            playersValue.setTextColor(MinecraftUi.GREEN);
-        }
         if (cpuBar != null) cpuBar.set(10, showMetrics ? Math.min(10, dm.cpuPercent / 10) : 0);
         if (memBar != null) {
             int memSeg = showMetrics && dm.memoryTotal > 0
@@ -4393,70 +4358,50 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
                     }
                 });
                 if (!running) return;
-                // /v1/join 实测恒返回 200 + 空体，且每次 1.4s 超时会拖慢采样，直接停用
-                String json = null;
-                final String body = json;
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        if (!ServerManager.get().isRunning()) return;
-                        if (body == null) {
-                            serverReady = false;
-                            if (playersValue != null) {
-                                playersValue.setText(I18n.t("连接中…"));
-                                playersValue.setTextColor(MinecraftUi.AMBER);
-                            }
-                            return;
-                        }
-                        try {
-                            JSONObject o = new JSONObject(body);
-                            int players = o.optInt("players", 0);
-                            int max = o.optInt("maxPlayers", 10);
-                            String gv = o.optString("version", "");
-                            int proto = o.optInt("protocol", 0);
-                            String lvl = o.optString("level", "");
-                            if (!gv.isEmpty()) {
-                                liveGameVersion = gv;
-                                liveProtocol = proto;
-                                if (gameVersionValue != null) {
-                                    gameVersionValue.setText(gv + (proto > 0 ? I18n.t(" · 协议 ") + proto : ""));
-                                }
-                            }
-                            if (!lvl.isEmpty()) {
-                                liveLevel = lvl;
-                                if (worldValue != null) worldValue.setText(port + " · " + lvl);
-                            }
-                            serverReady = true;
-                            if (playersValue != null) {
-                                playersValue.setText(players + "/" + max);
-                                playersValue.setTextColor(MinecraftUi.GREEN);
-                            }
-                        } catch (Throwable t) {
-                            serverReady = false;
-                        }
-                    }
-                });
+                // /v1/join 实测恒返回 200 + 空体，且每次 1.4s 超时会拖慢采样，已停用。
+                // 这里以前每个采样周期都写一次「连接中…」，导致首页人数每 3 秒闪回连接中，
+                // 玩家进出时尤其明显。现在在线人数只由 renderPlayers() 一个入口渲染。
             }
         });
     }
 
-    private String httpGet(String url, int timeoutMs) throws Exception {
-        HttpURLConnection c = (HttpURLConnection) new URL(url).openConnection();
-        c.setConnectTimeout(timeoutMs);
-        c.setReadTimeout(timeoutMs);
-        c.setRequestMethod("GET");
-        c.setUseCaches(false);
-        try {
-            InputStream in = c.getInputStream();
-            BufferedReader r = new BufferedReader(new InputStreamReader(in, "UTF-8"));
-            StringBuilder sb = new StringBuilder();
-            String line;
-            while ((line = r.readLine()) != null) sb.append(line);
-            r.close();
-            return sb.toString();
-        } finally {
-            c.disconnect();
+    /**
+     * 在线人数：唯一写入口，值没变就不动 UI。
+     * 数据来源是 ServerManager 的权威计数（list 输出 / 进服离服事件 / 日志探针）。
+     */
+    private void renderPlayers() {
+        if (playersValue == null) return;
+        ServerManager m = ServerManager.get();
+        String text;
+        int color;
+        if (!m.isRunning()) {
+            text = "--/--";
+            color = MinecraftUi.MINIMAL ? MinecraftUi.PANEL_MUTED : 0xFF4A4A4A;
+        } else {
+            int n = -1;
+            if (m.getPlayers() >= 0
+                    && System.currentTimeMillis() - m.getPlayersAt() < 600000) {
+                n = m.getPlayers();
+            }
+            int mx = m.getMaxPlayers();
+            if (mx <= 0) mx = 10;
+            boolean ready = serverReady || readyFallback(m);
+            if (n >= 0) {
+                text = n + "/" + mx;
+                color = MinecraftUi.GREEN;
+            } else if (!ready) {
+                text = I18n.t("连接中…");
+                color = MinecraftUi.AMBER;
+            } else {
+                text = "--/--";
+                color = MinecraftUi.MINIMAL ? MinecraftUi.PANEL_MUTED : 0xFF4A4A4A;
+            }
         }
+        if (!text.equals(lastPlayersText)) {
+            lastPlayersText = text;
+            playersValue.setText(text);
+        }
+        playersValue.setTextColor(color);
     }
 
     private int dp(float v) {
