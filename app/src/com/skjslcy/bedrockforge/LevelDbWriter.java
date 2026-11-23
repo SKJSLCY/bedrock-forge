@@ -130,6 +130,19 @@ final class LevelDbWriter {
     }
 
     /**
+     * 把本地日志截回指定长度（回滚一次追加）。
+     * 追加式写入只影响文件尾部，所以截断就等于撤销，不需要整世界备份。
+     */
+    static void truncateLocal(File log, long size) throws Exception {
+        if (log == null || !log.exists() || size < 0) return;
+        if (log.length() <= size) return;
+        try (RandomAccessFile raf = new RandomAccessFile(log, "rw")) {
+            raf.setLength(size);
+            raf.getFD().sync();
+        }
+    }
+
+    /**
      * 写前自检：整个日志按 LevelDB 的读法是否干净。
      * 有截断 / CRC 不符 / 非零填充就抛异常——继续追加只会让新记录跟着被丢弃。
      * 通过时返回可追加偏移（等于文件长度）。

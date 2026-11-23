@@ -25,14 +25,39 @@ final class LevelDbReader {
     /** 列出所有以 prefix 开头的键（按 sequence 取最新，跳过删除）。 */
     static java.util.LinkedHashMap<String, byte[]> list(File dbDir, String prefix)
             throws Exception {
+        java.util.LinkedHashMap<String, byte[]> out = list(dbDir, prefix, true);
+        if (out.isEmpty()) {
+            // 兜底：万一 MANIFEST 的键范围判定不成立，退回全量扫描，宁可慢也不能漏
+            out = list(dbDir, prefix, false);
+        }
+        return out;
+    }
+
+    /** 本次扫描统计（诊断用）。 */
+    static int scannedTables = 0;
+    static int skippedTables = 0;
+
+    private static java.util.LinkedHashMap<String, byte[]> list(File dbDir, String prefix,
+                                                                boolean useRange)
+            throws Exception {
         java.util.LinkedHashMap<String, byte[]> out = new java.util.LinkedHashMap<>();
         java.util.HashMap<String, Long> seqs = new java.util.HashMap<>();
         File[] files = dbDir.listFiles();
         if (files == null) return out;
         Arrays.sort(files, (a, b) -> a.getName().compareTo(b.getName()));
+        byte[] lo = prefix.getBytes("UTF-8");
+        byte[] hi = upperBound(lo);
+        Manifest man = useRange ? Manifest.read(dbDir) : null;
+        scannedTables = 0;
+        skippedTables = 0;
         for (File f : files) {
             String n = f.getName();
             if (!(n.endsWith(".ldb") || n.endsWith(".sst"))) continue;
+            if (man != null && man.ok && !man.mayContain(fileNumber(n), lo, hi)) {
+                skippedTables++;
+                continue;
+            }
+            scannedTables++;
             try {
                 scanTableAll(f, prefix, out, seqs);
             } catch (Throwable ignored) {
@@ -46,6 +71,24 @@ final class LevelDbReader {
             }
         }
         return out;
+    }
+
+    /** prefix 的上界：prefix + 0xFF（任何以 prefix 开头的键都小于它）。 */
+    private static byte[] upperBound(byte[] prefix) {
+        byte[] hi = Arrays.copyOf(prefix, prefix.length + 1);
+        hi[prefix.length] = (byte) 0xFF;
+        return hi;
+    }
+
+    /** 文件名里的编号（SST 都是纯数字名）。 */
+    static long fileNumber(String name) {
+        int dot = name.indexOf('.');
+        String s = dot > 0 ? name.substring(0, dot) : name;
+        try {
+            return Long.parseLong(s);
+        } catch (Throwable ignored) {
+            return -1;
+        }
     }
 
     private static void scanTableAll(File file, String prefix,
@@ -156,18 +199,28 @@ final class LevelDbReader {
 
     /** 在整个目录里查 key，返回 sequence 最大的那条记录。 */
     static Result get(File dbDir, byte[] key) throws Exception {
+        Result best = get(dbDir, key, true);
+        if (best.seq < 0) {
+            // 兜底：范围判定没命中时退回全量扫描
+            best = get(dbDir, key, false);
+        }
+        return best;
+    }
+
+    private static Result get(File dbDir, byte[] key, boolean useRange) throws Exception {
         Result best = new Result();
         File[] files = dbDir.listFiles();
         if (files == null) throw new Exception(I18n.t("无法读取数据库目录"));
         Arrays.sort(files, (a, b) -> a.getName().compareTo(b.getName()));
+        Manifest man = useRange ? Manifest.read(dbDir) : null;
 
         for (File f : files) {
             String n = f.getName();
-            if (n.endsWith(".ldb") || n.endsWith(".sst")) {
-                try {
-                    scanTable(f, key, best);
-                } catch (Throwable ignored) {
-                }
+            if (!(n.endsWith(".ldb") || n.endsWith(".sst"))) continue;
+            if (man != null && man.ok && !man.mayContain(fileNumber(n), key, key)) continue;
+            try {
+                scanTable(f, key, best);
+            } catch (Throwable ignored) {
             }
         }
         for (File f : files) {
@@ -231,6 +284,16 @@ final class LevelDbReader {
         String comparator = "";
         boolean ok;
 
+        /** 文件编号 → {最小键, 最大键}（已去掉 8 字节内部前缀）。用于跳过不可能命中的 SST。 */
+        final java.util.HashMap<Long, byte[][]> ranges = new java.util.HashMap<>();
+
+        /** 该文件是否可能与 [lo, hi] 区间有交集；无信息时按「可能有」处理。 */
+        boolean mayContain(long number, byte[] lo, byte[] hi) {
+            byte[][] r = ranges.get(number);
+            if (r == null || r[0] == null || r[1] == null) return true;
+            return compare(r[0], hi) <= 0 && compare(r[1], lo) >= 0;
+        }
+
         static Manifest read(File dbDir) {
             Manifest m = new Manifest();
             try {
@@ -272,19 +335,34 @@ final class LevelDbReader {
                     skipSlice(r, p);
                 } else if (tag == 6) {                            // deleted_file
                     readVarLong(r, p);
-                    readVarLong(r, p);
+                    long num = readVarLong(r, p);
+                    ranges.remove(num);
                 } else if (tag == 7) {                            // new_file
                     readVarLong(r, p);
-                    readVarLong(r, p);
-                    readVarLong(r, p);
-                    skipSlice(r, p);
-                    skipSlice(r, p);
+                    long num = readVarLong(r, p);
+                    readVarLong(r, p);                            // file size
+                    byte[] sm = slice(r, p);
+                    byte[] lg = slice(r, p);
+                    if (num >= 0) {
+                        ranges.put(num, new byte[][]{userKey(sm), userKey(lg)});
+                    }
                 } else if (tag == 9) {                            // prev_log_number
                     prevLogNumber = readVarLong(r, p);
                 } else {
                     return;
                 }
             }
+        }
+
+        private static byte[] slice(byte[] r, int[] p) {
+            long n = readVarLong(r, p);
+            if (n < 0 || p[0] + n > r.length) {
+                p[0] = r.length;
+                return new byte[0];
+            }
+            byte[] out = Arrays.copyOfRange(r, p[0], p[0] + (int) n);
+            p[0] += (int) n;
+            return out;
         }
 
         private static void skipSlice(byte[] r, int[] p) {

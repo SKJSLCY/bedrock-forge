@@ -165,9 +165,31 @@ final class PlayerDataEditor {
     }
 
     private void openEditor() {
+        final ProgressDialog.Holder pd = ProgressDialog.show(activity, I18n.t("读取玩家数据"));
+        pd.indeterminate(I18n.t("读取数据库…"));
         new Thread(() -> {
+            final boolean[] parsing = {false};
             try {
-                byte[] data = OfflinePlayerData.readServerData(activity, record.serverId);
+                byte[] data = OfflinePlayerData.readServerData(activity, record.serverId,
+                        new OfflinePlayerData.Progress() {
+                            private long lastAt = 0;
+
+                            @Override public void onProgress(int done, int total, long bytes,
+                                                             long totalBytes) {
+                                long now = System.currentTimeMillis();
+                                if (now - lastAt < 150 && done < total) return;
+                                lastAt = now;
+                                if (total > 0 && done >= total) {
+                                    if (!parsing[0]) {
+                                        parsing[0] = true;
+                                        pd.indeterminate(I18n.t("正在解析玩家数据…"));
+                                    }
+                                    return;
+                                }
+                                pd.set(done, total, I18n.t("读取数据库 ") + done + "/" + total
+                                        + I18n.t(" 文件"));
+                            }
+                        });
                 if (data == null) throw new Exception(I18n.t("找不到玩家数据"));
                 root = NbtCodec.parse(data);
                 rootMap = NbtCodec.map(root);
@@ -175,9 +197,15 @@ final class PlayerDataEditor {
                 String ver = DeployManager.detect(activity, DeployManager.TYPE_SERVER).version;
                 versionSupportsUnbreakable = atLeast112(ver);
                 buildItems();
-                handler.post(this::showEditor);
+                handler.post(() -> {
+                    pd.dismiss();
+                    showEditor();
+                });
             } catch (Throwable e) {
-                handler.post(() -> toast(I18n.t("读取失败：") + e.getMessage()));
+                handler.post(() -> {
+                    pd.dismiss();
+                    toast(I18n.t("读取失败：") + e.getMessage());
+                });
             }
         }, "editor-read").start();
     }
@@ -362,7 +390,6 @@ final class PlayerDataEditor {
                 I18n.t("保存玩家数据"));
         new Thread(() -> {
             try {
-                pd.indeterminate(I18n.t("1/3 备份数据库…"));
                 applyBasic();
                 byte[] out = NbtCodec.write(root);
                 // 记录按 LevelDB 语义分片写入，体积不再受单块 32 KB 限制；
@@ -370,30 +397,59 @@ final class PlayerDataEditor {
                 if (out.length > (8 << 20)) {
                     throw new Exception(I18n.t("数据过大（") + out.length + I18n.t(" 字节），写回被拒绝"));
                 }
-                String world = OfflinePlayerData.currentWorldStrict();
                 String key = "player_server_" + record.serverId;
-                String backup = backupDb(world);
-                pd.indeterminate(I18n.t("2/3 写入数据…"));
+                pd.indeterminate(I18n.t("1/2 写入数据…"));
+                final OfflinePlayerData.WriteResult wr =
+                        OfflinePlayerData.writeBack(activity, key, out);
+                pd.indeterminate(I18n.t("2/2 校验写入…"));
                 try {
-                    OfflinePlayerData.WriteResult wr = OfflinePlayerData.writeBack(activity, key, out);
-                    pd.indeterminate(I18n.t("3/3 校验写入…"));
                     OfflinePlayerData.verifyWritten(activity, key, out, wr);
-                    handler.post(() -> {
-                        toast(I18n.t("已写入（sequence ") + wr.seq + I18n.t("），启动服务端后生效"));
-                        if (onDone != null) onDone.run();
-                    });
-                } catch (Throwable e) {
-                    android.util.Log.e("MCBDS", "write/verify failed, rollback", e);
-                    restoreDb(world, backup);
-                    throw e;
+                } catch (Throwable t) {
+                    OfflinePlayerData.rollbackWrite(wr);
+                    throw t;
                 }
+                handler.post(() -> {
+                    pd.dismiss();
+                    showResult(true,
+                            I18n.t("已写入（sequence ") + wr.seq + I18n.t("），启动服务端后生效"));
+                    if (onDone != null) onDone.run();
+                });
             } catch (Throwable e) {
                 android.util.Log.e("MCBDS", "editor save failed", e);
-                handler.post(() -> toast(I18n.t("保存失败：") + e.getMessage()));
-            } finally {
-                pd.dismiss();
+                handler.post(() -> {
+                    pd.dismiss();
+                    showResult(false, e.getMessage());
+                });
             }
         }, "editor-save").start();
+    }
+
+    /** 固定的结果弹窗：必须点「确定」才关闭，不再是一闪而过的 Toast。 */
+    private void showResult(boolean ok, String message) {
+        final Dialog d = new Dialog(activity);
+        d.requestWindowFeature(Window.FEATURE_NO_TITLE);
+        LinearLayout wrap = new LinearLayout(activity);
+        wrap.setOrientation(LinearLayout.VERTICAL);
+        wrap.setPadding(dp(12), dp(12), dp(12), dp(12));
+        LinearLayout panel = MinecraftUi.panel(activity, ok ? "保存完成" : "保存失败");
+        panel.addView(MinecraftUi.text(activity, message == null ? "" : message, 9.5f,
+                ok ? MinecraftUi.PANEL_TEXT : MinecraftUi.RED, false));
+        Button okButton = new MinecraftUi.McButton(activity, "确定");
+        LinearLayout.LayoutParams olp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(44));
+        olp.topMargin = dp(12);
+        panel.addView(okButton, olp);
+        okButton.setOnClickListener(v -> d.dismiss());
+        wrap.addView(panel);
+        d.setContentView(wrap);
+        d.setCancelable(false);
+        d.show();
+        Window w = d.getWindow();
+        if (w != null) {
+            w.setBackgroundDrawable(new ColorDrawable(0x00000000));
+            w.setLayout((int) (activity.getResources().getDisplayMetrics().widthPixels * 0.92f),
+                    ViewGroup.LayoutParams.WRAP_CONTENT);
+        }
     }
 
     private void applyRaw(String text) throws Exception {
@@ -808,27 +864,6 @@ final class PlayerDataEditor {
         String id = str(im.get("Name"));
         if (id.startsWith("minecraft:")) id = id.substring("minecraft:".length());
         return DURABLE.contains(id);
-    }
-
-    private String backupDb(String world) throws Exception {
-        String ts = String.valueOf(System.currentTimeMillis());
-        String path = DeployManager.BACKUPS_DIR + "/playeredit-" + ts + ".tar.gz";
-        ShizukuShell.sh("mkdir -p " + q(DeployManager.BACKUPS_DIR)
-                + "; tar -czf " + q(path) + " -C " + q(DeployManager.SERVER_DIR + "/worlds")
-                + " " + q(world) + " 2>/dev/null || true");
-        if (!"1".equals(ShizukuShell.sh("test -f " + q(path) + " && echo 1 || echo 0").trim())) {
-            throw new Exception(I18n.t("自动备份失败，已取消写入"));
-        }
-        return path;
-    }
-
-    private void restoreDb(String world, String backup) {
-        try {
-            ShizukuShell.sh("rm -rf " + q(DeployManager.SERVER_DIR + "/worlds/" + world)
-                    + "; tar -xzf " + q(backup) + " -C "
-                    + q(DeployManager.SERVER_DIR + "/worlds") + " 2>/dev/null || true");
-        } catch (Throwable ignored) {
-        }
     }
 
     private static String numOf(NbtCodec.Tag t) {

@@ -154,6 +154,18 @@ public final class ShizukuShell {
         }
     }
 
+    /** 把远端文件截断到指定长度（回滚一次追加写）。 */
+    public static void truncateRemote(String remote, long size) throws Exception {
+        if (size < 0) return;
+        String tmp = remote + ".bf_tmp";
+        sh("head -c " + size + " " + quote(remote) + " > " + quote(tmp)
+                + " && mv -f " + quote(tmp) + " " + quote(remote));
+        try {
+            sh("sync");
+        } catch (Throwable ignored) {
+        }
+    }
+
     public static String exec(String[] cmd, String[] env, String dir, String stdin) throws Exception {        if (!Shizuku.pingBinder()) throw new IOException(I18n.t("Shizuku 未运行"));
         if (Shizuku.checkSelfPermission() != PackageManager.PERMISSION_GRANTED) {
             throw new IOException(I18n.t("Shizuku 未授权"));

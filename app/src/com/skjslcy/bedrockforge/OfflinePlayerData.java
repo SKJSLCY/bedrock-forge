@@ -196,17 +196,42 @@ final class OfflinePlayerData {
 
     /** 读取指定玩家服务器的原始 NBT，用于编辑。 */
     static byte[] readServerData(Context ctx, String serverId) throws Exception {
-        File local = copyDb(ctx, "editread");
+        return readServerData(ctx, serverId, null);
+    }
+
+    static byte[] readServerData(Context ctx, String serverId, Progress prog) throws Exception {
+        File local = copyDbAt(ctx, "editread",
+                DeployManager.SERVER_DIR + "/worlds/" + currentWorldStrict() + "/db", prog);
         return LevelDbReader.value(local, "player_server_" + serverId);
+    }
+
+    /**
+     * 保存后刷新单条记录：只重读这个玩家的 NBT 并重建展示字段，
+     * 不重扫整个存档（玩家数据界面保存后立刻能看到新值）。
+     */
+    static void refreshRecord(Context ctx, Record r) throws Exception {
+        byte[] data = readServerData(ctx, r.serverId);
+        if (data == null) throw new Exception(I18n.t("读取失败：找不到玩家数据"));
+        Map<String, Object> nbt = BedrockNbt.parse(data);
+        r.nbt = nbt;
+        r.basic.clear();
+        r.inventory.clear();
+        r.ender.clear();
+        r.effects.clear();
+        r.groups.clear();
+        r.unknown.clear();
+        r.raw.clear();
+        fill(r);
     }
 
     /** 写回结果：写后校验要用到的全部凭据。 */
     static final class WriteResult {
         long seq;
+        long logStart;
+        long logEnd;
         File localDb;
         File localLog;
         String remoteLog;
-        long logEnd;
     }
 
     /**
@@ -231,9 +256,28 @@ final class OfflinePlayerData {
         r.seq = LevelDbReader.lastSequence(local) + 1;
         byte[] batch = LevelDbWriter.batch(r.seq, LevelDbWriter.Op.put(key, value));
         long start = LevelDbWriter.appendBatch(log, batch);
+        r.logStart = start;
         r.logEnd = log.length();
-        ShizukuShell.appendTail(log, start, r.remoteLog);
+        try {
+            ShizukuShell.appendTail(log, start, r.remoteLog);
+        } catch (Throwable t) {
+            rollbackWrite(r);
+            throw t;
+        }
         return r;
+    }
+
+    /** 追加失败或校验失败时把日志截回写入前的长度（追加式写入可以精确回滚）。 */
+    static void rollbackWrite(WriteResult r) {
+        if (r == null) return;
+        try {
+            LevelDbWriter.truncateLocal(r.localLog, r.logStart);
+        } catch (Throwable ignored) {
+        }
+        try {
+            ShizukuShell.truncateRemote(r.remoteLog, r.logStart);
+        } catch (Throwable ignored) {
+        }
     }
 
     /**
@@ -284,8 +328,14 @@ final class OfflinePlayerData {
         String k2 = "player_server_" + serverId;
         long start = LevelDbWriter.appendBatch(log, LevelDbWriter.batch(r.seq,
                 LevelDbWriter.Op.delete(k1), LevelDbWriter.Op.delete(k2)));
+        r.logStart = start;
         r.logEnd = log.length();
-        ShizukuShell.appendTail(log, start, r.remoteLog);
+        try {
+            ShizukuShell.appendTail(log, start, r.remoteLog);
+        } catch (Throwable t) {
+            rollbackWrite(r);
+            throw t;
+        }
         return r;
     }
 

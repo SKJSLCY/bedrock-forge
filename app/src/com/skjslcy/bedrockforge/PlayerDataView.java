@@ -267,12 +267,36 @@ final class PlayerDataView {
         editBottom.setEnabled(!running);
         editBottom.setAlpha(running ? 0.55f : 1f);
         editBottom.setVisibility(running ? android.view.View.GONE : android.view.View.VISIBLE);
+        final boolean fromListFlag = fromList;
         editBottom.setOnClickListener(v -> {
             if (ServerManager.get().isRunning()) {
                 Toast.makeText(activity, I18n.t("请先停止服务端再编辑"), Toast.LENGTH_SHORT).show();
                 return;
             }
-            PlayerDataEditor.start(activity, r, () -> { });
+            PlayerDataEditor.start(activity, r, () -> {
+                // 保存成功后只重读这一个玩家并重绘，不重扫整个存档
+                panel.removeAllViews();
+                panel.addView(MinecraftUi.text(activity, I18n.t("正在刷新…"), 9f,
+                        MinecraftUi.PANEL_MUTED, false));
+                new Thread(() -> {
+                    String err = null;
+                    try {
+                        OfflinePlayerData.refreshRecord(activity, r);
+                    } catch (Throwable e) {
+                        err = e.getMessage();
+                    }
+                    final String message = err;
+                    activity.runOnUiThread(() -> {
+                        panel.removeAllViews();
+                        if (message != null) {
+                            panel.addView(MinecraftUi.text(activity,
+                                    I18n.t("刷新失败：") + message, 9f, MinecraftUi.RED, false));
+                        }
+                        showRecord(activity, panel, s, r, fromListFlag,
+                                editBottom, backupBtn, deleteBtn);
+                    });
+                }, "player-refresh").start();
+            });
         });
 
         backupBtn.setVisibility(android.view.View.VISIBLE);
