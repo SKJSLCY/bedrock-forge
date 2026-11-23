@@ -52,3 +52,35 @@ MANIFEST 的键范围跳过无关 SST——2 GB 存档的常用路径从分钟�
   全量扫描验证一致，且 `list()`/`get()` 在结果为空时会自动退回全量扫描。
 - 保存回滚只还原「本次追加的字节」，不做整库回滚：因为写回只在日志尾部追加，截断即等价；
   若远端日志在写入期间被第三方改动，`appendTail` 的长度校验会直接拒绝写入。
+
+## 6. 备份导入 / 删除玩家：真机验证（第三轮）
+
+两个入口这轮都做了真机实操（世界 `cs`，每次操作前都取快照，结束后逐字节还原）。
+
+| 路径 | 结果 | 证据 |
+|---|---|---|
+| 备份数据（单玩家） | ✅ | 生成 `players-1.26.62.1-SKJSLCY-f8da3499.tar.gz`（data.nbt + stub.bin + meta.json） |
+| 回滚玩家数据（导入） | ✅ | 日志新增 1 条分片 batch：seq=952，`PUT player_f8da3499…`(113B) + `PUT player_server_cbc29ffd…`(4612B)，顺手生成 `playerapply-*.tar.gz` 世界备份，成功后自动刷新列表 |
+| 删除玩家 | ✅ | 日志新增 seq=954，`DEL player_f8da3499…` + `DEL player_server_cbc29ffd…`，先做了整世界备份（`playerdelete-*.tar.gz`） |
+| 还原（测试善后） | ✅ | 追加 seq=956/957 的原始 113B / 7473B 记录，与操作前快照**逐字节相同** |
+
+### 顺带修掉的阻断性 bug
+
+老实现 `BackupSectionView.doApplyPlayer()` 在**工作线程**里 `new Dialog` / `MinecraftUi.panel()` /
+`scanAnimation()`，直接抛：
+
+```
+导入失败：Can't create handler inside thread Thread[player-apply,5,main]
+         that has not called Looper.prepare()
+```
+
+即「回滚玩家数据 / 覆盖玩家数据」在这台机器上**从来没成功过**（与本次写回改动无关）。
+改为使用已经在主线程创建的 `ProgressDialog`（内部走 `runOnUiThread` + latch），阶段文案
+走 `pd.indeterminate(text)`。
+
+### 已知行为（未改动，等确认）
+
+`OfflinePlayerData.filtered()` 会把玩家记录裁成「核心 12 项（+ 坐标 9 项）」再写入：
+本机实测 7,473 → 4,612 字节。对跨世界/跨版本搬运是合理的（避免把旧字段带进新世界），
+但对「同一世界回滚」会丢 `recipe_unlocking`、`PlayerUIItems`、`definitions`、
+出生/死亡等字段。要改成「同版本同世界整份写入」的话，需要先定策略。
