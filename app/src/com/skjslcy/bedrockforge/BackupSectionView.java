@@ -392,16 +392,25 @@ public class BackupSectionView extends ScrollView {
                 String sid = meta.optString("serverId");
                 byte[] data = OfflinePlayerData.backupMember(activity, name, "data.nbt");
                 byte[] stub = OfflinePlayerData.backupMember(activity, name, "stub.bin");
-                byte[] reduced = OfflinePlayerData.filtered(data, withPosition);
+                // 同版本 + 同世界 = 就地回滚：整份写入（不再裁剪字段，避免丢 recipe_unlocking、
+                // PlayerUIItems、definitions、出生/死亡等）；跨版本或跨世界才退回核心子集。
+                String bakVer = meta.optString("version");
+                String bakWorld = meta.optString("world");
+                String instVer = new java.io.File(instDir).getName();
+                final boolean full = !bakVer.isEmpty()
+                        && OfflinePlayerData.compareVersion(instVer, bakVer) == 0
+                        && world.equals(bakWorld);
+                byte[] payload = full ? data : OfflinePlayerData.filtered(data, withPosition);
                 // 进度弹窗必须由主线程创建：老实现直接在工作线程里 new Dialog/View，
                 // 抛 "Can't create handler inside thread ... that has not called Looper.prepare()"。
                 pd = ProgressDialog.show(activity, I18n.t("正在导入玩家数据"));
                 pd.indeterminate(I18n.t("准备中…"));
                 final ProgressDialog.Holder holder = pd;
-                OfflinePlayerData.applyPlayer(activity, instDir, world, msa, sid, stub, reduced,
+                OfflinePlayerData.applyPlayer(activity, instDir, world, msa, sid, stub, payload,
                         text -> holder.indeterminate(text));
                 handler.post(() -> {
-                    toast(I18n.t("导入完成：") + world);
+                    toast(I18n.t("导入完成：") + world
+                            + (full ? I18n.t("（整份写入）") : I18n.t("（仅核心数据）")));
                     refreshList();
                 });
             } catch (Throwable e) {
