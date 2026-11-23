@@ -198,6 +198,10 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
     private long lastDeviceSampleAt = 0;
     private long lastPlayersProbeAt = 0;
     private long lastWhitelistSweepAt = 0;
+    /** 守护系统专用执行器：保证踢人指令不被读档/网络任务阻塞。 */
+    private final java.util.concurrent.ExecutorService guardExec =
+            java.util.concurrent.Executors.newSingleThreadExecutor();
+
     /** 已判定违规、等待玩家真正进入世界后再踢的名字。 */
     private final java.util.Set<String> pendingKick =
             java.util.Collections.newSetFromMap(new java.util.concurrent.ConcurrentHashMap<String, Boolean>());
@@ -578,12 +582,36 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
                     File out = new File(getCacheDir(), "import_" + System.currentTimeMillis() + ext);
                     InputStream in = getContentResolver().openInputStream(uri);
                     if (in == null) throw new java.io.IOException(I18n.t("无法读取文件"));
+                    // 选完文件后先把它拷进缓存：大文件也要有进度，否则用户会以为没反应
+                    long totalSize = -1;
+                    try {
+                        android.database.Cursor cur = getContentResolver()
+                                .query(uri, new String[]{android.provider.OpenableColumns.SIZE},
+                                        null, null, null);
+                        if (cur != null) {
+                            if (cur.moveToFirst()) totalSize = cur.getLong(0);
+                            cur.close();
+                        }
+                    } catch (Throwable ignored) {
+                    }
+                    final ProgressDialog.Holder pickPd =
+                            ProgressDialog.show(MainActivity.this, I18n.t("读取所选文件"));
                     FileOutputStream fos = new FileOutputStream(out);
                     byte[] buf = new byte[65536];
                     int n;
-                    while ((n = in.read(buf)) > 0) fos.write(buf, 0, n);
-                    fos.close();
-                    in.close();
+                    long done = 0;
+                    try {
+                        while ((n = in.read(buf)) > 0) {
+                            fos.write(buf, 0, n);
+                            done += n;
+                            pickPd.set(done, totalSize > 0 ? totalSize : done,
+                                    I18n.t("正在读取所选文件"));
+                        }
+                    } finally {
+                        try { fos.close(); } catch (Throwable ignored) { }
+                        try { in.close(); } catch (Throwable ignored) { }
+                        pickPd.dismiss();
+                    }
                     final File file = out;
                     runOnUiThread(new Runnable() {
                         @Override public void run() {
@@ -2826,7 +2854,7 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
         android.util.Log.i("BFGUARD", "sweep mode=" + AppWhitelist.mode(this)
                 + " online=" + online);
         if (online.isEmpty()) return;
-        io.execute(new Runnable() {
+        guardExec.execute(new Runnable() {
             @Override public void run() {
                 for (String n : online) {
                     if (!plausibleName(n)) continue;      // 再挡一层，绝不踢回显/命令行
@@ -2836,6 +2864,24 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
                 }
             }
         });
+    }
+
+    /**
+     * 守护系统操作后立即执行：先扫一次本地已知名单，再强制发 list 刷新，
+     * 并在 400ms / 1200ms 各补扫一次（覆盖 list 回包与 Spawned 的延迟）。
+     */
+    private void triggerGuardNow() {
+        lastWhitelistSweepAt = 0;
+        if (AppWhitelist.mode(this) == AppWhitelist.OFF) return;
+        sweepWhitelist();
+        if (!ServerManager.get().isRunning()) return;
+        ServerManager.get().send("list");
+        handler.postDelayed(new Runnable() {
+            @Override public void run() { sweepWhitelist(); }
+        }, 400);
+        handler.postDelayed(new Runnable() {
+            @Override public void run() { sweepWhitelist(); }
+        }, 1200);
     }
 
     /** 玩家管理页的「守护系统」入口。 */
@@ -2948,8 +2994,7 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
                 @Override public void onClick(View v) {
                     AppWhitelist.remove(MainActivity.this, n);
                     renderGuardList();
-                    lastWhitelistSweepAt = 0;
-                    sweepWhitelist();
+                    triggerGuardNow();
                 }
             });
             LinearLayout.LayoutParams rlp = new LinearLayout.LayoutParams(
@@ -3244,8 +3289,7 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
                 else toast(I18n.t("已加入名单"));
                 d.dismiss();
                 renderGuardList();
-                lastWhitelistSweepAt = 0;
-                sweepWhitelist();
+                triggerGuardNow();
             }
         });
         Button cancel = new MinecraftUi.McButton(this, I18n.t("取消"));
@@ -3306,8 +3350,7 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
                                 ? I18n.t("黑名单名单") : I18n.t("白名单名单"));
                     }
                     renderGuardList();
-                    lastWhitelistSweepAt = 0;   // 立即触发一次监测
-                    sweepWhitelist();
+                    triggerGuardNow();
                 }
             });
         }
@@ -3426,8 +3469,7 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
                     }
                     toast(I18n.t("已同步在线玩家"));
                     renderGuardList();
-                    lastWhitelistSweepAt = 0;
-                    sweepWhitelist();
+                    triggerGuardNow();
                 }
             });
         }
@@ -4251,6 +4293,16 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
         }
     }
 
+    /** 自动化命令的回显与服务端拒绝回复：只在控制台隐藏，不影响功能。 */
+    private boolean isAutomationNoise(String line) {
+        String t = line == null ? "" : line.trim();
+        if (t.startsWith("> kick ") || t.equals("> list")
+                || t.startsWith("> time query gametime")) return true;
+        if (t.contains("No targets matched selector")) return true;
+        if (t.startsWith("Could not find player")) return true;
+        return false;
+    }
+
     private boolean isGametimeNoise(String line) {
         String t = line == null ? "" : line;
         return t.contains("time query gametime") || t.contains("Gametime is")
@@ -4284,6 +4336,7 @@ public class MainActivity extends Activity implements DeploySectionView.Host {
             }
             if (ListOutput.isNameLine(line, listRemain)) continue;
             if (isGametimeNoise(line) && logColor(line) != MinecraftUi.RED) continue;
+            if (isAutomationNoise(line)) continue;
             int st = sb.length();
             sb.append(line).append('\n');
             sb.setSpan(new ForegroundColorSpan(

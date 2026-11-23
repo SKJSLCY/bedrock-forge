@@ -420,7 +420,18 @@ public class AddonsSectionView extends ScrollView {
         new Thread(() -> {
             try {
                 String remote = "/data/local/tmp/mcbds/addon-import.zip";
-                ShizukuShell.copyIn(file, remote, null);
+                final ProgressDialog.Holder pd = ProgressDialog.show(activity,
+                    I18n.t("导入 addon"));
+            try {
+                ShizukuShell.copyIn(file, remote, new ShizukuShell.CopyProgress() {
+                    @Override public void onProgress(long copied, long total) {
+                        pd.set(copied, total, I18n.t("正在复制 addon"));
+                    }
+                });
+                pd.indeterminate(I18n.t("正在解压 addon…"));
+            } finally {
+                pd.dismiss();
+            }
                 String stage = DeployManager.BASE + "/tmp/addon-stage";
                 ShizukuShell.sh("rm -rf " + q(stage) + "; mkdir -p " + q(stage)
                         + "; unzip -q -o " + q(remote) + " -d " + q(stage));

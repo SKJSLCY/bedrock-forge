@@ -509,7 +509,15 @@ public class WorldSectionView extends ScrollView {
         new Thread(() -> {
             try {
                 String remote = "/data/local/tmp/mcbds/world-import.zip";
-                ShizukuShell.copyIn(file, remote, null);
+                final ProgressDialog.Holder pd = ProgressDialog.show(activity,
+                    I18n.t("导入存档"));
+            try {
+                ShizukuShell.copyIn(file, remote, new ShizukuShell.CopyProgress() {
+                    @Override public void onProgress(long copied, long total) {
+                        pd.set(copied, total, I18n.t("正在复制存档"));
+                    }
+                });
+                pd.indeterminate(I18n.t("正在解压存档…"));
                 String stage = DeployManager.BASE + "/tmp/world-import";
                 ShizukuShell.sh("rm -rf " + q(stage) + "; mkdir -p " + q(stage)
                         + "; unzip -q -o " + q(remote) + " -d " + q(stage));
@@ -520,6 +528,9 @@ public class WorldSectionView extends ScrollView {
                 ShizukuShell.sh("rm -rf " + q(dest) + "; mkdir -p " + q(dest)
                         + "; cp -a " + q(root) + "/. " + q(dest) + "/");
                 ShizukuShell.sh("rm -f " + q(remote) + "; rm -rf " + q(stage));
+            } finally {
+                pd.dismiss();
+            }
                 AppLog.add(I18n.t("[存档] 导入 ") + world);
                 handler.post(() -> {
                     toast(I18n.t("已导入存档 ") + world + I18n.t("，可在列表里切换"));
@@ -532,6 +543,8 @@ public class WorldSectionView extends ScrollView {
     }
 
     private void setLevelName(String name) throws Exception {
+        // 切换存档：先保存当前世界的玩家统计，再切到新世界的记录
+        try { PlayerTracker.setScopeWorld(name); } catch (Throwable ignored) { }
         String path = DeployManager.SERVER_DIR + "/server.properties";
         String props = ShizukuShell.read(path);
         StringBuilder sb = new StringBuilder();

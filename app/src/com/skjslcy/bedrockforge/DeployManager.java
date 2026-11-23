@@ -272,6 +272,7 @@ public final class DeployManager {
         ShizukuShell.sh("rm -f " + q(SERVER_LINK) + "; ln -s " + q("servers/" + version)
                 + " " + q(SERVER_LINK));
         AppLog.add(I18n.t("[实例] 切换到 ") + version);
+        try { PlayerTracker.onInstanceSwitch(); } catch (Throwable ignored) { }
         SharedPreferences sp = prefs(context);
         String source = "";
         try {

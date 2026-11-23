@@ -358,16 +358,21 @@ final class PlayerDataEditor {
             toast(I18n.t("请先停止服务端"));
             return;
         }
+        final ProgressDialog.Holder pd = ProgressDialog.show(activity,
+                I18n.t("保存玩家数据"));
         new Thread(() -> {
             try {
+                pd.indeterminate(I18n.t("1/3 备份数据库…"));
                 applyBasic();
                 byte[] out = NbtCodec.write(root);
                 if (out.length > 65000) throw new Exception(I18n.t("数据过大，写回被拒绝"));
                 String world = OfflinePlayerData.currentWorldForEdit(activity);
                 String key = "player_server_" + record.serverId;
                 String backup = backupDb(world);
+                pd.indeterminate(I18n.t("2/3 写入数据…"));
                 try {
                     long seq = OfflinePlayerData.writeBack(activity, key, out);
+                    pd.indeterminate(I18n.t("3/3 校验写入…"));
                     String verify = OfflinePlayerData.verifyWritten(activity, key);
                     if (!"ok".equals(verify)) throw new Exception(I18n.t("写入校验失败"));
                     handler.post(() -> {
@@ -382,6 +387,8 @@ final class PlayerDataEditor {
             } catch (Throwable e) {
                 android.util.Log.e("MCBDS", "editor save failed", e);
                 handler.post(() -> toast(I18n.t("保存失败：") + e.getMessage()));
+            } finally {
+                pd.dismiss();
             }
         }, "editor-save").start();
     }

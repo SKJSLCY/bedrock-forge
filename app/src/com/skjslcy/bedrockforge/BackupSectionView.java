@@ -173,7 +173,18 @@ public class BackupSectionView extends ScrollView {
                     name = name0.replace(".tar.gz", "-" + (dup++) + ".tar.gz");
                 }
                 ShizukuShell.sh("mkdir -p '" + DeployManager.BACKUPS_DIR + "'");
-                ShizukuShell.copyIn(file, DeployManager.BACKUPS_DIR + "/" + name, null);
+                final ProgressDialog.Holder pd = ProgressDialog.show(activity,
+                    I18n.t("导入备份"));
+            try {
+                ShizukuShell.copyIn(file, DeployManager.BACKUPS_DIR + "/" + name,
+                        new ShizukuShell.CopyProgress() {
+                            @Override public void onProgress(long copied, long total) {
+                                pd.set(copied, total, I18n.t("正在复制备份"));
+                            }
+                        });
+            } finally {
+                pd.dismiss();
+            }
                 try {
                     org.json.JSONObject meta = new org.json.JSONObject();
                     meta.put("kind", kind);

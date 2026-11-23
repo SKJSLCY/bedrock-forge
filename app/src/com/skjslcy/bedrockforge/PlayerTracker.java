@@ -34,8 +34,41 @@ public final class PlayerTracker {
     private PlayerTracker() {
     }
 
+    /** 当前统计所属世界（切换存档时更新），用于分世界存档。 */
+    private static String scopeWorld = "default";
+
+    private static String safe(String w) {
+        String t = w == null ? "default" : w.trim();
+        if (t.isEmpty()) t = "default";
+        return t.replaceAll("[\\\\/:*?\"<>|\\s]", "_");
+    }
+
     private static String path() {
-        return DeployManager.SERVER_DIR + "/players.json";
+        // 按「实例（SERVER_DIR 指向）+ 世界」分文件：切换实例或切档后各自读取自己的记录
+        return DeployManager.SERVER_DIR + "/.bf_players-" + safe(scopeWorld) + ".json";
+    }
+
+    /** 立即落盘（切换实例/存档前调用，避免丢失当前累计）。 */
+    public static synchronized void flush() {
+        save();
+    }
+
+    /** 切换世界：先保存旧世界数据，再加载新世界的记录。 */
+    public static synchronized void setScopeWorld(String world) {
+        if (safe(world).equals(safe(scopeWorld))) return;
+        save();
+        scopeWorld = world;
+        loaded = false;
+        loadedPath = "";
+        ensureLoaded();
+    }
+
+    /** 切换实例：实例路径变了，先保存再重新加载。 */
+    public static synchronized void onInstanceSwitch() {
+        save();
+        loaded = false;
+        loadedPath = "";
+        ensureLoaded();
     }
 
     public static synchronized void ensureLoaded() {
