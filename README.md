@@ -27,7 +27,7 @@ Minecraft Bedrock Dedicated Server（BDS）。
 
 ## 状态
 
-版本：0.2
+版本：0.3.0（versionCode 4）
 平台：Android 8.0+ / arm64
 语言：简体中文 / 繁體中文 / English
 许可证：GPL-3.0-or-later
