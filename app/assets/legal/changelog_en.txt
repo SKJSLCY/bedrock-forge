@@ -1,5 +1,41 @@
 Bedrock Forge Changelog
 
+0.3.0 (2026-11-24)
+
+What's new:
+
+· Editing player data now really works: in big worlds, changes to level, inventory or coordinates used to show "written" while the game kept the old values — fixed, and the change takes effect once you start the server
+· Saving takes seconds instead of a couple of minutes
+· Opening player data in a big world takes seconds instead of minutes (the very first open still reads the whole world, about a minute)
+· The app cache went from about 8 GB down to about 2 GB
+
+New
+
+· Guardian system: Players → Guardian system sets a whitelist or a blacklist; the two lists are kept separately
+· Guardian system: write your own message — blocked players see it
+· Guardian system: players are stopped as soon as they join, no need to wait until they walk into the world
+· Guardian system: the block log can be searched, filtered, imported and exported
+
+Improved
+
+· Every import (server, addons, world, backup) shows live progress — how much has been copied and which file is being unpacked
+· Reading player data has a progress bar and can be cancelled halfway
+· The save result is now a window you dismiss with "OK" instead of a toast that disappears by itself
+· After saving, the player data screen refreshes with the new values — no need to leave and come back
+· "Roll back player data" and "import player data into another world" did nothing before; now they work, and rolling back into the same world restores everything instead of only part of it
+· "Delete player data" now backs up the whole world first
+· The online player count on the home page no longer flickers to "connecting…" every few seconds; when a player leaves the number simply drops by one
+· New console lines no longer jump the view back to the top
+
+Fixed
+
+· Added the 38 missing translations — the English and Traditional Chinese screens no longer show Simplified Chinese text
+
+Notes
+
+· Stop the server before importing or editing saves (same as before)
+· Install over the old version; worlds and settings are kept
+· The first time you open player data in a big world it has to read the world once (about a minute); after that it opens instantly
 0.2.1 (2026-11-22)
 
 New
