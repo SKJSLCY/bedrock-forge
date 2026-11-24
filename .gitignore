@@ -33,3 +33,7 @@ app/assets/toolchain-rootfs.tar.gz
 提示词.txt
 新建 文本文档*.txt
 *.docx
+
+# 交接包（外部打包的源码/资源快照，不入库）
+jj/
+jj.zip
